@@ -1,0 +1,46 @@
+import { Button, ComboBox, Palette, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { Installations } from "../global.slint";
+
+export component HomePage inherits VerticalLayout {
+    Rectangle {
+        background: Palette.background.darker(0.2);
+
+        HorizontalBox {
+            alignment: end;
+
+            Button {
+                text: @tr("Configure…");
+                clicked => {
+                    Installations.current-page = 1;
+                }
+            }
+        }
+    }
+    Rectangle {
+        background: Palette.background;
+        vertical-stretch: 1;
+    }
+    Rectangle {
+        background: Palette.background.darker(0.2);
+
+        HorizontalBox {
+            Rectangle {
+                horizontal-stretch: 1;
+                clip: true;
+
+                Text {
+                    text: Installations.task-text;
+                    horizontal-alignment: left;
+                }
+            }
+
+            Button {
+                text: @tr("Launch game");
+                enabled: Installations.is-ready;
+                clicked => {
+                    Installations.launch-game();
+                }
+            }
+        }
+    }
+}

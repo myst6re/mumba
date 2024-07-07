@@ -1,0 +1,9 @@
+export global Installations {
+    in property <string> game-path;
+    in-out property <int> current-page : 0;
+    in property <string> task-text;
+    in property <bool> is-ready : false;
+    pure callback launch-game();
+    pure callback browse-game(string) -> string;
+    pure callback configure-game(string);
+}

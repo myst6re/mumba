@@ -1,0 +1,16 @@
+[package]
+name = "moomba"
+version = "0.1.0"
+edition = "2021"
+authors = ["myst6re <myst6re@gmail.com>"]
+build = "build.rs"
+
+[dependencies]
+log = "0.4"
+moomba_core = { path = "../core" }
+slint = { version = "1.6", features = ["default", "raw-window-handle-06"] }
+raw-window-handle = "0.6.0"
+rfd = "0.14.1"
+
+[build-dependencies]
+slint-build = "1.5"

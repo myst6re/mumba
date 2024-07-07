@@ -1,0 +1,16 @@
+import { Button, ComboBox, StyleMetrics, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { OptionsPage } from "pages/options.slint";
+import { HomePage } from "pages/home.slint";
+import { Installations } from "global.slint";
+
+export { Installations }
+
+export component AppWindow inherits Window {
+    preferred-width: 640px;
+    preferred-height: 480px;
+    title: @tr("Moomba Configurator");
+    icon: @image-url("../data/moomba-icon.png");
+
+    if Installations.current-page == 0 : HomePage {}
+    if Installations.current-page == 1 : OptionsPage {}
+}
