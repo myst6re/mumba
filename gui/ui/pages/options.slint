@@ -1,31 +1,12 @@
-import { CheckBox, GroupBox, Button, StandardButton, HorizontalBox, GridBox, LineEdit, VerticalBox } from "std-widgets.slint";
+import { CheckBox, GroupBox, Button, Palette, StandardButton, HorizontalBox, GridBox, LineEdit, VerticalBox } from "std-widgets.slint";
 import { Installations } from "../global.slint";
 
 export component OptionsPage inherits VerticalLayout {
     Rectangle {
         VerticalBox {
             Text {
-                text: @tr("Options");
+                text: @tr("Game Options");
                 font-size: 20px;
-            }
-            GroupBox {
-                title: @tr("Game path");
-                vertical-stretch: 0;
-
-                HorizontalBox {
-                    padding: 0px;
-
-                    game-path := LineEdit {
-                        text: Installations.game-path;
-                    }
-
-                    Button {
-                        text: @tr("Browse…");
-                        clicked => {
-                            game-path.text = Installations.browse-game(game-path.text);
-                        }
-                    }
-                }
             }
             fullscreen := CheckBox {
                 text: @tr("Fullscreen");
@@ -36,6 +17,8 @@ export component OptionsPage inherits VerticalLayout {
         vertical-stretch: 1;
     }
     Rectangle {
+        background: Palette.background.darker(0.2);
+
         HorizontalBox {
             alignment: end;
 
@@ -46,7 +29,7 @@ export component OptionsPage inherits VerticalLayout {
             StandardButton {
                 kind: ok;
                 clicked => {
-                    Installations.configure-game(game-path.text);
+                    Installations.configure-game();
                     Installations.current-page = 0;
                 }
             }

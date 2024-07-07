@@ -29,6 +29,25 @@ impl Installation {
         }
     }
 
+    pub fn from_exe_path(exe_path: &PathBuf) -> Self {
+        let exe_name = String::from(exe_path.file_name().and_then(|e| e.to_str()).unwrap_or_default());
+        let app_path = String::from(exe_path.parent().map(|e| e.as_os_str()).and_then(|e| e.to_str()).unwrap_or_default());
+        // Detect exe name and version
+        let (version, language) = match Self::get_steam_version_lang(&app_path) {
+            Ok(lang) => {
+                (Version::Steam, lang)
+            }
+            Err(_) => (Version::Standard, Self::get_standard_version_lang(&app_path).unwrap_or(String::from("eng")))
+        };
+
+        Self {
+            app_path,
+            exe_name,
+            version,
+            language
+        }
+    }
+
     pub fn from_directory(app_path: String) -> Self {
         // Detect exe name and version
         let (exe_name, version, language) = match Self::get_steam_version_lang(&app_path) {
@@ -48,6 +67,10 @@ impl Installation {
             version,
             language
         }
+    }
+
+    pub fn exe_path(self: &Self) -> PathBuf {
+        PathBuf::from(&self.app_path).join(&self.exe_name)
     }
 
     pub fn search() -> Vec<Self> {

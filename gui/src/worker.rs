@@ -8,6 +8,7 @@ use std::{
     os::windows::process::CommandExt,
     process::{Command, Stdio},
 };
+use moomba_core::config::Config;
 use moomba_core::game::installation;
 use moomba_core::game::ffnx_config::FfnxConfig;
 
@@ -15,9 +16,9 @@ const DETACHED_PROCESS: u32 = 0x8;
 
 #[derive(Debug)]
 pub enum Message {
-    InstallBase,
+    Setup(slint::SharedString),
     LaunchGame,
-    ConfigureGame(slint::SharedString),
+    ConfigureGame,
     Quit
 }
 
@@ -59,9 +60,9 @@ fn set_game_ready(handle: slint::Weak<AppWindow>, ready: bool) -> Result<(), sli
     })
 }
 
-fn set_game_path(handle: slint::Weak<AppWindow>, text: String) -> Result<(), slint::EventLoopError> {
+fn set_game_exe_path(handle: slint::Weak<AppWindow>, text: String) -> Result<(), slint::EventLoopError> {
     handle.upgrade_in_event_loop(move |h| {
-        h.global::<Installations>().set_game_path(slint::SharedString::from(text))
+        h.global::<Installations>().set_game_exe_path(slint::SharedString::from(text))
     })
 }
 
@@ -76,74 +77,93 @@ fn worker_loop(
     handle: slint::Weak<AppWindow>
 ) -> () {
     let env = moomba_core::game::env::Env::new().unwrap();
+    let moomba_config_path = env.moomba_dir.join("config.toml");
+    let mut moomba_config = Config::from_file(&moomba_config_path).unwrap_or(Config::new());
     let ffnx_config_path = env.ffnx_dir.join("FFNx.toml");
-    let mut config = match FfnxConfig::from_file(ffnx_config_path.clone()) {
-        Ok(c) => c,
-        Err(_e) => FfnxConfig::new()
-    };
     let first_installation;
 
-    let installation = match config.app_path() {
-        Ok(app_path) => installation::Installation::from_directory(String::from(app_path)),
-        Err(_e) => {
+    let installation = match moomba_config.installation() {
+        Ok(Some(installation)) => installation,
+        Ok(None) | Err(_) => {
             let installations = installation::Installation::search();
-            if installations.is_empty() {
-                set_current_page(handle.clone(), 1);
-                return;
-            } else {
+            if ! installations.is_empty() {
                 first_installation = installations[0].clone();
-                let app_path = first_installation.app_path.as_str();
-                config.set_app_path(app_path);
-                config.save(ffnx_config_path.clone());
-                first_installation.clone()
+                set_game_exe_path(handle.clone(), first_installation.exe_path().as_os_str().to_os_string().into_string().unwrap());
+            }
+
+            set_current_page(handle.clone(), 1);
+            match rx.recv() {
+                Ok(Message::Setup(exe_path)) => {
+                    info!("Setup with EXE path {}", exe_path);
+                    installation::Installation::from_exe_path(&PathBuf::from(exe_path.as_str()))
+                },
+                Ok(Message::Quit) => return,
+                Ok(msg) => {
+                    error!("Received unknown message: {:?}", msg);
+                    return
+                }
+                Err(e) => {
+                    error!("Received error: {}", e);
+                    return
+                }
             }
         }
     };
 
     info!("Found Game at {:?}: {:?} {}", &installation.app_path, &installation.version, &installation.language);
 
+    moomba_config.set_installation(&installation);
+    moomba_config.save(&moomba_config_path);
+
     let app_path = installation.app_path;
     let source_ff8_path = PathBuf::from(&app_path).join(installation.exe_name);
     let ff8_path = env.ffnx_dir.join("FF8_Moomba.exe");
 
-    set_game_path(handle.clone(), app_path.clone());
+    match moomba_core::game::ffnx::Ffnx::is_installed(&env.ffnx_dir) {
+        Some(version) => {
+            info!("Found FFNx version {}", version);
+        },
+        None => {
+            set_task_text(handle.clone(), "Installing game…");
+            match moomba_core::game::ffnx::Ffnx::from_url(
+                "https://github.com/julianxhokaxhiu/FFNx/releases/download/1.18.1/FFNx-FF8_2000-v1.18.1.0.zip",
+                &env.ffnx_dir,
+                &env
+            ) {
+                Ok(()) => {
+                    ()
+                },
+                Err(e) => {
+                    error!("Error when installing FFNx: {:?}", e);
+                    ()
+                }
+            }
+
+        }
+    };
+    if ! ff8_path.exists() {
+        info!("Copy {:?} to {:?}...", &source_ff8_path, &ff8_path);
+        moomba_core::provision::copy_file(&source_ff8_path, &ff8_path);
+        ()
+    }
+    if matches!(installation.version, installation::Version::Standard) && ! env.ffnx_dir.join("binkw32.dll").exists() {
+        info!("Patch game to 1.02...");
+        moomba_core::provision::download_zip("https://www.ff8.fr/download/programs/FF8EidosFre.zip", "FF8Patch1.02.zip", &env.ffnx_dir, &env);
+        moomba_core::provision::rename_file(&env.ffnx_dir.join("FF8.exe"), &ff8_path);
+    }
+    let mut config = match FfnxConfig::from_file(&ffnx_config_path) {
+        Ok(c) => c,
+        Err(_e) => FfnxConfig::new()
+    };
+    config.set_app_path(app_path.as_str());
+    config.save(&ffnx_config_path);
+
+    set_game_ready(handle.clone(), true);
 
     for received in rx {
         match received {
-            Message::InstallBase => {
-                match moomba_core::game::ffnx::Ffnx::is_installed(&env.ffnx_dir) {
-                    Some(version) => {
-                        info!("Found FFNx version {}", version);
-                    },
-                    None => {
-                        set_task_text(handle.clone(), "Installing game…");
-                        match moomba_core::game::ffnx::Ffnx::from_url(
-                            "https://github.com/julianxhokaxhiu/FFNx/releases/download/1.18.1/FFNx-FF8_2000-v1.18.1.0.zip",
-                            &env.ffnx_dir,
-                            &env
-                        ) {
-                            Ok(()) => {
-                                ()
-                            },
-                            Err(e) => {
-                                error!("Error when installing FFNx: {:?}", e);
-                                ()
-                            }
-                        }
+            Message::Setup(_) => {
 
-                    }
-                };
-                if ! ff8_path.exists() {
-                    info!("Copy {:?} to {:?}...", &source_ff8_path, &ff8_path);
-                    moomba_core::provision::copy_file(&source_ff8_path, &ff8_path);
-                    ()
-                }
-                if matches!(installation.version, installation::Version::Standard) && ! env.ffnx_dir.join("binkw32.dll").exists() {
-                    info!("Patch game to 1.02...");
-                    moomba_core::provision::download_zip("https://www.ff8.fr/download/programs/FF8EidosFre.zip", "FF8Patch1.02.zip", &env.ffnx_dir, &env);
-                    moomba_core::provision::rename_file(&env.ffnx_dir.join("FF8.exe"), &ff8_path);
-                }
-                set_game_ready(handle.clone(), true);
             },
             Message::LaunchGame => {
                 info!("Launch {:?} in dir {:?}...", &ff8_path, &env.ffnx_dir);
@@ -162,19 +182,10 @@ fn worker_loop(
                     Ok(_) => ()
                 };
             },
-            Message::ConfigureGame(path) => {
-                let mut config = match FfnxConfig::from_file(ffnx_config_path.clone()) {
-                    Ok(c) => c,
-                    Err(_e) => FfnxConfig::new()
-                };
-                config.set_app_path(path.as_str());
-                set_game_path(handle.clone(), config.app_path().unwrap().into());
-                config.save(ffnx_config_path.clone())
-                ;
+            Message::ConfigureGame => {
+                config.save(&ffnx_config_path);
             },
-            Message::Quit => {
-                break
-            }
+            Message::Quit => break
         };
         set_task_text(handle.clone(), "");
     }

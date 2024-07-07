@@ -1,5 +1,6 @@
 use std::path::Path;
 slint::include_modules!();
+use log::{info, error};
 
 pub mod worker;
 
@@ -11,6 +12,16 @@ fn main() -> Result<(), slint::PlatformError> {
     let ui = AppWindow::new()?;
 
     let worker = Worker::new(&ui);
+
+    ui.global::<Installations>().on_setup({
+        let tx = worker.tx.clone();
+        move |path| {
+            match tx.send(worker::Message::Setup(path)) {
+                Err(e) => error!("Error: {}", e),
+                _ => ()
+            }
+        }
+    });
 
     ui.global::<Installations>().on_launch_game({
         let tx = worker.tx.clone();
@@ -41,12 +52,10 @@ fn main() -> Result<(), slint::PlatformError> {
 
     ui.global::<Installations>().on_configure_game({
         let tx = worker.tx.clone();
-        move |path| {
-            tx.send(worker::Message::ConfigureGame(path)).unwrap()
+        move || {
+            tx.send(worker::Message::ConfigureGame).unwrap()
         }
     });
-
-    worker.tx.clone().send(worker::Message::InstallBase).unwrap();
 
     ui.run()?;
 

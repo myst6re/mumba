@@ -1,0 +1,50 @@
+import { CheckBox, GroupBox, Palette, Button, StandardButton, HorizontalBox, GridBox, LineEdit, VerticalBox } from "std-widgets.slint";
+import { Installations } from "../global.slint";
+
+export component SetupPage inherits VerticalLayout {
+    Rectangle {
+        VerticalBox {
+            Text {
+                text: @tr("Initial Setup");
+                font-size: 20px;
+            }
+            GroupBox {
+                title: @tr("FF8 EXE path");
+                vertical-stretch: 0;
+
+                HorizontalBox {
+                    padding: 0px;
+
+                    game-exe-path := LineEdit {
+                        text: Installations.game-exe-path;
+                    }
+
+                    Button {
+                        text: @tr("Browse…");
+                        clicked => {
+                            game-exe-path.text = Installations.browse-game(game-exe-path.text);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Rectangle {
+        vertical-stretch: 1;
+    }
+    Rectangle {
+        background: Palette.background.darker(0.2);
+
+        HorizontalBox {
+            alignment: end;
+
+            StandardButton {
+                kind: ok;
+                clicked => {
+                    Installations.setup(game-exe-path.text);
+                    Installations.current-page = 0;
+                }
+            }
+        }
+    }
+}
