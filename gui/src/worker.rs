@@ -2,7 +2,7 @@ use std::sync::mpsc;
 use std::sync::mpsc::{Sender, Receiver};
 use super::{AppWindow, Installations};
 use slint::ComponentHandle;
-use log::{info, error};
+use log::{info, warn, error};
 use std::{
     path::PathBuf,
     os::windows::process::CommandExt,
@@ -78,17 +78,23 @@ fn worker_loop(
 ) -> () {
     let env = moomba_core::game::env::Env::new().unwrap();
     let moomba_config_path = env.moomba_dir.join("config.toml");
-    let mut moomba_config = Config::from_file(&moomba_config_path).unwrap_or(Config::new());
     let ffnx_config_path = env.ffnx_dir.join("FFNx.toml");
-    let first_installation;
+
+    let mut moomba_config = Config::from_file(&moomba_config_path).unwrap_or(Config::new());
 
     let installation = match moomba_config.installation() {
         Ok(Some(installation)) => installation,
         Ok(None) | Err(_) => {
             let installations = installation::Installation::search();
-            if ! installations.is_empty() {
-                first_installation = installations[0].clone();
-                set_game_exe_path(handle.clone(), first_installation.exe_path().as_os_str().to_os_string().into_string().unwrap());
+            for inst in installations {
+                match inst.version {
+                    installation::Version::Standard | installation::Version::Steam => {
+                        set_game_exe_path(handle.clone(), inst.exe_path().as_os_str().to_os_string().into_string().unwrap());
+                    },
+                    installation::Version::Remastered => {
+                        warn!("Ignore remaster at {}, as Moomba is not compatible yet", inst.app_path)
+                    }
+                }
             }
 
             set_current_page(handle.clone(), 1);
@@ -117,16 +123,19 @@ fn worker_loop(
 
     let app_path = installation.app_path;
     let source_ff8_path = PathBuf::from(&app_path).join(installation.exe_name);
-    let ff8_path = env.ffnx_dir.join("FF8_Moomba.exe");
 
-    match moomba_core::game::ffnx::Ffnx::is_installed(&env.ffnx_dir) {
+    match moomba_core::game::ffnx::Ffnx::is_installed(&env.ffnx_dir, matches!(installation.version, installation::Version::Steam)) {
         Some(version) => {
             info!("Found FFNx version {}", version);
         },
         None => {
             set_task_text(handle.clone(), "Installing game…");
             match moomba_core::game::ffnx::Ffnx::from_url(
-                "https://github.com/julianxhokaxhiu/FFNx/releases/download/1.18.1/FFNx-FF8_2000-v1.18.1.0.zip",
+                if matches!(installation.version, installation::Version::Steam) {
+                    "https://github.com/julianxhokaxhiu/FFNx/releases/download/1.18.1/FFNx-Steam-v1.18.1.0.zip"
+                } else {
+                    "https://github.com/julianxhokaxhiu/FFNx/releases/download/1.18.1/FFNx-FF8_2000-v1.18.1.0.zip"
+                },
                 &env.ffnx_dir,
                 &env
             ) {
@@ -141,15 +150,30 @@ fn worker_loop(
 
         }
     };
+    let ff8_path = env.ffnx_dir.join(if matches!(installation.version, installation::Version::Steam) {
+        "FF8_Moomba_Steam.exe"
+    } else {
+        "FF8_Moomba.exe"
+    });
     if ! ff8_path.exists() {
         info!("Copy {:?} to {:?}...", &source_ff8_path, &ff8_path);
         moomba_core::provision::copy_file(&source_ff8_path, &ff8_path);
         ()
     }
-    if matches!(installation.version, installation::Version::Standard) && ! env.ffnx_dir.join("binkw32.dll").exists() {
-        info!("Patch game to 1.02...");
-        moomba_core::provision::download_zip("https://www.ff8.fr/download/programs/FF8EidosFre.zip", "FF8Patch1.02.zip", &env.ffnx_dir, &env);
-        moomba_core::provision::rename_file(&env.ffnx_dir.join("FF8.exe"), &ff8_path);
+    let bink_dll_path = env.ffnx_dir.join("binkw32.dll");
+    if ! bink_dll_path.exists() {
+        if matches!(installation.version, installation::Version::Standard) {
+            info!("Patch game to 1.02...");
+            moomba_core::provision::download_zip("https://www.ff8.fr/download/programs/FF8EidosFre.zip", "FF8Patch1.02.zip", &env.ffnx_dir, &env);
+            moomba_core::provision::rename_file(&env.ffnx_dir.join("FF8.exe"), &ff8_path);
+        } else {
+            moomba_core::provision::copy_file(&PathBuf::from(&app_path).join("binkw32.dll"), &bink_dll_path);
+            // Clean
+            let eax_dll_path = env.ffnx_dir.join("eax.dll");
+            if eax_dll_path.exists() {
+                std::fs::remove_file(eax_dll_path);
+            }
+        }
     }
     let mut config = match FfnxConfig::from_file(&ffnx_config_path) {
         Ok(c) => c,
@@ -158,6 +182,7 @@ fn worker_loop(
     config.set_app_path(app_path.as_str());
     config.save(&ffnx_config_path);
 
+    set_task_text(handle.clone(), "");
     set_game_ready(handle.clone(), true);
 
     for received in rx {

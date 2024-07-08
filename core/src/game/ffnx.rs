@@ -16,8 +16,8 @@ impl Ffnx {
         provision::extract_zip(source_file, target_dir)
     }
 
-    pub fn is_installed(target_dir: &PathBuf) -> Option<String> {
-        match pe_format::pe_version_info(target_dir.join("eax.dll").as_path()) {
+    pub fn is_installed(target_dir: &PathBuf, steam: bool) -> Option<String> {
+        match pe_format::pe_version_info(target_dir.join(if steam { "AF3DN.P" } else { "eax.dll" }).as_path()) {
             Ok(version) => Some(format!("{}.{}.{}", version.dwProductVersion.Major, version.dwProductVersion.Minor, version.dwProductVersion.Patch)),
             Err(pe_format::Error::IoError(e)) if e.kind() == std::io::ErrorKind::NotFound => None,
             Err(e) => {

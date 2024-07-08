@@ -1,6 +1,6 @@
 use std::path::Path;
 slint::include_modules!();
-use log::{info, error};
+use log::error;
 
 pub mod worker;
 
