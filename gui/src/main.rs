@@ -15,8 +15,8 @@ fn main() -> Result<(), slint::PlatformError> {
 
     ui.global::<Installations>().on_setup({
         let tx = worker.tx.clone();
-        move |path| {
-            match tx.send(worker::Message::Setup(path)) {
+        move |path, replace_launcher| {
+            match tx.send(worker::Message::Setup(path, replace_launcher)) {
                 Err(e) => error!("Error: {}", e),
                 _ => ()
             }

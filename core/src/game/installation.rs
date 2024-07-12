@@ -19,6 +19,24 @@ pub struct Installation {
     pub language: String
 }
 
+#[derive(Debug)]
+pub enum LauncherInstallError {
+    LibLoadingError(libloading::Error),
+    IoError(std::io::Error)
+}
+
+impl From<libloading::Error> for LauncherInstallError {
+    fn from(e: libloading::Error) -> Self {
+        Self::LibLoadingError(e)
+    }
+}
+
+impl From<std::io::Error> for LauncherInstallError {
+    fn from(e: std::io::Error) -> Self {
+        Self::IoError(e)
+    }
+}
+
 impl Installation {
     pub fn new(app_path: String, exe_name: String, version: Version, language: String) -> Self {
         Self {
@@ -175,5 +193,16 @@ impl Installation {
 
     pub fn install_patch_local(source_file: &PathBuf, target_dir: &PathBuf) -> Result<(), zip::result::ZipError> {
         provision::extract_zip(source_file, target_dir)
+    }
+
+    pub fn replace_launcher(self: &Installation, env: &Env) -> Result<(), LauncherInstallError> {
+        match provision::copy_file(&env.moomba_dir.join("ff8_launcher.exe"), &PathBuf::new().join(&self.app_path).join("FF8_Launcher.exe")) {
+            Ok(o) => Ok(o),
+            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+                crate::windows::run_as(&String::from(env.moomba_dir.join("moomba_cli.exe").to_str().unwrap()), &self.app_path.clone())?;
+                Ok(())
+            },
+            Err(e) => Err(e)?
+        }
     }
 }

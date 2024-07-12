@@ -1,7 +1,7 @@
 [workspace]
-members = ["cli", "core", "gui"]
+members = ["cli", "core", "gui", "launcher"]
 resolver = "2"
-default-members = ["core", "gui"]
+default-members = ["cli", "core", "gui", "launcher"]
 
 [profile.release]
 strip = true

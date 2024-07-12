@@ -6,3 +6,5 @@ authors = ["myst6re <myst6re@gmail.com>"]
 
 [dependencies]
 moomba_core = { path = "../core" }
+log = "0.4"
+simplelog = "^0.12.2"

@@ -16,7 +16,7 @@ const DETACHED_PROCESS: u32 = 0x8;
 
 #[derive(Debug)]
 pub enum Message {
-    Setup(slint::SharedString),
+    Setup(slint::SharedString, bool),
     LaunchGame,
     ConfigureGame,
     Quit
@@ -99,9 +99,13 @@ fn worker_loop(
 
             set_current_page(handle.clone(), 1);
             match rx.recv() {
-                Ok(Message::Setup(exe_path)) => {
-                    info!("Setup with EXE path {}", exe_path);
-                    installation::Installation::from_exe_path(&PathBuf::from(exe_path.as_str()))
+                Ok(Message::Setup(exe_path, replace_launcher)) => {
+                    info!("Setup with EXE path {} (replace launcher: {})", exe_path, replace_launcher);
+                    let installation = installation::Installation::from_exe_path(&PathBuf::from(exe_path.as_str()));
+                    if replace_launcher {
+                        installation.replace_launcher(&env);
+                    };
+                    installation
                 },
                 Ok(Message::Quit) => return,
                 Ok(msg) => {
@@ -187,7 +191,7 @@ fn worker_loop(
 
     for received in rx {
         match received {
-            Message::Setup(_) => {
+            Message::Setup(_, _) => {
 
             },
             Message::LaunchGame => {
