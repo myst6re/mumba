@@ -199,7 +199,7 @@ impl Installation {
         match provision::copy_file(&env.moomba_dir.join("ff8_launcher.exe"), &PathBuf::new().join(&self.app_path).join("FF8_Launcher.exe")) {
             Ok(o) => Ok(o),
             Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
-                crate::windows::run_as(&String::from(env.moomba_dir.join("moomba_cli.exe").to_str().unwrap()), &self.app_path.clone())?;
+                crate::windows::run_as(&String::from(env.moomba_dir.join("moomba_cli.exe").to_str().unwrap()), &self.app_path)?;
                 Ok(())
             },
             Err(e) => Err(e)?

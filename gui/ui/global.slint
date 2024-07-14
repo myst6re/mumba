@@ -1,8 +1,12 @@
+import { Palette } from "std-widgets.slint";
+export enum TextLevel { info, warn, error }
+
 export global Installations {
     in property <string> game-path;
     in property <string> game-exe-path;
     in-out property <int> current-page : 0;
     in property <string> task-text;
+    in property <TextLevel> task-text-type : info;
     in property <bool> is-ready : false;
     pure callback setup(string, bool);
     pure callback launch-game();

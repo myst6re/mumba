@@ -3,12 +3,19 @@ use std::io::Read;
 use std::path::PathBuf;
 use zip_extensions::*;
 use crate::game::env::Env;
+use serde::de::DeserializeOwned;
 
 #[derive(Debug)]
 pub enum Error {
     HttpError(ureq::Error),
     IoError(std::io::Error),
     ZipError(zip::result::ZipError)
+}
+
+#[derive(Debug)]
+pub enum ToJsonError {
+    HttpError(ureq::Error),
+    IoError(std::io::Error)
 }
 
 impl From<ureq::Error> for Error {
@@ -27,6 +34,22 @@ impl From<zip::result::ZipError> for Error {
     fn from(e: zip::result::ZipError) -> Self {
         Self::ZipError(e)
     }
+}
+
+impl From<ureq::Error> for ToJsonError {
+    fn from(e: ureq::Error) -> Self {
+        Self::HttpError(e)
+    }
+}
+
+impl From<std::io::Error> for ToJsonError {
+    fn from(e: std::io::Error) -> Self {
+        Self::IoError(e)
+    }
+}
+
+pub fn get_json<T: DeserializeOwned>(url: &str) -> Result<T, ToJsonError> {
+    Ok(ureq::get(url).call()?.into_json()?)
 }
 
 pub fn download_zip(url: &str, local_zip_name: &str, target_dir: &PathBuf, env: &Env) -> Result<(), Error> {

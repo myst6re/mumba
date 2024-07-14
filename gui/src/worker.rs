@@ -11,6 +11,7 @@ use std::{
 use moomba_core::config::Config;
 use moomba_core::game::installation;
 use moomba_core::game::ffnx_config::FfnxConfig;
+use crate::TextLevel;
 
 const DETACHED_PROCESS: u32 = 0x8;
 
@@ -48,28 +49,30 @@ impl Worker {
     }
 }
 
-fn set_task_text(handle: slint::Weak<AppWindow>, text: &'static str) -> Result<(), slint::EventLoopError> {
+fn set_task_text(handle: slint::Weak<AppWindow>, text_level: TextLevel, text: &'static str) -> () {
     handle.upgrade_in_event_loop(move |h| {
-        h.global::<Installations>().set_task_text(slint::SharedString::from(text))
-    })
+        let installations = h.global::<Installations>();
+        installations.set_task_text(slint::SharedString::from(text));
+        installations.set_task_text_type(text_level)
+    }).unwrap_or_default()
 }
 
-fn set_game_ready(handle: slint::Weak<AppWindow>, ready: bool) -> Result<(), slint::EventLoopError> {
+fn set_game_ready(handle: slint::Weak<AppWindow>, ready: bool) -> () {
     handle.upgrade_in_event_loop(move |h| {
         h.global::<Installations>().set_is_ready(ready)
-    })
+    }).unwrap_or_default()
 }
 
-fn set_game_exe_path(handle: slint::Weak<AppWindow>, text: String) -> Result<(), slint::EventLoopError> {
+fn set_game_exe_path(handle: slint::Weak<AppWindow>, text: String) -> () {
     handle.upgrade_in_event_loop(move |h| {
         h.global::<Installations>().set_game_exe_path(slint::SharedString::from(text))
-    })
+    }).unwrap_or_default()
 }
 
-fn set_current_page(handle: slint::Weak<AppWindow>, page_id: i32) -> Result<(), slint::EventLoopError> {
+fn set_current_page(handle: slint::Weak<AppWindow>, page_id: i32) -> () {
     handle.upgrade_in_event_loop(move |h| {
         h.global::<Installations>().set_current_page(page_id)
-    })
+    }).unwrap_or_default()
 }
 
 fn worker_loop(
@@ -133,13 +136,10 @@ fn worker_loop(
             info!("Found FFNx version {}", version);
         },
         None => {
-            set_task_text(handle.clone(), "Installing game…");
+            set_task_text(handle.clone(), TextLevel::Info, "Installing FFNx…");
+            let url = moomba_core::game::ffnx::Ffnx::find_last_stable_version_on_github("julianxhokaxhiu/FFNx", installation.version.clone());
             match moomba_core::game::ffnx::Ffnx::from_url(
-                if matches!(installation.version, installation::Version::Steam) {
-                    "https://github.com/julianxhokaxhiu/FFNx/releases/download/1.18.1/FFNx-Steam-v1.18.1.0.zip"
-                } else {
-                    "https://github.com/julianxhokaxhiu/FFNx/releases/download/1.18.1/FFNx-FF8_2000-v1.18.1.0.zip"
-                },
+                url.as_str(),
                 &env.ffnx_dir,
                 &env
             ) {
@@ -186,7 +186,7 @@ fn worker_loop(
     config.set_app_path(app_path.as_str());
     config.save(&ffnx_config_path);
 
-    set_task_text(handle.clone(), "");
+    set_task_text(handle.clone(), TextLevel::Info, "");
     set_game_ready(handle.clone(), true);
 
     for received in rx {
@@ -216,6 +216,6 @@ fn worker_loop(
             },
             Message::Quit => break
         };
-        set_task_text(handle.clone(), "");
+        set_task_text(handle.clone(), TextLevel::Info, "");
     }
 }
