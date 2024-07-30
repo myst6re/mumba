@@ -8,3 +8,4 @@ pub mod moomba_log;
 pub mod provision;
 pub mod regedit;
 pub mod windows;
+pub mod pe_format;

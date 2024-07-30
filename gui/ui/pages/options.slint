@@ -1,28 +1,148 @@
-import { CheckBox, GroupBox, Button, Palette, StandardButton, HorizontalBox, GridBox, LineEdit, VerticalBox } from "std-widgets.slint";
+import { Switch, ScrollView, SpinBox, ComboBox, GroupBox, Button, Palette, StandardButton, HorizontalBox, GridBox, LineEdit, VerticalBox } from "std-widgets.slint";
 import { Installations } from "../global.slint";
+import { Message } from "../components/message.slint";
 
 export component OptionsPage inherits VerticalLayout {
-    Rectangle {
+    VerticalBox {
+        Text {
+            text: @tr("Game Options");
+            font-size: 20px;
+        }
+    }
+
+    ScrollView {
+        vertical-stretch: 1;
+
         VerticalBox {
             max-width: 664px;
 
-            Text {
-                text: @tr("Game Options");
-                font-size: 20px;
+            GroupBox {
+                title: @tr("Window configuration");
+                vertical-stretch: 0;
+
+                VerticalBox {
+
+                    HorizontalBox {
+                        alignment: start;
+
+                        fullscreen := Switch {
+                            text: @tr("Fullscreen");
+                        }
+                        borderless := Switch {
+                            text: @tr("Borderless");
+                        }
+                    }
+
+                    HorizontalBox {
+                        alignment: start;
+
+                        Text {
+                            text: @tr("Resolution");
+                            vertical-alignment: TextVerticalAlignment.center;
+                        }
+
+                        ComboBox {
+                            model: ["auto", "640x480", "800x600", "1024x768", "1280x960", "1600x1200", "2048x1536", "3200x2400"];
+                        }
+                    }
+
+                    HorizontalBox {
+                        alignment: start;
+
+                        Text {
+                            text: @tr("Internal resolution scale");
+                            vertical-alignment: TextVerticalAlignment.center;
+                        }
+
+                        ComboBox {
+                            model: ["auto", "x1", "x2", "x4", "x8"];
+                        }
+                    }
+
+                    HorizontalBox {
+                        alignment: start;
+
+                        Text {
+                            text: @tr("Screen refresh rate");
+                            vertical-alignment: TextVerticalAlignment.center;
+                        }
+
+                        SpinBox {
+                            vertical-stretch: 0;
+                            minimum: 0;
+                            maximum: 120;
+                        }
+                    }
+
+
+                    Rectangle {
+                        vertical-stretch: 1;
+                    }
+                }
             }
-            fullscreen := CheckBox {
-                text: @tr("Fullscreen");
+
+            GroupBox {
+                title: @tr("Graphics");
+                vertical-stretch: 0;
+
+                VerticalBox {
+                    HorizontalBox {
+                        alignment: start;
+
+                        Text {
+                            text: @tr("Rendering backend");
+                            vertical-alignment: TextVerticalAlignment.center;
+                        }
+
+                        renderer_backend := ComboBox {
+                            model: [@tr("Auto"), @tr("OpenGL"), @tr("Direct3D11"), @tr("Direct3D12"), @tr("Vulkan")];
+                        }
+                    }
+
+                    HorizontalBox {
+                        alignment: start;
+
+                        Text {
+                            text: @tr("Antialiasing");
+                            vertical-alignment: TextVerticalAlignment.center;
+                        }
+
+                        ComboBox {
+                            model: [@tr("Disabled"), "2x", "4x", "8x", "16x"];
+                        }
+                    }
+
+                    HorizontalBox {
+                        alignment: start;
+
+                        vsync := Switch {
+                            text: @tr("VSYNC");
+                        }
+
+                        anisotropic := Switch {
+                            text: @tr("Anisotropic");
+                        }
+                    }
+                }
+            }
+
+            GroupBox {
+                title: @tr("Inputs");
+                vertical-stretch: 0;
+
+                VerticalBox {
+                    gamepad_icons := Switch {
+                        text: @tr("Show PS1 gamepad icons");
+                    }
+                }
             }
         }
-    }
-    Rectangle {
-        vertical-stretch: 1;
     }
     Rectangle {
         background: Palette.background.darker(0.2);
 
         HorizontalBox {
-            alignment: end;
+            Message {}
 
             StandardButton {
                 kind: cancel;
@@ -30,6 +150,7 @@ export component OptionsPage inherits VerticalLayout {
             }
             StandardButton {
                 kind: ok;
+
                 clicked => {
                     Installations.configure-game();
                     Installations.current-page = 0;

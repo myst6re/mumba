@@ -10,7 +10,7 @@ export component AppWindow inherits Window {
     preferred-width: 640px;
     preferred-height: 480px;
     title: @tr("Moomba Configurator");
-    icon: @image-url("../data/moomba-icon.png");
+    icon: @image-url("../data/icon.png");
 
     if Installations.current-page == 0 : HomePage {}
     if Installations.current-page == 1 : SetupPage {}

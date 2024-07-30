@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 use crate::game::env::Env;
-use crate::game::pe_format;
+use crate::pe_format;
 use crate::provision;
-use crate::game::installation::Version;
+use crate::game::installation::Edition;
 
 pub struct Ffnx {
 
@@ -28,11 +28,11 @@ impl Ffnx {
         }
     }
 
-    pub fn find_last_stable_version_on_github(repo_name: &str, game_version: Version) -> String {
+    pub fn find_last_stable_version_on_github(repo_name: &str, edition: &Edition) -> String {
         let last_tag = crate::github::find_last_tag_version(repo_name).unwrap_or(String::from("1.19.1"));
 
         let url = "https://github.com/julianxhokaxhiu/FFNx/releases/download";
-        let filename_prefix = if matches!(game_version, Version::Steam) {
+        let filename_prefix = if matches!(edition, Edition::Steam) {
             "Steam"
         } else {
             "FF8_2000"

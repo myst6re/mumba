@@ -1,5 +1,6 @@
 import { Button, ComboBox, Palette, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { Installations, TextLevel } from "../global.slint";
+import { Message } from "../components/message.slint";
 
 export component HomePage inherits VerticalLayout {
     Rectangle {
@@ -7,6 +8,13 @@ export component HomePage inherits VerticalLayout {
 
         HorizontalBox {
             alignment: end;
+
+            Button {
+                text: @tr("Check for updates");
+                clicked => {
+                    Installations.upgrade-ffnx()
+                }
+            }
 
             Button {
                 text: @tr("Configure…");
@@ -24,26 +32,12 @@ export component HomePage inherits VerticalLayout {
         background: Palette.background.darker(0.2);
 
         HorizontalBox {
-            Rectangle {
-                horizontal-stretch: 1;
-                clip: true;
-                background: Installations.task-text-type == TextLevel.error ? @linear-gradient(90deg, #ED3333 0%, #ED3333 95%, Palette.background.darker(0.2) 100%) : Palette.background.darker(0.2);
-
-                HorizontalBox {
-                    Text {
-                        text: Installations.task-text;
-                        horizontal-alignment: left;
-                        font-weight: 700;
-                        font-size: 1.1rem;
-                        width: 100%;
-                        color: Installations.task-text-type == TextLevel.error ? Colors.white : Palette.foreground;
-                    }
-                }
-            }
+            Message {}
 
             Button {
                 text: @tr("Launch game");
                 enabled: Installations.is-ready;
+                primary: true;
                 clicked => {
                     Installations.launch-game();
                 }

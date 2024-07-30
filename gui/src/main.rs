@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 use std::path::Path;
 slint::include_modules!();
 use log::error;
@@ -54,6 +56,13 @@ fn main() -> Result<(), slint::PlatformError> {
         let tx = worker.tx.clone();
         move || {
             tx.send(worker::Message::ConfigureGame).unwrap()
+        }
+    });
+
+    ui.global::<Installations>().on_upgrade_ffnx({
+        let tx = worker.tx.clone();
+        move || {
+            tx.send(worker::Message::UpdateGame).unwrap()
         }
     });
 

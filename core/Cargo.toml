@@ -3,13 +3,14 @@ name = "moomba_core"
 version = "0.1.0"
 edition = "2021"
 authors = ["myst6re <myst6re@gmail.com>"]
+license = "GPL-3.0"
 
 [dependencies]
 log = "0.4"
 simplelog = "^0.12.2"
 toml_edit = "0.22.9"
 chrono = "0.4.37"
-ureq = {version = "2.9.6", features = ["brotli", "json"]}
+ureq = {version = "2.10.0", features = ["brotli", "json"]}
 serde = {version = "1", features = ["derive"]}
 zip = "0.6"
 zip-extensions = "0.6"

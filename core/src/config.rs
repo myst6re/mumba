@@ -27,6 +27,7 @@ impl From<toml_edit::TomlError> for FileError {
 
 pub enum Error {
     WrongTypeError,
+    DoesNotExist,
     OsStringError(core::convert::Infallible)
 }
 
@@ -75,7 +76,7 @@ impl Config {
             Some(toml_edit::Item::Value(toml_edit::Value::String(exe_path))) => exe_path.value(),
             _ => return Err(Error::WrongTypeError)
         });
-        Ok(Installation::from_exe_path(&exe_path))
+        Installation::from_exe_path(&exe_path).ok_or_else(|| Error::DoesNotExist)
     }
 
     fn set_installation_to_table(installation: &Installation) -> Option<toml_edit::Table> {
