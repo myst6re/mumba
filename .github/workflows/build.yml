@@ -1,0 +1,88 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  create: null
+
+jobs:
+  main_build:
+    name: Windows
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Wix3
+      run: |
+        curl -LJO https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip
+        7z x wix314-binaries.zip -o${{ github.workspace }}/wix
+
+    - run: rustup toolchain install stable --profile minimal
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        cache-on-failure: true
+        cache-all-crates: true
+
+    - name: Build exe
+      run: cargo build --release
+
+    - name: Install cargo-wix
+      run: cargo install cargo-wix
+
+    - name: Build installer
+      working-directory: ${{ github.workspace }}/gui
+      run: cargo wix --nocapture -p moomba --bin-path ${{ github.workspace }}/wix
+
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: artifact-windows
+        path: ${{ github.workspace }}/target/wix/*.msi
+
+  pre_release_assets:
+    name: Pre-Release
+    needs:
+     - main_build
+    if: (github.event.ref_type != 'tag') && (github.ref == 'refs/heads/master')
+    concurrency: pre-release-${{ github.ref }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download Files
+      uses: actions/download-artifact@v4
+
+    - name: Debug
+      run: ls -l
+
+    - name: Deploy Package
+      uses: crowbarmaster/GH-Automatic-Releases@latest
+      with:
+       repo_token: "${{ secrets.GITHUB_TOKEN }}"
+       automatic_release_tag: "continuous"
+       prerelease: true
+       title: "Unstable Build"
+       files: |
+         *.msi
+
+  release_assets:
+    name: Release
+    needs:
+     - main_build
+    if: github.event.ref_type == 'tag'
+    concurrency: release-${{ github.ref }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download Files
+      uses: actions/download-artifact@v4
+
+    - name: Deploy Package
+      uses: crowbarmaster/GH-Automatic-Releases@latest
+      with:
+       repo_token: "${{ secrets.GITHUB_TOKEN }}"
+       prerelease: false
+       title: ${{ github.event.ref }}
+       files: |
+         *.msi
