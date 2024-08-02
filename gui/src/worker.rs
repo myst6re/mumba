@@ -102,7 +102,7 @@ fn worker_loop(
     handle: slint::Weak<AppWindow>
 ) -> () {
     let env = moomba_core::game::env::Env::new().unwrap();
-    let moomba_config_path = env.moomba_dir.join("config.toml");
+    let moomba_config_path = env.config_dir.join("config.toml");
     let ffnx_config_path = env.ffnx_dir.join("FFNx.toml");
 
     let mut moomba_config = Config::from_file(&moomba_config_path).unwrap_or(Config::new());
@@ -186,25 +186,27 @@ fn worker_loop(
 
     let bink_dll_path = env.ffnx_dir.join("binkw32.dll");
     if ! bink_dll_path.exists() {
-        if matches!(installation.edition, installation::Edition::Standard) && ! matches!(installation.version, Some((installation::Version::V120, _))) {
-            info!("Patch game to 1.02...");
-            let file_name = match installation.language.as_str() {
-                "fre" | "fr" => Some("FF8EidosFre"),
-                "ger" | "de" => Some("FF8EidosGerV12"),
-                "eng" | "en" => Some("FF8SqeaPatch"),
-                "spa" | "es" => Some("ff8ngspa"),
-                "ita" | "it" => Some("ff8ngita"),
-                "jp" => Some("FF8EasqPatch"),
-                _ => None
-            };
-            match file_name {
-                Some(file_name) => {
-                    let url = format!("https://www.ff8.fr/download/programs/{}.zip", file_name);
-                    moomba_core::provision::download_zip(url.as_str(), "FF8Patch1.02.zip", &env.ffnx_dir, &env);
-                    moomba_core::provision::rename_file(&env.ffnx_dir.join("FF8.exe"), &ff8_path);
-                },
-                None => {
-                    error!("Cannot detect the language of your game!");
+        if matches!(installation.edition, installation::Edition::Standard) {
+            if ! matches!(installation.version, Some((installation::Version::V120, _))) {
+                info!("Patch game to 1.02...");
+                let file_name = match installation.language.as_str() {
+                    "fre" | "fr" => Some("FF8EidosFre"),
+                    "ger" | "de" => Some("FF8EidosGerV12"),
+                    "eng" | "en" => Some("FF8SqeaPatch"),
+                    "spa" | "es" => Some("ff8ngspa"),
+                    "ita" | "it" => Some("ff8ngita"),
+                    "jp" => Some("FF8EasqPatch"),
+                    _ => None
+                };
+                match file_name {
+                    Some(file_name) => {
+                        let url = format!("https://www.ff8.fr/download/programs/{}.zip", file_name);
+                        moomba_core::provision::download_zip(url.as_str(), "FF8Patch1.02.zip", &env.ffnx_dir, &env);
+                        moomba_core::provision::rename_file(&env.ffnx_dir.join("FF8.exe"), &ff8_path);
+                    },
+                    None => {
+                        error!("Cannot detect the language of your game!");
+                    }
                 }
             }
         } else {

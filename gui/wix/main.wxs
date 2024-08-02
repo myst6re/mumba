@@ -87,44 +87,56 @@
 
         <Directory Id='TARGETDIR' Name='SourceDir'>
             <Directory Id='$(var.PlatformProgramFilesFolder)' Name='PFiles'>
-                <Directory Id='APPLICATIONFOLDER' Name='moomba'>
-                    <!--
-                      Disabling the license sidecar file in the installer is a two step process:
+                <Directory Id='APPLICATIONFOLDER' Name='moomba'/>
+            </Directory>
 
-                      1. Comment out or remove the `Component` tag along with its contents.
-                      2. Comment out or remove the `ComponentRef` tag with the "License" Id
-                         attribute value further down in this file.
-                    -->
-                    <Component Id='License' Guid='*'>
-                        <File Id='LicenseFile'
-                            DiskId='1'
-                            Source='wix\License.rtf'
-                            KeyPath='yes'/>
-                    </Component>
-                    
-                    <Directory Id='Bin' Name='bin'>
-                        <Component Id='Path' Guid='B7AF420C-AE6F-4FB7-922D-19FE489D6AE3' KeyPath='yes'>
-                            <Environment
-                                Id='PATH'
-                                Name='PATH'
-                                Value='[Bin]'
-                                Permanent='no'
-                                Part='last'
-                                Action='set'
-                                System='yes'/>
-                        </Component>
-                        <Component Id='binary0' Guid='*'>
-                            <File
-                                Id='exe0'
-                                Name='moomba.exe'
-                                DiskId='1'
-                                Source='$(var.CargoTargetBinDir)\moomba.exe'
-                                KeyPath='yes'/>
-                        </Component>
-                    </Directory>
-                </Directory>
+            <Directory Id="ProgramMenuFolder">
+                <Directory Id="ApplicationProgramsFolder" Name="Moomba"/>
             </Directory>
         </Directory>
+
+        <DirectoryRef Id="APPLICATIONFOLDER">
+            <!--
+                Disabling the license sidecar file in the installer is a two step process:
+
+                1. Comment out or remove the `Component` tag along with its contents.
+                2. Comment out or remove the `ComponentRef` tag with the "License" Id
+                    attribute value further down in this file.
+            -->
+            <Component Id='License' Guid='*'>
+                <File Id='LicenseFile'
+                    DiskId='1'
+                    Source='wix\License.rtf'
+                    KeyPath='yes'/>
+            </Component>
+
+            <Component Id='binary0' Guid='*'>
+                <File
+                    Id='exe0'
+                    Name='moomba.exe'
+                    DiskId='1'
+                    Source='$(var.CargoTargetBinDir)\moomba.exe'
+                    KeyPath='yes'/>
+                <File
+                    Id='exe1'
+                    Name='moomba_cli.exe'
+                    DiskId='1'
+                    Source='$(var.CargoTargetBinDir)\moomba_cli.exe'
+                    KeyPath='no'/>
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="ApplicationProgramsFolder">
+            <Component Id="ApplicationShortcut" Guid="*">
+                <Shortcut Id="ApplicationStartMenuShortcut"
+                    Name="Moomba"
+                    Description="Modern and fast FFNx configurator"
+                    Target="[APPLICATIONFOLDER]moomba.exe"
+                    WorkingDirectory="APPLICATIONFOLDER"/>
+                <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall"/>
+                <RegistryValue Root="HKCU" Key="Software\Moomba\Moomba" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+            </Component>
+        </DirectoryRef>
 
         <Feature
             Id='Binaries'
@@ -140,22 +152,15 @@
               the license sidecar file from the installer.
             -->
             <ComponentRef Id='License'/>
-            
+
             <ComponentRef Id='binary0'/>
 
-            <Feature
-                Id='Environment'
-                Title='PATH Environment Variable'
-                Description='Add the install location of the [ProductName] executable to the PATH system environment variable. This allows the [ProductName] executable to be called from any location.'
-                Level='1'
-                Absent='allow'>
-                <ComponentRef Id='Path'/>
-            </Feature>
+            <ComponentRef Id="ApplicationShortcut" />
         </Feature>
 
         <SetProperty Id='ARPINSTALLLOCATION' Value='[APPLICATIONFOLDER]' After='CostFinalize'/>
 
-        
+
         <!--
           Uncomment the following `Icon` and `Property` tags to change the product icon.
 
@@ -165,7 +170,7 @@
         <!--<Icon Id='ProductICO' SourceFile='wix\Product.ico'/>-->
         <!--<Property Id='ARPPRODUCTICON' Value='ProductICO' />-->
 
-        
+
         <!--
           Adding a URL to Add/Remove Programs control panel listing for the
           application is a two step process:
@@ -188,7 +193,7 @@
             -->
             <!--<Publish Dialog='WelcomeDlg' Control='Next' Event='NewDialog' Value='CustomizeDlg' Order='99'>1</Publish>-->
             <!--<Publish Dialog='CustomizeDlg' Control='Back' Event='NewDialog' Value='WelcomeDlg' Order='99'>1</Publish>-->
-            
+
         </UI>
 
         <!--
@@ -196,8 +201,8 @@
           or removing the following `WixVariable` tag
         -->
         <WixVariable Id='WixUILicenseRtf' Value='wix\License.rtf'/>
-        
-        
+
+
         <!--
           Uncomment the next `WixVariable` tag to customize the installer's
           Graphical User Interface (GUI) and add a custom banner image across
@@ -208,7 +213,7 @@
         -->
         <!--<WixVariable Id='WixUIBannerBmp' Value='wix\Banner.bmp'/>-->
 
-        
+
         <!--
           Uncomment the next `WixVariable` tag to customize the installer's
           Graphical User Interface (GUI) and add a custom image to the first

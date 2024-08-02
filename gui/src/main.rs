@@ -9,7 +9,8 @@ pub mod worker;
 use worker::Worker;
 
 fn main() -> Result<(), slint::PlatformError> {
-    moomba_core::moomba_log::init();
+    let env = moomba_core::game::env::Env::new().unwrap();
+    moomba_core::moomba_log::init(&env);
 
     let ui = AppWindow::new()?;
 
