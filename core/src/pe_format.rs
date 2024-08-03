@@ -29,7 +29,27 @@ impl From<pelite::resources::FindError> for Error {
     }
 }
 
-pub fn pe_version_info(path: &Path) -> Result<pelite::image::VS_FIXEDFILEINFO, Error> {
+pub struct VersionInfo {
+    pub product_version: pelite::image::VS_VERSION,
+    pub product_name: Option<String>
+}
+
+struct QueryStringsMultiLang<F> {
+	f: F
+}
+
+impl<'a, F: FnMut(&str, &str)> pelite::resources::version_info::Visit<'a> for QueryStringsMultiLang<F> {
+	fn string_table(&mut self, _lang: &'a [u16]) -> bool {
+		true
+	}
+	fn string(&mut self, key: &'a [u16], value: &'a [u16]) {
+		let key = String::from_utf16_lossy(key);
+		let value = String::from_utf16_lossy(value);
+		(self.f)(&key, &value);
+	}
+}
+
+pub fn pe_version_info<P: AsRef<Path> + ?Sized>(path: &P) -> Result<VersionInfo, Error> {
     // Map the file into memory
     let file_map = pelite::FileMap::open(path)?;
 
@@ -41,8 +61,27 @@ pub fn pe_version_info(path: &Path) -> Result<pelite::image::VS_FIXEDFILEINFO, E
 
     // Extract the version info from the resources
     let version_info = resources.version_info()?;
+    let mut product_name = None;
 
-    Ok(version_info.fixed().ok_or(Error::NoVersion)?.clone())
+    info!("version info debug {}", version_info.source_code());
+
+    version_info.visit(&mut QueryStringsMultiLang {
+        f: |name: &str, str: &str| {
+            if name == "ProductName" && ! str.is_empty() {
+                product_name = Some(String::from(str))
+            }
+        }
+    });
+
+    let product_name = product_name;
+
+    match version_info.fixed() {
+        Some(info) => Ok(VersionInfo {
+            product_version: info.dwProductVersion,
+            product_name
+        }),
+        None => Err(Error::NoVersion)
+    }
 }
 
 pub fn pe_patch_4bg(path: &Path) -> Result<bool, Error> {

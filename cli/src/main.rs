@@ -1,30 +1,32 @@
 use moomba_core::game::env::Env;
-use std::path::PathBuf;
-use std::io::Error;
-use simplelog::{CombinedLogger, TermLogger, WriteLogger, LevelFilter, TerminalMode, ColorChoice};
-use std::fs::File;
-use log::info;
+use moomba_core::game::installation::{Installation, LauncherInstallError};
+use clap::{arg, Command};
 
-fn copy_launcher(target_dir: &String) -> Result<(), Error> {
-    let env = Env::new()?;
-    let launcher_name = "FF8_Launcher.exe";
-    let target_file = PathBuf::new().join(target_dir).join(&launcher_name);
-    let from = env.moomba_dir.join(&launcher_name);
-
-    info!("Copy {:?} to {:?}", &from, &target_file);
-
-    std::fs::copy(from, target_file).and(Ok(()))
+fn cli() -> Command {
+    Command::new("mmb")
+        .about("Modern and fast FFNx configurator")
+        .subcommand_required(true)
+        .arg_required_else_help(true)
+        .allow_external_subcommands(true)
+        .subcommand(
+            Command::new("replace_launcher")
+                .about("Replaces the launcher")
+                .arg(arg!(<APP_PATH> "The app path of the game"))
+                .arg_required_else_help(true),
+        )
 }
 
-fn main() -> Result<(), Error> {
-    CombinedLogger::init(
-        vec![
-            TermLogger::new(LevelFilter::Debug, simplelog::Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
-            WriteLogger::new(LevelFilter::Info, simplelog::Config::default(), File::create("moomba_patcher.log").unwrap()),
-        ]
-    ).unwrap();
+fn main() -> Result<(), LauncherInstallError> {
+    let env = Env::new()?;
+    moomba_core::moomba_log::init(&env, "mmb.log");
 
-    let target_dir = std::env::args().nth(1).expect("Please set target directory");
+    let matches = cli().get_matches();
 
-    copy_launcher(&target_dir)
+    match matches.subcommand() {
+        Some(("replace_launcher", sub_matches)) => {
+            let app_path = sub_matches.get_one::<String>("APP_PATH").expect("required");
+            Installation::replace_launcher_from_app_path(app_path, &env)
+        },
+        Some((_, _)) | None => unreachable!()
+    }
 }

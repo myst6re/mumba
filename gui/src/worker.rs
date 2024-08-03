@@ -18,7 +18,7 @@ const DETACHED_PROCESS: u32 = 0x8;
 
 #[derive(Debug)]
 pub enum Message {
-    Setup(slint::SharedString, bool),
+    Setup(slint::SharedString),
     LaunchGame,
     ConfigureGame,
     UpdateGame,
@@ -124,13 +124,11 @@ fn worker_loop(
 
             set_current_page(handle.clone(), 1);
             match rx.recv() {
-                Ok(Message::Setup(exe_path, replace_launcher)) => {
-                    info!("Setup with EXE path {} (replace launcher: {})", exe_path, replace_launcher);
+                Ok(Message::Setup(exe_path)) => {
+                    info!("Setup with EXE path {}", exe_path);
                     match installation::Installation::from_exe_path(&PathBuf::from(exe_path.as_str())) {
                         Some(installation) => {
-                            if replace_launcher {
-                                installation.replace_launcher(&env);
-                            };
+                            installation.replace_launcher(&env);
                             installation
                         },
                         None => return
@@ -190,12 +188,12 @@ fn worker_loop(
             if ! matches!(installation.version, Some((installation::Version::V120, _))) {
                 info!("Patch game to 1.02...");
                 let file_name = match installation.language.as_str() {
-                    "fre" | "fr" => Some("FF8EidosFre"),
-                    "ger" | "de" => Some("FF8EidosGerV12"),
-                    "eng" | "en" => Some("FF8SqeaPatch"),
-                    "spa" | "es" => Some("ff8ngspa"),
-                    "ita" | "it" => Some("ff8ngita"),
-                    "jp" => Some("FF8EasqPatch"),
+                    "fre" | "FR" => Some("FF8EidosFre"),
+                    "ger" | "DE" => Some("FF8EidosGerV12"),
+                    "eng" | "EN" => Some("FF8SqeaPatch"),
+                    "spa" | "ES" => Some("ff8ngspa"),
+                    "ita" | "IT" => Some("ff8ngita"),
+                    "jp" | "JP" => Some("FF8EasqPatch"),
                     _ => None
                 };
                 match file_name {
@@ -234,7 +232,7 @@ fn worker_loop(
 
     for received in rx {
         match received {
-            Message::Setup(_, _) => {
+            Message::Setup(_) => {
 
             },
             Message::UpdateGame => {

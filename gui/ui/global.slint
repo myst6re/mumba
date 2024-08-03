@@ -8,7 +8,7 @@ export global Installations {
     in property <string> task-text;
     in property <TextLevel> task-text-type : info;
     in property <bool> is-ready : false;
-    pure callback setup(string, bool);
+    pure callback setup(string);
     pure callback launch-game();
     pure callback browse-game(string) -> string;
     pure callback configure-game();

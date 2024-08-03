@@ -28,9 +28,6 @@ export component SetupPage inherits VerticalLayout {
                     }
                 }
             }
-            replace-launcher := CheckBox {
-                text: @tr("Replace launcher (Steam version)");
-            }
         }
     }
     Rectangle {
@@ -45,7 +42,7 @@ export component SetupPage inherits VerticalLayout {
             StandardButton {
                 kind: ok;
                 clicked => {
-                    Installations.setup(game-exe-path.text, replace-launcher.checked);
+                    Installations.setup(game-exe-path.text);
                     Installations.current-page = 0;
                 }
             }

@@ -1,5 +1,5 @@
 [package]
-name = "moomba_cli"
+name = "mmb"
 version = "0.1.0"
 edition = "2021"
 authors = ["myst6re <myst6re@gmail.com>"]
@@ -8,3 +8,4 @@ authors = ["myst6re <myst6re@gmail.com>"]
 moomba_core = { path = "../core" }
 log = "0.4"
 simplelog = "^0.12.2"
+clap = "4"

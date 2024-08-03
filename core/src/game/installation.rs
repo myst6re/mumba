@@ -3,6 +3,7 @@ use std::str::FromStr;
 use crate::game::env::Env;
 use crate::provision;
 use crate::regedit;
+use crate::pe_format;
 use std::fs::File;
 use std::io::{Seek, SeekFrom, Read};
 
@@ -279,13 +280,34 @@ impl Installation {
     }
 
     pub fn replace_launcher(self: &Installation, env: &Env) -> Result<(), LauncherInstallError> {
-        match provision::copy_file(&env.moomba_dir.join("ff8_launcher.exe"), &PathBuf::new().join(&self.app_path).join("FF8_Launcher.exe")) {
+        match Self::replace_launcher_from_app_path(&self.app_path, env) {
             Ok(o) => Ok(o),
-            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
-                crate::windows::run_as(&String::from(env.moomba_dir.join("moomba_cli.exe").to_str().unwrap()), &self.app_path)?;
+            Err(LauncherInstallError::IoError(e)) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+                crate::windows::run_as(
+                    &String::from(env.moomba_dir.join("mmb.exe").to_str().unwrap()),
+                    &format!("replace_launcher \"{}\"", self.app_path.replace("\"", ""))
+                )?;
                 Ok(())
             },
             Err(e) => Err(e)?
         }
+    }
+
+    pub fn replace_launcher_from_app_path(app_path: &String, env: &Env) -> Result<(), LauncherInstallError> {
+        let launcher_path = PathBuf::new().join(app_path).join("FF8_Launcher.exe");
+        let launcher_product_name = match pe_format::pe_version_info(&launcher_path) {
+            Ok(infos) => match infos.product_name {
+                Some(product_name) => product_name,
+                None => String::new()
+            },
+            Err(_) => String::new()
+        };
+        info!("Launcher product name: {} (path: {})", launcher_product_name, launcher_path.to_string_lossy());
+        let backup_path = PathBuf::new().join(app_path).join("FF8_Launcher_Original.exe");
+        if ! backup_path.exists() || launcher_product_name == "FINAL FANTASY VIII for PC" {
+            provision::copy_file(&launcher_path, &backup_path)?
+        }
+        provision::copy_file(&env.moomba_dir.join("ff8_launcher.exe"), &launcher_path)?;
+        Ok(())
     }
 }

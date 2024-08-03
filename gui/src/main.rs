@@ -1,4 +1,4 @@
-#![windows_subsystem = "windows"]
+#![cfg_attr(feature = "release", windows_subsystem = "windows")]
 
 use std::path::Path;
 slint::include_modules!();
@@ -10,7 +10,7 @@ use worker::Worker;
 
 fn main() -> Result<(), slint::PlatformError> {
     let env = moomba_core::game::env::Env::new().unwrap();
-    moomba_core::moomba_log::init(&env);
+    moomba_core::moomba_log::init(&env, "moomba.log");
 
     let ui = AppWindow::new()?;
 
@@ -18,8 +18,8 @@ fn main() -> Result<(), slint::PlatformError> {
 
     ui.global::<Installations>().on_setup({
         let tx = worker.tx.clone();
-        move |path, replace_launcher| {
-            match tx.send(worker::Message::Setup(path, replace_launcher)) {
+        move |path| {
+            match tx.send(worker::Message::Setup(path)) {
                 Err(e) => error!("Error: {}", e),
                 _ => ()
             }

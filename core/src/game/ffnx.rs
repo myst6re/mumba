@@ -19,7 +19,7 @@ impl Ffnx {
 
     pub fn is_installed(target_dir: &PathBuf, steam: bool) -> Option<String> {
         match pe_format::pe_version_info(target_dir.join(if steam { "AF3DN.P" } else { "eax.dll" }).as_path()) {
-            Ok(version) => Some(format!("{}.{}.{}", version.dwProductVersion.Major, version.dwProductVersion.Minor, version.dwProductVersion.Patch)),
+            Ok(infos) => Some(format!("{}.{}.{}", infos.product_version.Major, infos.product_version.Minor, infos.product_version.Patch)),
             Err(pe_format::Error::IoError(e)) if e.kind() == std::io::ErrorKind::NotFound => None,
             Err(e) => {
                 warn!("Cannot obtain eax.dll infos: {:?}", e);
