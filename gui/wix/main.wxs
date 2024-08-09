@@ -110,7 +110,7 @@
                     KeyPath='yes'/>
             </Component>
 
-            <Component Id='binary0' Guid='*'>
+            <Component Id='binary0' Guid='{1095AF31-8E19-4EB0-80BB-9A10BBB104BD}'>
                 <File
                     Id='exe0'
                     Name='moomba.exe'

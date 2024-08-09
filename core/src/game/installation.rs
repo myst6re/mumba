@@ -48,24 +48,6 @@ pub enum FromExeError {
     LauncherSelected
 }
 
-#[derive(Debug)]
-pub enum LauncherInstallError {
-    LibLoadingError(libloading::Error),
-    IoError(std::io::Error)
-}
-
-impl From<libloading::Error> for LauncherInstallError {
-    fn from(e: libloading::Error) -> Self {
-        Self::LibLoadingError(e)
-    }
-}
-
-impl From<std::io::Error> for LauncherInstallError {
-    fn from(e: std::io::Error) -> Self {
-        Self::IoError(e)
-    }
-}
-
 impl Installation {
     pub fn new(app_path: String, exe_name: String, edition: Edition, version: Option<(Version, Publisher)>, language: String) -> Self {
         Self {
@@ -298,10 +280,10 @@ impl Installation {
         provision::extract_zip(source_file, target_dir)
     }
 
-    pub fn replace_launcher(self: &Installation, env: &Env) -> Result<(), LauncherInstallError> {
+    pub fn replace_launcher(self: &Installation, env: &Env) -> std::io::Result<()> {
         match Self::replace_launcher_from_app_path(&self.app_path, env) {
             Ok(o) => Ok(o),
-            Err(LauncherInstallError::IoError(e)) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
                 crate::windows::run_as(
                     &String::from(env.moomba_dir.join("mmb.exe").to_str().unwrap()),
                     &format!("replace_launcher \"{}\"", self.app_path.replace("\"", ""))
@@ -312,7 +294,7 @@ impl Installation {
         }
     }
 
-    pub fn replace_launcher_from_app_path(app_path: &String, env: &Env) -> Result<(), LauncherInstallError> {
+    pub fn replace_launcher_from_app_path(app_path: &String, env: &Env) -> std::io::Result<()> {
         let app_path = PathBuf::from(app_path);
         Self::create_launcher_config_file(&app_path, env)?;
         let launcher_path = app_path.join("FF8_Launcher.exe");
@@ -332,7 +314,7 @@ impl Installation {
         Ok(())
     }
 
-    fn create_launcher_config_file(app_path: &PathBuf, env: &Env) -> Result<(), LauncherInstallError> {
+    fn create_launcher_config_file(app_path: &PathBuf, env: &Env) -> std::io::Result<()> {
         let config_path = app_path.join("moomba_path.txt");
         let mut file = File::create(config_path)?;
         let exe_path = env.ffnx_dir.join("FF8_Moomba_Steam.exe");

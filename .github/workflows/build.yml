@@ -25,7 +25,6 @@ jobs:
     - uses: Swatinem/rust-cache@v2
       with:
         cache-on-failure: true
-        cache-all-crates: true
 
     - name: Build exe
       run: cargo build --release
@@ -35,7 +34,7 @@ jobs:
 
     - name: Build installer
       working-directory: ${{ github.workspace }}/gui
-      run: cargo wix --nocapture -p moomba --bin-path ${{ github.workspace }}/wix
+      run: cargo wix --nocapture --no-build -p moomba --bin-path ${{ github.workspace }}/wix
 
     - name: Upload
       uses: actions/upload-artifact@v4

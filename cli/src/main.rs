@@ -1,5 +1,5 @@
 use moomba_core::game::env::Env;
-use moomba_core::game::installation::{Installation, LauncherInstallError};
+use moomba_core::game::installation::Installation;
 use clap::{arg, Command};
 
 fn cli() -> Command {
@@ -16,7 +16,7 @@ fn cli() -> Command {
         )
 }
 
-fn main() -> Result<(), LauncherInstallError> {
+fn main() -> std::io::Result<()> {
     let env = Env::new()?;
     moomba_core::moomba_log::init(&env, "mmb.log");
 

@@ -8,15 +8,13 @@ license = "GPL-3.0"
 [dependencies]
 log = "0.4"
 simplelog = "^0.12.2"
-toml_edit = "0.22.9"
-chrono = "0.4.37"
-ureq = {version = "2.10.0", features = ["brotli", "json"]}
+toml_edit = "0.22"
+ureq = {version = "2.10", features = ["brotli", "json"]}
 serde = {version = "1", features = ["derive"]}
-zip = "0.6"
-zip-extensions = "0.6"
+zip = "2.1"
+zip-extensions = "0.8"
 directories = "5.0"
 pelite = "=0.10.0"
-libloading = "0.8"
 regex = "1"
 version-compare = "0.2.0"
 
