@@ -119,9 +119,9 @@
                     KeyPath='yes'/>
                 <File
                     Id='exe1'
-                    Name='moomba_cli.exe'
+                    Name='mmb.exe'
                     DiskId='1'
-                    Source='$(var.CargoTargetBinDir)\moomba_cli.exe'
+                    Source='$(var.CargoTargetBinDir)\mmb.exe'
                     KeyPath='no'/>
             </Component>
         </DirectoryRef>

@@ -6,5 +6,5 @@ Modern and fast FFNx configurator
 # Build GUI
 cargo run --release
 # Build CLI
-cargo run --release --bin moomba_cli
+cargo run --release --bin mmb
 ```
