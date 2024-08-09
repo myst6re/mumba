@@ -1,17 +1,17 @@
-use std::path::PathBuf;
-use std::str::FromStr;
 use crate::game::env::Env;
+use crate::pe_format;
 use crate::provision;
 use crate::regedit;
-use crate::pe_format;
 use std::fs::File;
-use std::io::{Seek, SeekFrom, Read, Write};
+use std::io::{Read, Seek, SeekFrom, Write};
+use std::path::PathBuf;
+use std::str::FromStr;
 
 #[derive(Clone, Debug)]
 pub enum Edition {
     Standard,
     Steam,
-    Remastered
+    Remastered,
 }
 
 #[derive(Clone, Debug)]
@@ -19,7 +19,7 @@ pub enum Version {
     Unknown,
     V100,
     V120,
-    V120NV
+    V120NV,
 }
 
 #[derive(Clone, Debug)]
@@ -30,7 +30,7 @@ pub enum Publisher {
     EidosFr,
     EidosIt,
     EidosSp,
-    EidosUk
+    EidosUk,
 }
 
 #[derive(Clone)]
@@ -39,60 +39,81 @@ pub struct Installation {
     pub exe_name: String,
     pub edition: Edition,
     pub version: Option<(Version, Publisher)>,
-    pub language: String
+    pub language: String,
 }
 
 #[derive(Debug)]
 pub enum FromExeError {
     NotFound,
-    LauncherSelected
+    LauncherSelected,
 }
 
 impl Installation {
-    pub fn new(app_path: String, exe_name: String, edition: Edition, version: Option<(Version, Publisher)>, language: String) -> Self {
+    pub fn new(
+        app_path: String,
+        exe_name: String,
+        edition: Edition,
+        version: Option<(Version, Publisher)>,
+        language: String,
+    ) -> Self {
         Self {
             app_path,
             exe_name,
             edition,
             version,
-            language
+            language,
         }
     }
 
     pub fn from_exe_path(exe_path: &PathBuf) -> Result<Self, FromExeError> {
-        if ! exe_path.exists() {
-            return Err(FromExeError::NotFound)
+        if !exe_path.exists() {
+            return Err(FromExeError::NotFound);
         };
 
-        let app_path = String::from(exe_path.parent().map(|e| e.as_os_str()).and_then(|e| e.to_str()).unwrap_or_default());
+        let app_path = String::from(
+            exe_path
+                .parent()
+                .map(|e| e.as_os_str())
+                .and_then(|e| e.to_str())
+                .unwrap_or_default(),
+        );
         // Detect edition and language
         let (edition, language) = match Self::get_steam_edition_lang(&app_path) {
             Ok(lang) => (Edition::Steam, lang),
-            Err(_) => (Edition::Standard, Self::get_standard_edition_lang(&app_path).unwrap_or(String::from("eng")))
+            Err(_) => (
+                Edition::Standard,
+                Self::get_standard_edition_lang(&app_path).unwrap_or(String::from("eng")),
+            ),
         };
 
-        let mut exe_name = String::from(exe_path.file_name().and_then(|e| e.to_str()).unwrap_or_default());
+        let mut exe_name = String::from(
+            exe_path
+                .file_name()
+                .and_then(|e| e.to_str())
+                .unwrap_or_default(),
+        );
         let lower_exe_name = exe_name.to_ascii_lowercase();
 
         if lower_exe_name.contains("launcher") || lower_exe_name.contains("chocobo") {
-            if ! matches!(edition, Edition::Steam) {
-                return Err(FromExeError::LauncherSelected)
+            if !matches!(edition, Edition::Steam) {
+                return Err(FromExeError::LauncherSelected);
             }
             exe_name = format!("FF8_{}.exe", language);
-            if ! PathBuf::from(&app_path).join(&exe_name).exists() {
-                return Err(FromExeError::LauncherSelected)
+            if !PathBuf::from(&app_path).join(&exe_name).exists() {
+                return Err(FromExeError::LauncherSelected);
             }
         }
 
         // Detect version
-        let version = Self::get_version_from_exe(&PathBuf::new().join(&app_path).join(&exe_name)).unwrap_or(None);
+        let version = Self::get_version_from_exe(&PathBuf::new().join(&app_path).join(&exe_name))
+            .unwrap_or(None);
 
         Ok(Self {
             app_path,
             exe_name,
             edition,
             version,
-            language
+            language,
         })
     }
 
@@ -106,17 +127,22 @@ impl Installation {
                 exe_name.push_str(".exe");
                 (exe_name, Edition::Steam, lang)
             }
-            Err(_) => (String::from_str("FF8.exe").unwrap(), Edition::Standard, Self::get_standard_edition_lang(&app_path).unwrap_or(String::from("eng")))
+            Err(_) => (
+                String::from_str("FF8.exe").unwrap(),
+                Edition::Standard,
+                Self::get_standard_edition_lang(&app_path).unwrap_or(String::from("eng")),
+            ),
         };
         // Detect version
-        let version = Self::get_version_from_exe(&PathBuf::new().join(&app_path).join(&exe_name)).unwrap_or(None);
+        let version = Self::get_version_from_exe(&PathBuf::new().join(&app_path).join(&exe_name))
+            .unwrap_or(None);
 
         Self {
             app_path,
             exe_name,
             edition,
             version,
-            language
+            language,
         }
     }
 
@@ -128,45 +154,68 @@ impl Installation {
         let mut installations = Vec::new();
         match Self::search_original_version() {
             Some((app_path, exe_name, language)) => {
-                let version = Self::get_version_from_exe(&PathBuf::new().join(&app_path).join(&exe_name)).unwrap_or(None);
-                installations.push(Self::new(app_path, exe_name, Edition::Standard, version, language))
-            },
-            None => ()
-        }
-        ;
+                let version =
+                    Self::get_version_from_exe(&PathBuf::new().join(&app_path).join(&exe_name))
+                        .unwrap_or(None);
+                installations.push(Self::new(
+                    app_path,
+                    exe_name,
+                    Edition::Standard,
+                    version,
+                    language,
+                ))
+            }
+            None => (),
+        };
         match Self::search_steam_edition() {
             Some((app_path, exe_name, language)) => {
-                let version = Self::get_version_from_exe(&PathBuf::new().join(&app_path).join(&exe_name)).unwrap_or(None);
-                installations.push(Self::new(app_path, exe_name, Edition::Steam, version, language))
-            },
-            None => ()
-        }
-        ;
+                let version =
+                    Self::get_version_from_exe(&PathBuf::new().join(&app_path).join(&exe_name))
+                        .unwrap_or(None);
+                installations.push(Self::new(
+                    app_path,
+                    exe_name,
+                    Edition::Steam,
+                    version,
+                    language,
+                ))
+            }
+            None => (),
+        };
         match Self::search_remastered_edition() {
             Some((app_path, exe_name, language)) => {
-                let version = Self::get_version_from_exe(&PathBuf::new().join(&app_path).join(&exe_name)).unwrap_or(None);
-                installations.push(Self::new(app_path, exe_name, Edition::Remastered, version, language))
-            },
-            None => ()
-        }
-        ;
+                let version =
+                    Self::get_version_from_exe(&PathBuf::new().join(&app_path).join(&exe_name))
+                        .unwrap_or(None);
+                installations.push(Self::new(
+                    app_path,
+                    exe_name,
+                    Edition::Remastered,
+                    version,
+                    language,
+                ))
+            }
+            None => (),
+        };
         installations
     }
 
     pub fn get_standard_edition_lang(app_path: &String) -> std::io::Result<String> {
         let path_lang_dat = PathBuf::from(app_path);
         let contents = std::fs::read_to_string(path_lang_dat.join("Data").join("main.fl"))?;
-        Ok(String::from(match contents.match_indices("ff8\\data\\").next() {
-            Some((idx, _matched)) => {
-                let lang = &contents[idx + 9..idx + 12];
-                if lang.ends_with('\\') {
-                    &contents[idx + 9..idx + 11]
-                } else {
-                    lang
+        Ok(String::from(
+            match contents.match_indices("ff8\\data\\").next() {
+                Some((idx, _matched)) => {
+                    let lang = &contents[idx + 9..idx + 12];
+                    if lang.ends_with('\\') {
+                        &contents[idx + 9..idx + 11]
+                    } else {
+                        lang
+                    }
                 }
-            }
-            None => "eng"
-        }))
+                None => "eng",
+            },
+        ))
     }
 
     pub fn get_steam_edition_lang(app_path: &String) -> std::io::Result<String> {
@@ -175,7 +224,9 @@ impl Installation {
         Ok(contents.to_ascii_uppercase())
     }
 
-    pub fn get_version_from_exe(exe_path: &PathBuf) -> std::io::Result<Option<(Version, Publisher)>> {
+    pub fn get_version_from_exe(
+        exe_path: &PathBuf,
+    ) -> std::io::Result<Option<(Version, Publisher)>> {
         let mut f = File::options().read(true).write(false).open(exe_path)?;
         f.seek(SeekFrom::Start(0x1004))?;
         let mut bytes = [0u8; 4];
@@ -231,52 +282,61 @@ impl Installation {
                 regedit::RegTarget::Wow32,
                 loc,
                 r"SOFTWARE\\Square Soft, Inc\\Final Fantasy VIII\\1.00",
-                r"AppPath"
+                r"AppPath",
             ) {
                 Ok(app_path) => {
-                    let lang = Self::get_standard_edition_lang(&app_path).unwrap_or(String::from("eng"));
-                    return Some((app_path, String::from("FF8.exe"), lang))
-                },
-                Err(_) => continue
+                    let lang =
+                        Self::get_standard_edition_lang(&app_path).unwrap_or(String::from("eng"));
+                    return Some((app_path, String::from("FF8.exe"), lang));
+                }
+                Err(_) => continue,
             }
         }
-        ;
         None
     }
 
     fn search_steam_edition() -> Option<(String, String, String)> {
-        match regedit::reg_search_installed_app_by_key(r"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App 39150") {
-            Some(app_path) => {
-                match Self::get_steam_edition_lang(&app_path) {
-                    Ok(lang) => {
-                        let mut exe_name = String::new();
-                        exe_name.push_str("FF8_");
-                        exe_name.push_str(lang.as_str());
-                        exe_name.push_str(".exe");
-                        Some((app_path, exe_name, lang))
-                    },
-                    Err(e) => {
-                        warn!("Open FF8 lang.dat: {:?}", e);
-                        None
-                    }
+        match regedit::reg_search_installed_app_by_key(
+            r"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App 39150",
+        ) {
+            Some(app_path) => match Self::get_steam_edition_lang(&app_path) {
+                Ok(lang) => {
+                    let mut exe_name = String::new();
+                    exe_name.push_str("FF8_");
+                    exe_name.push_str(lang.as_str());
+                    exe_name.push_str(".exe");
+                    Some((app_path, exe_name, lang))
+                }
+                Err(e) => {
+                    warn!("Open FF8 lang.dat: {:?}", e);
+                    None
                 }
             },
-            None => None
+            None => None,
         }
     }
 
     fn search_remastered_edition() -> Option<(String, String, String)> {
-        match regedit::reg_search_installed_app_by_key(r"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App 1026680") {
+        match regedit::reg_search_installed_app_by_key(
+            r"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App 1026680",
+        ) {
             Some(app_path) => Some((app_path, String::from("FFVIII.exe"), String::from("en"))), // TODO: lang
-            None => None
+            None => None,
         }
     }
 
-    pub fn install_patch_remote(url: &str, target_dir: &PathBuf, env: &Env) -> Result<(), provision::Error> {
+    pub fn install_patch_remote(
+        url: &str,
+        target_dir: &PathBuf,
+        env: &Env,
+    ) -> Result<(), provision::Error> {
         provision::download_zip(url, "FF8-patch.zip", target_dir, env)
     }
 
-    pub fn install_patch_local(source_file: &PathBuf, target_dir: &PathBuf) -> Result<(), zip::result::ZipError> {
+    pub fn install_patch_local(
+        source_file: &PathBuf,
+        target_dir: &PathBuf,
+    ) -> Result<(), zip::result::ZipError> {
         provision::extract_zip(source_file, target_dir)
     }
 
@@ -286,11 +346,11 @@ impl Installation {
             Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
                 crate::windows::run_as(
                     &String::from(env.moomba_dir.join("mmb.exe").to_str().unwrap()),
-                    &format!("replace_launcher \"{}\"", self.app_path.replace("\"", ""))
+                    &format!("replace_launcher \"{}\"", self.app_path.replace("\"", "")),
                 )?;
                 Ok(())
-            },
-            Err(e) => Err(e)?
+            }
+            Err(e) => Err(e)?,
         }
     }
 
@@ -301,13 +361,17 @@ impl Installation {
         let launcher_product_name = match pe_format::pe_version_info(&launcher_path) {
             Ok(infos) => match infos.product_name {
                 Some(product_name) => product_name,
-                None => String::new()
+                None => String::new(),
             },
-            Err(_) => String::new()
+            Err(_) => String::new(),
         };
-        info!("Launcher product name: {} (path: {})", launcher_product_name, launcher_path.to_string_lossy());
+        info!(
+            "Launcher product name: {} (path: {})",
+            launcher_product_name,
+            launcher_path.to_string_lossy()
+        );
         let backup_path = app_path.join("FF8_Launcher_Original.exe");
-        if ! backup_path.exists() || launcher_product_name == "FINAL FANTASY VIII for PC" {
+        if !backup_path.exists() || launcher_product_name == "FINAL FANTASY VIII for PC" {
             provision::copy_file(&launcher_path, &backup_path)?
         }
         provision::copy_file(&env.moomba_dir.join("ff8_launcher.exe"), &launcher_path)?;

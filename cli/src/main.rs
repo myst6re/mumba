@@ -1,6 +1,6 @@
+use clap::{arg, Command};
 use moomba_core::game::env::Env;
 use moomba_core::game::installation::Installation;
-use clap::{arg, Command};
 
 fn cli() -> Command {
     Command::new("mmb")
@@ -26,7 +26,7 @@ fn main() -> std::io::Result<()> {
         Some(("replace_launcher", sub_matches)) => {
             let app_path = sub_matches.get_one::<String>("APP_PATH").expect("required");
             Installation::replace_launcher_from_app_path(app_path, &env)
-        },
-        Some((_, _)) | None => unreachable!()
+        }
+        Some((_, _)) | None => unreachable!(),
     }
 }

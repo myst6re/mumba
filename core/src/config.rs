@@ -1,17 +1,17 @@
-use toml_edit::DocumentMut;
+use crate::game::installation::Installation;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
-use crate::game::installation::Installation;
+use toml_edit::DocumentMut;
 
 pub struct Config {
-    inner: DocumentMut
+    inner: DocumentMut,
 }
 
 #[derive(Debug)]
 pub enum FileError {
     IoError(std::io::Error),
-    TomlError(toml_edit::TomlError)
+    TomlError(toml_edit::TomlError),
 }
 
 impl From<std::io::Error> for FileError {
@@ -29,7 +29,7 @@ impl From<toml_edit::TomlError> for FileError {
 pub enum Error {
     WrongTypeError,
     DoesNotExist,
-    OsStringError(core::convert::Infallible)
+    OsStringError(core::convert::Infallible),
 }
 
 impl From<core::convert::Infallible> for Error {
@@ -41,7 +41,7 @@ impl From<core::convert::Infallible> for Error {
 impl Config {
     pub fn new() -> Self {
         Self {
-            inner: DocumentMut::new()
+            inner: DocumentMut::new(),
         }
     }
 
@@ -50,7 +50,7 @@ impl Config {
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
         Ok(Self {
-            inner: contents.parse::<DocumentMut>()?
+            inner: contents.parse::<DocumentMut>()?,
         })
     }
 
@@ -69,13 +69,15 @@ impl Config {
     }
 
     pub fn set_installation(self: &mut Self, installation: &Installation) -> () {
-        self.inner["game"] = toml_edit::Item::Table(Self::set_installation_to_table(installation).unwrap_or_default())
+        self.inner["game"] = toml_edit::Item::Table(
+            Self::set_installation_to_table(installation).unwrap_or_default(),
+        )
     }
 
     fn installation_from_table(table: &toml_edit::Table) -> Result<Installation, Error> {
         let exe_path = PathBuf::from(match table.get("exe_path") {
             Some(toml_edit::Item::Value(toml_edit::Value::String(exe_path))) => exe_path.value(),
-            _ => return Err(Error::WrongTypeError)
+            _ => return Err(Error::WrongTypeError),
         });
         Installation::from_exe_path(&exe_path).or_else(|_| Err(Error::DoesNotExist))
     }

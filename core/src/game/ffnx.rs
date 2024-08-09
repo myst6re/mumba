@@ -1,25 +1,35 @@
-use std::path::PathBuf;
 use crate::game::env::Env;
+use crate::game::installation::Edition;
 use crate::pe_format;
 use crate::provision;
-use crate::game::installation::Edition;
+use std::path::PathBuf;
 
-pub struct Ffnx {
-
-}
+pub struct Ffnx {}
 
 impl Ffnx {
     pub fn from_url(url: &str, target_dir: &PathBuf, env: &Env) -> Result<(), provision::Error> {
         provision::download_zip(url, "FFNx.zip", target_dir, env)
     }
 
-    pub fn from_file(source_file: &PathBuf, target_dir: &PathBuf) -> Result<(), zip::result::ZipError> {
+    pub fn from_file(
+        source_file: &PathBuf,
+        target_dir: &PathBuf,
+    ) -> Result<(), zip::result::ZipError> {
         provision::extract_zip(source_file, target_dir)
     }
 
     pub fn is_installed(target_dir: &PathBuf, steam: bool) -> Option<String> {
-        match pe_format::pe_version_info(target_dir.join(if steam { "AF3DN.P" } else { "eax.dll" }).as_path()) {
-            Ok(infos) => Some(format!("{}.{}.{}", infos.product_version.Major, infos.product_version.Minor, infos.product_version.Patch)),
+        match pe_format::pe_version_info(
+            target_dir
+                .join(if steam { "AF3DN.P" } else { "eax.dll" })
+                .as_path(),
+        ) {
+            Ok(infos) => Some(format!(
+                "{}.{}.{}",
+                infos.product_version.Major,
+                infos.product_version.Minor,
+                infos.product_version.Patch
+            )),
             Err(pe_format::Error::IoError(e)) if e.kind() == std::io::ErrorKind::NotFound => None,
             Err(e) => {
                 warn!("Cannot obtain eax.dll infos: {:?}", e);
@@ -29,7 +39,8 @@ impl Ffnx {
     }
 
     pub fn find_last_stable_version_on_github(repo_name: &str, edition: &Edition) -> String {
-        let last_tag = crate::github::find_last_tag_version(repo_name).unwrap_or(String::from("1.19.1"));
+        let last_tag =
+            crate::github::find_last_tag_version(repo_name).unwrap_or(String::from("1.19.1"));
 
         let url = "https://github.com/julianxhokaxhiu/FFNx/releases/download";
         let filename_prefix = if matches!(edition, Edition::Steam) {
@@ -38,6 +49,9 @@ impl Ffnx {
             "FF8_2000"
         };
 
-        format!("{}/{}/FFNx-{}-v{}.0.zip", url, last_tag, filename_prefix, last_tag)
+        format!(
+            "{}/{}/FFNx-{}-v{}.0.zip",
+            url, last_tag, filename_prefix, last_tag
+        )
     }
 }

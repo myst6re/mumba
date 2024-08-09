@@ -1,14 +1,14 @@
-use std::path::Path;
 use pelite::pe32::Pe;
 use std::fs::File;
 use std::io::{Seek, SeekFrom, Write};
+use std::path::Path;
 
 #[derive(Debug)]
 pub enum Error {
     IoError(std::io::Error),
     PeliteError(pelite::Error),
     PeliteFindError(pelite::resources::FindError),
-    NoVersion
+    NoVersion,
 }
 
 impl From<std::io::Error> for Error {
@@ -32,22 +32,24 @@ impl From<pelite::resources::FindError> for Error {
 pub struct VersionInfo {
     pub product_version: pelite::image::VS_VERSION,
     pub product_name: Option<String>,
-    pub original_filename: Option<String>
+    pub original_filename: Option<String>,
 }
 
 struct QueryStringsMultiLang<F> {
-	f: F
+    f: F,
 }
 
-impl<'a, F: FnMut(&str, &str)> pelite::resources::version_info::Visit<'a> for QueryStringsMultiLang<F> {
-	fn string_table(&mut self, _lang: &'a [u16]) -> bool {
-		true
-	}
-	fn string(&mut self, key: &'a [u16], value: &'a [u16]) {
-		let key = String::from_utf16_lossy(key);
-		let value = String::from_utf16_lossy(value);
-		(self.f)(&key, &value);
-	}
+impl<'a, F: FnMut(&str, &str)> pelite::resources::version_info::Visit<'a>
+    for QueryStringsMultiLang<F>
+{
+    fn string_table(&mut self, _lang: &'a [u16]) -> bool {
+        true
+    }
+    fn string(&mut self, key: &'a [u16], value: &'a [u16]) {
+        let key = String::from_utf16_lossy(key);
+        let value = String::from_utf16_lossy(value);
+        (self.f)(&key, &value);
+    }
 }
 
 pub fn pe_version_info<P: AsRef<Path> + ?Sized>(path: &P) -> Result<VersionInfo, Error> {
@@ -67,21 +69,21 @@ pub fn pe_version_info<P: AsRef<Path> + ?Sized>(path: &P) -> Result<VersionInfo,
 
     version_info.visit(&mut QueryStringsMultiLang {
         f: |name: &str, str: &str| {
-            if name == "ProductName" && ! str.is_empty() && product_name.is_none() {
+            if name == "ProductName" && !str.is_empty() && product_name.is_none() {
                 product_name = Some(String::from(str))
-            } else if name == "OriginalFilename" && ! str.is_empty() && original_filename.is_none() {
+            } else if name == "OriginalFilename" && !str.is_empty() && original_filename.is_none() {
                 original_filename = Some(String::from(str))
             }
-        }
+        },
     });
 
     match version_info.fixed() {
         Some(info) => Ok(VersionInfo {
             product_version: info.dwProductVersion,
             product_name,
-            original_filename
+            original_filename,
         }),
-        None => Err(Error::NoVersion)
+        None => Err(Error::NoVersion),
     }
 }
 
@@ -93,13 +95,17 @@ pub fn pe_patch_4bg(path: &Path) -> Result<bool, Error> {
     let image = pelite::pe32::PeFile::from_bytes(file_map.as_ref())?;
 
     // Already patched
-    if (image.nt_headers().FileHeader.Characteristics & pelite::image::IMAGE_FILE_LARGE_ADDRESS_AWARE) != 0 {
-        return Ok(false)
+    if (image.nt_headers().FileHeader.Characteristics
+        & pelite::image::IMAGE_FILE_LARGE_ADDRESS_AWARE)
+        != 0
+    {
+        return Ok(false);
     }
 
     let characteristics_offset = image.dos_header().e_lfanew as u64 + 22;
     let checksum_offset = image.dos_header().e_lfanew as u64 + 88;
-    let characteristics = image.nt_headers().FileHeader.Characteristics | pelite::image::IMAGE_FILE_LARGE_ADDRESS_AWARE;
+    let characteristics = image.nt_headers().FileHeader.Characteristics
+        | pelite::image::IMAGE_FILE_LARGE_ADDRESS_AWARE;
 
     drop(file_map);
 
@@ -120,5 +126,5 @@ pub fn pe_patch_4bg(path: &Path) -> Result<bool, Error> {
     f.seek(SeekFrom::Start(checksum_offset))?;
     f.write(&checksum.to_le_bytes())?;
 
-    return Ok(true)
+    return Ok(true);
 }

@@ -1,6 +1,6 @@
 use crate::provision;
+use serde::de::{self, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer};
-use serde::de::{self, Visitor, SeqAccess};
 use version_compare::{compare, Cmp};
 
 use std::fmt;
@@ -10,7 +10,7 @@ use regex::Regex;
 
 #[derive(Deserialize)]
 struct GitHubTag {
-    name: String
+    name: String,
 }
 
 #[derive(Deserialize)]
@@ -26,8 +26,7 @@ where
 {
     struct MaxVisitor(PhantomData<fn() -> String>);
 
-    impl<'de> Visitor<'de> for MaxVisitor
-    {
+    impl<'de> Visitor<'de> for MaxVisitor {
         type Value = String;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -45,10 +44,12 @@ where
                 if version_regex.is_match(&value.name) {
                     max = match &max {
                         None => Some(value.name),
-                        Some(v) => if compare(v, &value.name) == Ok(Cmp::Lt) {
-                            Some(value.name)
-                        } else {
-                            max
+                        Some(v) => {
+                            if compare(v, &value.name) == Ok(Cmp::Lt) {
+                                Some(value.name)
+                            } else {
+                                max
+                            }
                         }
                     }
                 }
@@ -65,6 +66,8 @@ where
 }
 
 pub fn find_last_tag_version(repo_name: &str) -> Result<String, provision::ToJsonError> {
-    let tags = provision::get_json::<GitHubTags>(format!("https://api.github.com/repos/{}/tags", repo_name).as_str())?;
+    let tags = provision::get_json::<GitHubTags>(
+        format!("https://api.github.com/repos/{}/tags", repo_name).as_str(),
+    )?;
     Ok(tags.max_version)
 }

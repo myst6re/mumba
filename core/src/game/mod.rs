@@ -1,4 +1,4 @@
-pub mod installation;
+pub mod env;
 pub mod ffnx;
 pub mod ffnx_config;
-pub mod env;
+pub mod installation;

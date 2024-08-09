@@ -18,19 +18,15 @@ fn main() -> Result<(), slint::PlatformError> {
 
     ui.global::<Installations>().on_setup({
         let tx = worker.tx.clone();
-        move |path| {
-            match tx.send(worker::Message::Setup(path)) {
-                Err(e) => error!("Error: {}", e),
-                _ => ()
-            }
+        move |path| match tx.send(worker::Message::Setup(path)) {
+            Err(e) => error!("Error: {}", e),
+            _ => (),
         }
     });
 
     ui.global::<Installations>().on_launch_game({
         let tx = worker.tx.clone();
-        move || {
-            tx.send(worker::Message::LaunchGame).unwrap()
-        }
+        move || tx.send(worker::Message::LaunchGame).unwrap()
     });
 
     ui.global::<Installations>().on_browse_game({
@@ -41,30 +37,31 @@ fn main() -> Result<(), slint::PlatformError> {
             dialog = dialog.add_filter("EXE files", &["exe"]);
             dialog = dialog.set_parent(&ui.unwrap().window().window_handle());
 
-            if ! old_path.is_empty() {
+            if !old_path.is_empty() {
                 dialog = dialog.set_directory(old_path.as_str());
-                dialog = dialog.set_file_name(Path::new(&old_path.as_str()).file_name().unwrap_or_default().to_string_lossy());
+                dialog = dialog.set_file_name(
+                    Path::new(&old_path.as_str())
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy(),
+                );
             }
 
             match dialog.pick_file() {
                 Some(new_path) => String::from(new_path.to_string_lossy()).into(),
-                None => old_path
+                None => old_path,
             }
         }
     });
 
     ui.global::<Installations>().on_configure_game({
         let tx = worker.tx.clone();
-        move || {
-            tx.send(worker::Message::ConfigureGame).unwrap()
-        }
+        move || tx.send(worker::Message::ConfigureGame).unwrap()
     });
 
     ui.global::<Installations>().on_upgrade_ffnx({
         let tx = worker.tx.clone();
-        move || {
-            tx.send(worker::Message::UpdateGame).unwrap()
-        }
+        move || tx.send(worker::Message::UpdateGame).unwrap()
     });
 
     ui.run()?;

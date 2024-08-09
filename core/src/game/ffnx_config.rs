@@ -1,16 +1,16 @@
-use toml_edit::DocumentMut;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
+use toml_edit::DocumentMut;
 
 pub struct FfnxConfig {
-    inner: DocumentMut
+    inner: DocumentMut,
 }
 
 #[derive(Debug)]
 pub enum FileError {
     IoError(std::io::Error),
-    TomlError(toml_edit::TomlError)
+    TomlError(toml_edit::TomlError),
 }
 
 impl From<std::io::Error> for FileError {
@@ -28,7 +28,7 @@ impl From<toml_edit::TomlError> for FileError {
 #[derive(Debug)]
 pub enum Error {
     WrongTypeError,
-    NotAValueError
+    NotAValueError,
 }
 
 const CFG_APP_PATH: &str = "app_path";
@@ -36,7 +36,7 @@ const CFG_APP_PATH: &str = "app_path";
 impl FfnxConfig {
     pub fn new() -> Self {
         Self {
-            inner: DocumentMut::new()
+            inner: DocumentMut::new(),
         }
     }
 
@@ -45,7 +45,7 @@ impl FfnxConfig {
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
         Ok(Self {
-            inner: contents.parse::<DocumentMut>()?
+            inner: contents.parse::<DocumentMut>()?,
         })
     }
 
@@ -59,7 +59,7 @@ impl FfnxConfig {
         match self.inner.get(CFG_APP_PATH) {
             Some(toml_edit::Item::Value(v)) => match v.as_str() {
                 Some(s) => Ok(s),
-                None => Err(Error::WrongTypeError)
+                None => Err(Error::WrongTypeError),
             },
             Some(_) => Err(Error::NotAValueError),
             None => Ok(""),
