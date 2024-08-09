@@ -8,6 +8,7 @@ pub struct Config {
     inner: DocumentMut
 }
 
+#[derive(Debug)]
 pub enum FileError {
     IoError(std::io::Error),
     TomlError(toml_edit::TomlError)
@@ -76,7 +77,7 @@ impl Config {
             Some(toml_edit::Item::Value(toml_edit::Value::String(exe_path))) => exe_path.value(),
             _ => return Err(Error::WrongTypeError)
         });
-        Installation::from_exe_path(&exe_path).ok_or_else(|| Error::DoesNotExist)
+        Installation::from_exe_path(&exe_path).or_else(|_| Err(Error::DoesNotExist))
     }
 
     fn set_installation_to_table(installation: &Installation) -> Option<toml_edit::Table> {

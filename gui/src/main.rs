@@ -1,4 +1,4 @@
-#![cfg_attr(feature = "release", windows_subsystem = "windows")]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::path::Path;
 slint::include_modules!();

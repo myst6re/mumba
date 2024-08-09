@@ -1,4 +1,4 @@
-# Moomba
+# The Great Moomba
 
 Modern and fast FFNx configurator
 

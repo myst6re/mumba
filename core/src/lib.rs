@@ -5,7 +5,7 @@ pub mod config;
 pub mod game;
 pub mod github;
 pub mod moomba_log;
+pub mod pe_format;
 pub mod provision;
 pub mod regedit;
 pub mod windows;
-pub mod pe_format;

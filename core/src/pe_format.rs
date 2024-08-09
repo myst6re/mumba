@@ -31,7 +31,8 @@ impl From<pelite::resources::FindError> for Error {
 
 pub struct VersionInfo {
     pub product_version: pelite::image::VS_VERSION,
-    pub product_name: Option<String>
+    pub product_name: Option<String>,
+    pub original_filename: Option<String>
 }
 
 struct QueryStringsMultiLang<F> {
@@ -62,23 +63,23 @@ pub fn pe_version_info<P: AsRef<Path> + ?Sized>(path: &P) -> Result<VersionInfo,
     // Extract the version info from the resources
     let version_info = resources.version_info()?;
     let mut product_name = None;
-
-    info!("version info debug {}", version_info.source_code());
+    let mut original_filename = None;
 
     version_info.visit(&mut QueryStringsMultiLang {
         f: |name: &str, str: &str| {
-            if name == "ProductName" && ! str.is_empty() {
+            if name == "ProductName" && ! str.is_empty() && product_name.is_none() {
                 product_name = Some(String::from(str))
+            } else if name == "OriginalFilename" && ! str.is_empty() && original_filename.is_none() {
+                original_filename = Some(String::from(str))
             }
         }
     });
 
-    let product_name = product_name;
-
     match version_info.fixed() {
         Some(info) => Ok(VersionInfo {
             product_version: info.dwProductVersion,
-            product_name
+            product_name,
+            original_filename
         }),
         None => Err(Error::NoVersion)
     }

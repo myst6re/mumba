@@ -33,7 +33,7 @@ impl Env {
         let config_dir = Self::create_dir(&config_dir).and(Ok(config_dir)).or_else(|_|
             Self::create_dir(&config_fallback).and(Ok(config_fallback))
         )?;
-        let mut exe_path = std::env::current_exe()?;
+        let mut exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("./"));
         exe_path.pop(); // Remove exe filename
         let ffnx_dir = data_dir.join("game");
         Ok(Self {
@@ -46,7 +46,7 @@ impl Env {
     }
 
     fn create_dir<P: AsRef<std::path::Path>>(path: P) -> io::Result<()> {
-        match std::fs::create_dir(path) {
+        match std::fs::create_dir_all(path) {
             Ok(()) => Ok(()),
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => Ok(()),
             Err(e) => Err(e)

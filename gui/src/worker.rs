@@ -101,11 +101,18 @@ fn worker_loop(
     rx: Receiver<Message>,
     handle: slint::Weak<AppWindow>
 ) -> () {
-    let env = moomba_core::game::env::Env::new().unwrap();
+    let env = match moomba_core::game::env::Env::new() {
+        Ok(env) => env,
+        Err(e) => {
+            error!("Cannot initialize environment: {:?}", e);
+            set_task_text(handle.clone(), TextLevel::Error, "Cannot initialize environment");
+            return
+        }
+    };
     let moomba_config_path = env.config_dir.join("config.toml");
     let ffnx_config_path = env.ffnx_dir.join("FFNx.toml");
 
-    let mut moomba_config = Config::from_file(&moomba_config_path).unwrap_or(Config::new());
+    let mut moomba_config = Config::from_file(&moomba_config_path).unwrap_or_else(|_| Config::new());
 
     let installation = match moomba_config.installation() {
         Ok(Some(installation)) => installation,
@@ -114,7 +121,7 @@ fn worker_loop(
             for inst in installations {
                 match inst.edition {
                     installation::Edition::Standard | installation::Edition::Steam => {
-                        set_game_exe_path(handle.clone(), inst.exe_path().as_os_str().to_os_string().into_string().unwrap());
+                        set_game_exe_path(handle.clone(), inst.exe_path().to_string_lossy().to_string());
                     },
                     installation::Edition::Remastered => {
                         warn!("Ignore remaster at {}, as Moomba is not compatible yet", inst.app_path)
@@ -122,35 +129,61 @@ fn worker_loop(
                 }
             }
 
-            set_current_page(handle.clone(), 1);
-            match rx.recv() {
-                Ok(Message::Setup(exe_path)) => {
-                    info!("Setup with EXE path {}", exe_path);
-                    match installation::Installation::from_exe_path(&PathBuf::from(exe_path.as_str())) {
-                        Some(installation) => {
-                            installation.replace_launcher(&env);
-                            installation
-                        },
-                        None => return
+            let install;
+            loop {
+                set_current_page(handle.clone(), 1);
+                match rx.recv() {
+                    Ok(Message::Setup(exe_path)) => {
+                        info!("Setup with EXE path {}", exe_path);
+                        match installation::Installation::from_exe_path(&PathBuf::from(exe_path.as_str())) {
+                            Ok(installation) => {
+                                if matches!(installation.edition, installation::Edition::Steam) {
+                                    match installation.replace_launcher(&env) {
+                                        Ok(()) => (),
+                                        Err(e) => {
+                                            error!("Cannot replace the launcher: {:?}", e);
+                                            set_task_text(handle.clone(), TextLevel::Error, "Please choose a path where you have permission to write to");
+                                            continue
+                                        }
+                                    }
+                                }
+                                install = installation;
+                                break
+                            },
+                            Err(installation::FromExeError::NotFound) => {
+                                error!("This file does not exist: {}", exe_path);
+                                set_task_text(handle.clone(), TextLevel::Error, "File not found");
+                                continue
+                            },
+                            Err(installation::FromExeError::LauncherSelected) => {
+                                error!("Select the game exe, not the launcher: {}", exe_path);
+                                set_task_text(handle.clone(), TextLevel::Error, "File not found");
+                                continue
+                            }
+                        }
+                    },
+                    Ok(Message::Quit) => return,
+                    msg => {
+                        error!("Received unknown message: {:?}", msg);
+                        set_task_text(handle.clone(), TextLevel::Error, "Fatal error: Unknown message received. See logs for more details.");
+                        continue
                     }
-                },
-                Ok(Message::Quit) => return,
-                Ok(msg) => {
-                    error!("Received unknown message: {:?}", msg);
-                    return
-                }
-                Err(e) => {
-                    error!("Received error: {}", e);
-                    return
                 }
             }
+            install
         }
     };
 
     info!("Found Game at {:?}: {:?} {} {:?}", &installation.app_path, &installation.edition, &installation.language, &installation.version);
 
     moomba_config.set_installation(&installation);
-    moomba_config.save(&moomba_config_path);
+    match moomba_config.save(&moomba_config_path) {
+        Ok(()) => (),
+        Err(e) => {
+            error!("Received error: {:?}", e);
+            set_task_text(handle.clone(), TextLevel::Error, "Cannot save configuration to config.toml")
+        }
+    }
 
     let app_path = installation.app_path;
     let source_ff8_path = PathBuf::from(&app_path).join(installation.exe_name);
@@ -178,8 +211,15 @@ fn worker_loop(
 
     if ! ff8_path.exists() {
         info!("Copy {:?} to {:?}...", &source_ff8_path, &ff8_path);
-        moomba_core::provision::copy_file(&source_ff8_path, &ff8_path);
-        ()
+        match moomba_core::provision::copy_file(&source_ff8_path, &ff8_path) {
+            Ok(()) => (),
+            Err(e) => {
+                error!("Cannot copy FF8 exe: {:?}", e);
+                set_task_text(handle.clone(), TextLevel::Error, "Cannot copy FF8 exe. Please choose a path where you have permission to read from");
+                set_current_page(handle.clone(), 1);
+                return
+            }
+        }
     }
 
     let bink_dll_path = env.ffnx_dir.join("binkw32.dll");

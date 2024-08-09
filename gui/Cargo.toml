@@ -11,7 +11,7 @@ default-run = "moomba"
 [dependencies]
 log = "0.4"
 moomba_core = { path = "../core" }
-slint = { version = "1.6", features = ["default", "raw-window-handle-06"] }
+slint = { version = "1.7", features = ["default", "raw-window-handle-06"] }
 raw-window-handle = "0.6.0"
 rfd = "0.14.1"
 windows = {version = "0.56.0", features = ["Win32_UI_WindowsAndMessaging"]}

@@ -1,5 +1,6 @@
 import { CheckBox, GroupBox, Palette, Button, StandardButton, HorizontalBox, GridBox, LineEdit, VerticalBox } from "std-widgets.slint";
 import { Installations } from "../global.slint";
+import { Message } from "../components/message.slint";
 
 export component SetupPage inherits VerticalLayout {
     Rectangle {
@@ -37,7 +38,7 @@ export component SetupPage inherits VerticalLayout {
         background: Palette.background.darker(0.2);
 
         HorizontalBox {
-            alignment: end;
+            Message {}
 
             StandardButton {
                 kind: ok;
