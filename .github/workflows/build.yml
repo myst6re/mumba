@@ -45,21 +45,8 @@ jobs:
         name: artifact-windows
         path: ${{ github.workspace }}/target/wix/*.msi
 
-  pre_release_assets:
-    name: Pre-Release
-    needs:
-     - main_build
-    if: (github.event.ref_type != 'tag') && (github.ref == 'refs/heads/master')
-    concurrency: pre-release-${{ github.ref }}
-    runs-on: ubuntu-latest
-    steps:
-    - name: Download Files
-      uses: actions/download-artifact@v4
-
-    - name: Debug
-      run: ls -l artifact-windows
-
     - name: Deploy Package
+      if: (github.event.ref_type != 'tag') && (github.ref == 'refs/heads/master')
       uses: crowbarmaster/GH-Automatic-Releases@latest
       with:
        repo_token: "${{ secrets.GITHUB_TOKEN }}"
@@ -67,24 +54,14 @@ jobs:
        prerelease: true
        title: "Unstable Build"
        files: |
-         artifact-windows/*.msi
-
-  release_assets:
-    name: Release
-    needs:
-     - main_build
-    if: github.event.ref_type == 'tag'
-    concurrency: release-${{ github.ref }}
-    runs-on: ubuntu-latest
-    steps:
-    - name: Download Files
-      uses: actions/download-artifact@v4
+        target/wix/*.msi
 
     - name: Deploy Package
+      if: github.event.ref_type == 'tag'
       uses: crowbarmaster/GH-Automatic-Releases@latest
       with:
        repo_token: "${{ secrets.GITHUB_TOKEN }}"
        prerelease: false
        title: ${{ github.event.ref }}
        files: |
-         *.msi
+         target/wix/*.msi
