@@ -2,40 +2,27 @@ use crate::game::installation::Installation;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
+use thiserror::Error;
 use toml_edit::DocumentMut;
 
 pub struct Config {
     inner: DocumentMut,
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum FileError {
-    IoError(std::io::Error),
-    TomlError(toml_edit::TomlError),
+    #[error("Error with the config file: {0}")]
+    IoError(#[from] std::io::Error),
+    #[error("TOML format error: {0}")]
+    TomlError(#[from] toml_edit::TomlError),
 }
 
-impl From<std::io::Error> for FileError {
-    fn from(e: std::io::Error) -> Self {
-        Self::IoError(e)
-    }
-}
-
-impl From<toml_edit::TomlError> for FileError {
-    fn from(e: toml_edit::TomlError) -> Self {
-        Self::TomlError(e)
-    }
-}
-
+#[derive(Error, Debug)]
 pub enum Error {
-    WrongTypeError,
-    DoesNotExist,
-    OsStringError(core::convert::Infallible),
-}
-
-impl From<core::convert::Infallible> for Error {
-    fn from(e: core::convert::Infallible) -> Self {
-        Self::OsStringError(e)
-    }
+    #[error("The key {0} is not the type {1}")]
+    WrongTypeError(String, String),
+    #[error("The key {0} is absent")]
+    DoesNotExist(String),
 }
 
 impl Config {
@@ -63,7 +50,10 @@ impl Config {
     pub fn installation(self: &Self) -> Result<Option<Installation>, Error> {
         match self.inner.get("game") {
             Some(toml_edit::Item::Table(t)) => Ok(Some(Self::installation_from_table(t)?)),
-            Some(_) => Err(Error::WrongTypeError),
+            Some(_) => Err(Error::WrongTypeError(
+                String::from("game"),
+                String::from("table"),
+            )),
             None => Ok(None),
         }
     }
@@ -75,11 +65,18 @@ impl Config {
     }
 
     fn installation_from_table(table: &toml_edit::Table) -> Result<Installation, Error> {
-        let exe_path = PathBuf::from(match table.get("exe_path") {
+        let key = "exe_path";
+        let exe_path = PathBuf::from(match table.get(key) {
             Some(toml_edit::Item::Value(toml_edit::Value::String(exe_path))) => exe_path.value(),
-            _ => return Err(Error::WrongTypeError),
+            _ => {
+                return Err(Error::WrongTypeError(
+                    String::from(key),
+                    String::from("value"),
+                ))
+            }
         });
-        Installation::from_exe_path(&exe_path).or_else(|_| Err(Error::DoesNotExist))
+        Installation::from_exe_path(&exe_path)
+            .or_else(|_| Err(Error::DoesNotExist(String::from(key))))
     }
 
     fn set_installation_to_table(installation: &Installation) -> Option<toml_edit::Table> {

@@ -123,6 +123,19 @@
                     DiskId='1'
                     Source='$(var.CargoTargetBinDir)\mmb.exe'
                     KeyPath='no'/>
+                <File
+                    Id='exe2'
+                    Name='FF8_Launcher.exe'
+                    DiskId='1'
+                    Source='$(var.CargoTargetBinDir)\ff8_launcher.exe'
+                    KeyPath='no'/>
+                <File
+                    Id='ffnx'
+                    Name='FFNx.zip'
+                    DiskId='1'
+                    Source='$(var.CargoTargetBinDir)\FFNx.zip'
+                    KeyPath='no'
+                    Vital='no'/>
             </Component>
         </DirectoryRef>
 

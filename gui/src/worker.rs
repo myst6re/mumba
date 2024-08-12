@@ -5,15 +5,20 @@ use moomba_core::config::Config;
 use moomba_core::game::env::Env;
 use moomba_core::game::ffnx_config::FfnxConfig;
 use moomba_core::game::installation;
+use moomba_core::pe_format;
+use moomba_core::provision;
 use slint::ComponentHandle;
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::{
-    os::windows::process::CommandExt,
     path::PathBuf,
     process::{Command, Stdio},
 };
+use thiserror::Error;
 
+#[cfg(windows)]
 const DETACHED_PROCESS: u32 = 0x8;
 
 #[derive(Debug)]
@@ -23,6 +28,16 @@ pub enum Message {
     ConfigureGame,
     UpdateGame,
     Quit,
+}
+
+#[derive(Error, Debug)]
+pub enum InstallError {
+    #[error("Install error: {0}")]
+    ProvisionError(#[from] provision::Error),
+    #[error("Install error: {0}")]
+    IOError(#[from] std::io::Error),
+    #[error("4GB patch Error: {0}")]
+    PeFormatError(#[from] pe_format::Error),
 }
 
 pub struct Worker {
@@ -107,120 +122,42 @@ fn upgrade_ffnx(
     }
 }
 
-fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) -> () {
-    let env = match moomba_core::game::env::Env::new() {
-        Ok(env) => env,
-        Err(e) => {
-            error!("Cannot initialize environment: {:?}", e);
-            set_task_text(
-                handle.clone(),
-                TextLevel::Error,
-                "Cannot initialize environment",
-            );
-            return;
-        }
-    };
-    let moomba_config_path = env.config_dir.join("config.toml");
-    let ffnx_config_path = env.ffnx_dir.join("FFNx.toml");
-
-    let mut moomba_config =
-        Config::from_file(&moomba_config_path).unwrap_or_else(|_| Config::new());
-
-    let installation = match moomba_config.installation() {
-        Ok(Some(installation)) => installation,
-        Ok(None) | Err(_) => {
-            let installations = installation::Installation::search();
-            for inst in installations {
-                match inst.edition {
-                    installation::Edition::Standard | installation::Edition::Steam => {
-                        set_game_exe_path(
-                            handle.clone(),
-                            inst.exe_path().to_string_lossy().to_string(),
-                        );
-                    }
-                    installation::Edition::Remastered => {
-                        warn!(
-                            "Ignore remaster at {}, as Moomba is not compatible yet",
-                            inst.app_path
-                        )
-                    }
-                }
-            }
-
-            let install;
-            loop {
-                set_current_page(handle.clone(), 1);
-                match rx.recv() {
-                    Ok(Message::Setup(exe_path)) => {
-                        info!("Setup with EXE path {}", exe_path);
-                        match installation::Installation::from_exe_path(&PathBuf::from(
-                            exe_path.as_str(),
-                        )) {
-                            Ok(installation) => {
-                                if matches!(installation.edition, installation::Edition::Steam) {
-                                    match installation.replace_launcher(&env) {
-                                        Ok(()) => (),
-                                        Err(e) => {
-                                            error!("Cannot replace the launcher: {:?}", e);
-                                            set_task_text(handle.clone(), TextLevel::Error, "Please choose a path where you have permission to write to");
-                                            continue;
-                                        }
-                                    }
-                                }
-                                install = installation;
-                                break;
-                            }
-                            Err(installation::FromExeError::NotFound) => {
-                                error!("This file does not exist: {}", exe_path);
-                                set_task_text(handle.clone(), TextLevel::Error, "File not found");
-                                continue;
-                            }
-                            Err(installation::FromExeError::LauncherSelected) => {
-                                error!("Select the game exe, not the launcher: {}", exe_path);
-                                set_task_text(handle.clone(), TextLevel::Error, "File not found");
-                                continue;
-                            }
-                        }
-                    }
-                    Ok(Message::Quit) => return,
-                    msg => {
-                        error!("Received unknown message: {:?}", msg);
-                        set_task_text(
-                            handle.clone(),
-                            TextLevel::Error,
-                            "Fatal error: Unknown message received. See logs for more details.",
-                        );
-                        continue;
-                    }
-                }
-            }
-            install
-        }
-    };
-
-    info!(
-        "Found Game at {:?}: {:?} {} {:?}",
-        &installation.app_path,
-        &installation.edition,
-        &installation.language,
-        &installation.version
-    );
-
-    moomba_config.set_installation(&installation);
-    match moomba_config.save(&moomba_config_path) {
-        Ok(()) => (),
-        Err(e) => {
-            error!("Received error: {:?}", e);
-            set_task_text(
-                handle.clone(),
-                TextLevel::Error,
-                "Cannot save configuration to config.toml",
-            )
-        }
+#[cfg(windows)]
+fn launch_game(ff8_path: &PathBuf, ffnx_dir: &PathBuf) -> () {
+    let command = Command::new(&ff8_path)
+        .creation_flags(DETACHED_PROCESS)
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .current_dir(ffnx_dir)
+        .spawn();
+    match command {
+        Err(e) => error!("Unable to launch game: {:?}", e),
+        Ok(_) => (),
     }
+}
 
-    let app_path = installation.app_path;
-    let source_ff8_path = PathBuf::from(&app_path).join(installation.exe_name);
+#[cfg(unix)]
+fn launch_game(_ff8_path: &PathBuf, _ffnx_dir: &PathBuf) -> () {
+    let command = Command::new("steam")
+        .args(["-applaunch", "39150"])
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .spawn();
+    match command {
+        Err(e) => error!("Unable to launch game: {:?}", e),
+        Ok(_) => (),
+    }
+}
+
+fn install_game_and_ffnx(
+    handle: slint::Weak<AppWindow>,
+    installation: &installation::Installation,
+    ff8_path: &PathBuf,
+    env: &Env,
+) -> Result<Option<String>, InstallError> {
+    let source_ff8_path = PathBuf::from(&installation.app_path).join(&installation.exe_name);
     let mut ffnx_version = None;
 
     match moomba_core::game::ffnx::Ffnx::is_installed(
@@ -237,33 +174,17 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) -> () {
                 "julianxhokaxhiu/FFNx",
                 &installation.edition,
             );
-            match moomba_core::game::ffnx::Ffnx::from_url(url.as_str(), &env.ffnx_dir, &env) {
-                Ok(()) => (),
-                Err(e) => {
-                    error!("Error when installing FFNx: {:?}", e);
-                }
-            }
+            moomba_core::game::ffnx::Ffnx::from_url(url.as_str(), &env.ffnx_dir, &env)?
         }
     };
-    let ff8_path = env.ffnx_dir.join(
-        if matches!(installation.edition, installation::Edition::Steam) {
-            "FF8_Moomba_Steam.exe"
-        } else {
-            "FF8_Moomba.exe"
-        },
-    );
+
+    if matches!(installation.edition, installation::Edition::Steam) {
+        installation.replace_launcher(&env)?
+    };
 
     if !ff8_path.exists() {
-        info!("Copy {:?} to {:?}...", &source_ff8_path, &ff8_path);
-        match moomba_core::provision::copy_file(&source_ff8_path, &ff8_path) {
-            Ok(()) => (),
-            Err(e) => {
-                error!("Cannot copy FF8 exe: {:?}", e);
-                set_task_text(handle.clone(), TextLevel::Error, "Cannot copy FF8 exe. Please choose a path where you have permission to read from");
-                set_current_page(handle.clone(), 1);
-                return;
-            }
-        }
+        info!("Copy {:?} to {:?}...", &source_ff8_path, ff8_path);
+        moomba_core::provision::copy_file(&source_ff8_path, ff8_path)?
     }
 
     let bink_dll_path = env.ffnx_dir.join("binkw32.dll");
@@ -288,11 +209,11 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) -> () {
                             "FF8Patch1.02.zip",
                             &env.ffnx_dir,
                             &env,
-                        );
+                        )?;
                         moomba_core::provision::rename_file(
                             &env.ffnx_dir.join("FF8.exe"),
                             &ff8_path,
-                        );
+                        )?;
                     }
                     None => {
                         error!("Cannot detect the language of your game!");
@@ -301,29 +222,173 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) -> () {
             }
         } else {
             moomba_core::provision::copy_file(
-                &PathBuf::from(&app_path).join("binkw32.dll"),
+                &PathBuf::from(&installation.app_path).join("binkw32.dll"),
                 &bink_dll_path,
-            );
+            )?;
             // Clean
             let eax_dll_path = env.ffnx_dir.join("eax.dll");
             if eax_dll_path.exists() {
-                std::fs::remove_file(eax_dll_path);
+                std::fs::remove_file(eax_dll_path)?;
             }
         }
     }
-    moomba_core::pe_format::pe_patch_4bg(&ff8_path);
+    moomba_core::pe_format::pe_patch_4bg(&ff8_path)?;
+    Ok(ffnx_version)
+}
 
-    let mut config = match FfnxConfig::from_file(&ffnx_config_path) {
-        Ok(c) => c,
-        Err(_e) => FfnxConfig::new(),
+fn go_to_setup_page(
+    rx: &Receiver<Message>,
+    handle: slint::Weak<AppWindow>,
+) -> Option<installation::Installation> {
+    loop {
+        set_current_page(handle.clone(), 1);
+        match rx.recv() {
+            Ok(Message::Setup(exe_path)) => {
+                info!("Setup with EXE path {}", exe_path);
+                match installation::Installation::from_exe_path(&PathBuf::from(exe_path.as_str())) {
+                    Ok(installation) => return Some(installation),
+                    Err(installation::FromExeError::NotFound) => {
+                        error!("This file does not exist: {}", exe_path);
+                        set_task_text(handle.clone(), TextLevel::Error, "File not found");
+                        continue;
+                    }
+                    Err(installation::FromExeError::LauncherSelected) => {
+                        error!("Select the game exe, not the launcher: {}", exe_path);
+                        set_task_text(handle.clone(), TextLevel::Error, "File not found");
+                        continue;
+                    }
+                }
+            }
+            Ok(Message::Quit) => return None,
+            msg => {
+                error!("Received unknown message: {:?}", msg);
+                set_task_text(
+                    handle.clone(),
+                    TextLevel::Error,
+                    "Fatal error: Unknown message received. See logs for more details.",
+                );
+                continue;
+            }
+        }
+    }
+}
+
+fn worker_configure_loop(
+    rx: &Receiver<Message>,
+    handle: slint::Weak<AppWindow>,
+    moomba_config_path: &PathBuf,
+) -> Option<installation::Installation> {
+    loop {
+        let mut moomba_config =
+            Config::from_file(moomba_config_path).unwrap_or_else(|_| Config::new());
+        let installation = match moomba_config.installation() {
+            Ok(Some(installation)) => installation,
+            Ok(None) | Err(_) => {
+                let installations = installation::Installation::search();
+                for inst in installations {
+                    match inst.edition {
+                        installation::Edition::Standard | installation::Edition::Steam => {
+                            set_game_exe_path(
+                                handle.clone(),
+                                inst.exe_path().to_string_lossy().to_string(),
+                            );
+                        }
+                        installation::Edition::Remastered => {
+                            warn!(
+                                "Ignore remaster at {}, as Moomba is not compatible yet",
+                                inst.app_path
+                            )
+                        }
+                    }
+                }
+
+                match go_to_setup_page(rx, handle.clone()) {
+                    Some(installation) => installation,
+                    None => return None,
+                }
+            }
+        };
+        moomba_config.set_installation(&installation);
+        match moomba_config.save(moomba_config_path) {
+            Ok(()) => return Some(installation),
+            Err(e) => {
+                error!("Cannot save configuration to config.toml: {:?}", e);
+                set_task_text(
+                    handle.clone(),
+                    TextLevel::Error,
+                    "Cannot save configuration to config.toml",
+                );
+            }
+        }
+    }
+}
+
+fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) -> () {
+    let env = match moomba_core::game::env::Env::new() {
+        Ok(env) => env,
+        Err(e) => {
+            error!("Cannot initialize environment: {:?}", e);
+            set_task_text(
+                handle.clone(),
+                TextLevel::Error,
+                "Cannot initialize environment",
+            );
+            return;
+        }
     };
-    config.set_app_path(app_path.as_str());
-    config.save(&ffnx_config_path);
+    let moomba_config_path = env.config_dir.join("config.toml");
+    let ffnx_config_path = env.ffnx_dir.join("FFNx.toml");
+
+    let mut installation = match worker_configure_loop(&rx, handle.clone(), &moomba_config_path) {
+        Some(installation) => installation,
+        None => return, // Exit
+    };
+
+    info!(
+        "Found Game at {:?}: {:?} {} {:?}",
+        &installation.app_path,
+        &installation.edition,
+        &installation.language,
+        &installation.version
+    );
+
+    let ff8_path = env.ffnx_dir.join(
+        if matches!(installation.edition, installation::Edition::Steam) {
+            "FF8_Moomba_Steam.exe"
+        } else {
+            "FF8_Moomba.exe"
+        },
+    );
+    let ffnx_version;
+    loop {
+        match install_game_and_ffnx(handle.clone(), &installation, &ff8_path, &env) {
+            Ok(version) => {
+                ffnx_version = version;
+                break;
+            }
+            Err(e) => {
+                error!("Installation error: {}", e);
+                set_task_text(handle.clone(), TextLevel::Error, "Cannot install FFNx");
+
+                installation = match go_to_setup_page(&rx, handle.clone()) {
+                    Some(installation) => installation,
+                    None => return, // Exit
+                };
+            }
+        };
+    }
 
     set_task_text(handle.clone(), TextLevel::Info, "");
     set_game_ready(handle.clone(), true);
 
     upgrade_ffnx(handle.clone(), &ffnx_version, &installation.edition, &env);
+
+    let mut config = match FfnxConfig::from_file(&ffnx_config_path) {
+        Ok(c) => c,
+        Err(_e) => FfnxConfig::new(),
+    };
+    config.set_app_path(&installation.app_path.as_str());
+    config.save(&ffnx_config_path);
 
     for received in rx {
         match received {
@@ -333,20 +398,7 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) -> () {
             }
             Message::LaunchGame => {
                 info!("Launch {:?} in dir {:?}...", &ff8_path, &env.ffnx_dir);
-                let res = Command::new(&ff8_path)
-                    .creation_flags(DETACHED_PROCESS)
-                    .stdin(Stdio::inherit())
-                    .stdout(Stdio::inherit())
-                    .stderr(Stdio::inherit())
-                    .current_dir(&env.ffnx_dir)
-                    .spawn();
-
-                match res {
-                    Err(e) => {
-                        error!("Unable to launch game: {:?}", e)
-                    }
-                    Ok(_) => (),
-                };
+                launch_game(&ff8_path, &env.ffnx_dir)
             }
             Message::ConfigureGame => {
                 config.save(&ffnx_config_path);

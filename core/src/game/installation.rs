@@ -1,11 +1,14 @@
 use crate::game::env::Env;
+#[cfg(windows)]
+use crate::os::regedit;
+use crate::steam;
 use crate::pe_format;
 use crate::provision;
-use crate::regedit;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 use std::str::FromStr;
+use thiserror::Error;
 
 #[derive(Clone, Debug)]
 pub enum Edition {
@@ -42,9 +45,11 @@ pub struct Installation {
     pub language: String,
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum FromExeError {
+    #[error("EXE file not found")]
     NotFound,
+    #[error("The launcher was selected, please select the FF8 executable")]
     LauncherSelected,
 }
 
@@ -152,6 +157,7 @@ impl Installation {
 
     pub fn search() -> Vec<Self> {
         let mut installations = Vec::new();
+        #[cfg(windows)]
         match Self::search_original_version() {
             Some((app_path, exe_name, language)) => {
                 let version =
@@ -167,7 +173,14 @@ impl Installation {
             }
             None => (),
         };
-        match Self::search_steam_edition() {
+        let steam_library_folders = match steam::SteamLibraryFolders::from_config() {
+            Ok(lib_folders) => Some(lib_folders),
+            Err(e) => {
+                warn!("Cannot find Steam Client installation: {:?}", e);
+                None
+            }
+        };
+        match Self::search_steam_edition(&steam_library_folders) {
             Some((app_path, exe_name, language)) => {
                 let version =
                     Self::get_version_from_exe(&PathBuf::new().join(&app_path).join(&exe_name))
@@ -182,7 +195,7 @@ impl Installation {
             }
             None => (),
         };
-        match Self::search_remastered_edition() {
+        match Self::search_remastered_edition(&steam_library_folders) {
             Some((app_path, exe_name, language)) => {
                 let version =
                     Self::get_version_from_exe(&PathBuf::new().join(&app_path).join(&exe_name))
@@ -275,6 +288,7 @@ impl Installation {
         }
     }
 
+    #[cfg(windows)]
     fn search_original_version() -> Option<(String, String, String)> {
         let locations = [regedit::RegLocation::Machine, regedit::RegLocation::User];
         for loc in locations {
@@ -295,11 +309,28 @@ impl Installation {
         None
     }
 
-    fn search_steam_edition() -> Option<(String, String, String)> {
-        match regedit::reg_search_installed_app_by_key(
-            r"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App 39150",
-        ) {
-            Some(app_path) => match Self::get_steam_edition_lang(&app_path) {
+    #[cfg(windows)]
+    fn search_steam_edition(
+        steam_library_folders: &Option<steam::SteamLibraryFolders>,
+    ) -> Option<(String, String, String)> {
+        steam_library_folders
+            .as_ref()
+            .and_then(|lib_folders| lib_folders.find_app(39150))
+            .and_then(|path| {
+                Some(format!(
+                    r"{}\\steamapps\\common\\FINAL FANTASY VIII",
+                    path.to_string_lossy().to_string()
+                ))
+            })
+            .or_else(|| {
+                warn!(
+                    "Cannot find FINAL FANTASY VIII installation path, try with uninstall entries"
+                );
+                regedit::reg_search_installed_app_by_key(
+                    r"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App 39150",
+                )
+            })
+            .and_then(|app_path| match Self::get_steam_edition_lang(&app_path) {
                 Ok(lang) => {
                     let mut exe_name = String::new();
                     exe_name.push_str("FF8_");
@@ -311,18 +342,75 @@ impl Installation {
                     warn!("Open FF8 lang.dat: {:?}", e);
                     None
                 }
-            },
-            None => None,
-        }
+            })
     }
 
-    fn search_remastered_edition() -> Option<(String, String, String)> {
-        match regedit::reg_search_installed_app_by_key(
-            r"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App 1026680",
-        ) {
-            Some(app_path) => Some((app_path, String::from("FFVIII.exe"), String::from("en"))), // TODO: lang
-            None => None,
-        }
+    #[cfg(unix)]
+    fn search_steam_edition(
+        steam_library_folders: &Option<steam::SteamLibraryFolders>,
+    ) -> Option<(String, String, String)> {
+        steam_library_folders
+            .as_ref()
+            .and_then(|lib_folders| lib_folders.find_app(39150))
+            .and_then(|path| {
+                Some(format!(
+                    r"{}\\steamapps\\common\\FINAL FANTASY VIII",
+                    path.to_string_lossy().to_string()
+                ))
+            })
+            .and_then(|app_path| match Self::get_steam_edition_lang(&app_path) {
+                Ok(lang) => {
+                    let mut exe_name = String::new();
+                    exe_name.push_str("FF8_");
+                    exe_name.push_str(lang.as_str());
+                    exe_name.push_str(".exe");
+                    Some((app_path, exe_name, lang))
+                }
+                Err(e) => {
+                    warn!("Open FF8 lang.dat: {:?}", e);
+                    None
+                }
+            })
+    }
+
+    #[cfg(windows)]
+    fn search_remastered_edition(
+        steam_library_folders: &Option<steam::SteamLibraryFolders>,
+    ) -> Option<(String, String, String)> {
+        steam_library_folders
+            .as_ref()
+            .and_then(|lib_folders| lib_folders.find_app(1026680))
+            .and_then(|path| {
+                Some(format!(
+                    r"{}\\steamapps\\common\\FINAL FANTASY VIII Remastered",
+                    path.to_string_lossy().to_string()
+                ))
+            })
+            .or_else(|| {
+                warn!("Cannot find FINAL FANTASY VIII Remastered installation path, try with uninstall entries");
+                regedit::reg_search_installed_app_by_key(
+                    r"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App 1026680",
+                )
+            })
+            .and_then(|app_path| Some((app_path, String::from("FFVIII.exe"), String::from("en"))))
+        // TODO: lang
+    }
+
+    #[cfg(unix)]
+    fn search_remastered_edition(
+        steam_library_folders: &Option<steam::SteamLibraryFolders>,
+    ) -> Option<(String, String, String)> {
+        steam_library_folders
+            .as_ref()
+            .and_then(|lib_folders| lib_folders.find_app(1026680))
+            .and_then(|path| {
+                Some(format!(
+                    r"{}\\steamapps\\common\\FINAL FANTASY VIII Remastered",
+                    path.to_string_lossy().to_string()
+                ))
+            })
+            .and_then(|app_path| Some((app_path, String::from("FFVIII.exe"), String::from("en"))))
+        // TODO: lang
     }
 
     pub fn install_patch_remote(
@@ -344,11 +432,16 @@ impl Installation {
         match Self::replace_launcher_from_app_path(&self.app_path, env) {
             Ok(o) => Ok(o),
             Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
-                crate::windows::run_as(
-                    &String::from(env.moomba_dir.join("mmb.exe").to_str().unwrap()),
-                    &format!("replace_launcher \"{}\"", self.app_path.replace("\"", "")),
-                )?;
-                Ok(())
+                if cfg!(windows) {
+                    #[cfg(windows)]
+                    crate::os::windows::run_as(
+                        &String::from(env.moomba_dir.join("mmb.exe").to_str().unwrap()),
+                        &format!("replace_launcher \"{}\"", self.app_path.replace("\"", "")),
+                    )?;
+                    Ok(())
+                } else {
+                    Err(e)
+                }
             }
             Err(e) => Err(e)?,
         }

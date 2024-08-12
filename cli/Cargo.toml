@@ -9,5 +9,5 @@ moomba_core = { path = "../core" }
 log = "0.4"
 clap = "4"
 
-[target.'cfg(windows)'.build-dependencies]
+[build-dependencies]
 winresource = "0.1"
