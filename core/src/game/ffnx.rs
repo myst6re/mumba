@@ -1,16 +1,22 @@
+#[cfg(all(feature = "network", feature = "zip"))]
 use crate::game::env::Env;
+#[cfg(feature = "network")]
 use crate::game::installation::Edition;
+#[cfg(feature = "pe")]
 use crate::pe_format;
+#[cfg(any(feature = "network", feature = "zip"))]
 use crate::provision;
 use std::path::PathBuf;
 
 pub struct Ffnx {}
 
 impl Ffnx {
+    #[cfg(all(feature = "network", feature = "zip"))]
     pub fn from_url(url: &str, target_dir: &PathBuf, env: &Env) -> Result<(), provision::Error> {
         provision::download_zip(url, "FFNx.zip", target_dir, env)
     }
 
+    #[cfg(feature = "zip")]
     pub fn from_file(
         source_file: &PathBuf,
         target_dir: &PathBuf,
@@ -18,6 +24,7 @@ impl Ffnx {
         provision::extract_zip(source_file, target_dir)
     }
 
+    #[cfg(feature = "pe")]
     pub fn is_installed(target_dir: &PathBuf, steam: bool) -> Option<String> {
         match pe_format::pe_version_info(
             target_dir
@@ -38,6 +45,7 @@ impl Ffnx {
         }
     }
 
+    #[cfg(feature = "network")]
     pub fn find_last_stable_version_on_github(repo_name: &str, edition: &Edition) -> String {
         let last_tag =
             crate::github::find_last_tag_version(repo_name).unwrap_or(String::from("1.19.1"));

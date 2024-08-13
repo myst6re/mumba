@@ -1,11 +1,14 @@
 use crate::game::env::Env;
 #[cfg(windows)]
 use crate::os::regedit;
+#[cfg(feature = "pe")]
 use crate::pe_format;
 use crate::provision;
 use crate::steam;
 use std::fs::File;
-use std::io::{Read, Seek, SeekFrom, Write};
+#[cfg(feature = "pe")]
+use std::io::Write;
+use std::io::{Read, Seek, SeekFrom};
 use std::path::PathBuf;
 use std::str::FromStr;
 use thiserror::Error;
@@ -421,6 +424,7 @@ impl Installation {
         // TODO: lang
     }
 
+    #[cfg(all(feature = "network", feature = "zip"))]
     pub fn install_patch_remote(
         url: &str,
         target_dir: &PathBuf,
@@ -429,6 +433,7 @@ impl Installation {
         provision::download_zip(url, "FF8-patch.zip", target_dir, env)
     }
 
+    #[cfg(feature = "zip")]
     pub fn install_patch_local(
         source_file: &PathBuf,
         target_dir: &PathBuf,
@@ -436,6 +441,7 @@ impl Installation {
         provision::extract_zip(source_file, target_dir)
     }
 
+    #[cfg(feature = "pe")]
     pub fn replace_launcher(
         self: &Installation,
         ff8_path: &PathBuf,
@@ -459,6 +465,7 @@ impl Installation {
         }
     }
 
+    #[cfg(feature = "pe")]
     pub fn replace_launcher_from_app_path(
         app_path: &String,
         ff8_path: &PathBuf,
@@ -487,6 +494,7 @@ impl Installation {
         Ok(())
     }
 
+    #[cfg(feature = "pe")]
     fn create_launcher_config_file(app_path: &PathBuf, ff8_path: &PathBuf) -> std::io::Result<()> {
         let config_path = app_path.join("moomba_path.txt");
         let mut file = File::create(config_path)?;

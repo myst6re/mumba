@@ -5,21 +5,28 @@ edition = "2021"
 authors = ["myst6re <myst6re@gmail.com>"]
 license = "GPL-3.0"
 
+[features]
+network = ["dep:ureq", "dep:regex-lite", "dep:version-compare", "dep:serde"]
+steam = ["dep:keyvalues-serde", "dep:keyvalues-parser", "dep:serde"]
+zip = ["dep:zip", "dep:zip-extensions"]
+config = ["dep:toml_edit"]
+pe = ["dep:pelite"]
+
 [dependencies]
 log = "0.4"
-simplelog = { version = "^0.12.2", default-features = false }
-toml_edit = "0.22"
-ureq = {version = "2.10", features = ["brotli", "json"]}
-serde = {version = "1", features = ["derive"]}
-zip = {version = "2.1", default-features = false, features = ["bzip2", "deflate64", "deflate", "lzma", "zstd", "xz"]}
-zip-extensions = {version = "0.8", default-features = false, features = ["bzip2", "deflate64", "deflate", "lzma", "zstd", "xz"]}
+simplelog = {version = "^0.12.2", default-features = false}
 directories = "5.0"
-pelite = {version = "=0.10.0", default-features = false, features = ["mmap"]}
-regex-lite = "^0.1.6"
-version-compare = "0.2.0"
 thiserror = "1"
-keyvalues-serde = "^0.2.0"
-keyvalues-parser = "0.2"
+toml_edit = {version = "0.22", optional = true}
+ureq = {version = "2.10", features = ["brotli", "json"], optional = true}
+serde = {version = "1", features = ["derive"], optional = true}
+zip = {version = "2.1", default-features = false, features = ["bzip2", "deflate64", "deflate", "lzma", "zstd", "xz"], optional = true}
+zip-extensions = {version = "0.8", default-features = false, features = ["bzip2", "deflate64", "deflate", "lzma", "zstd", "xz"], optional = true}
+pelite = {version = "=0.10.0", default-features = false, features = ["mmap"], optional = true}
+regex-lite = {version = "^0.1.6", optional = true}
+version-compare = {version = "0.2.0", optional = true}
+keyvalues-serde = {version = "^0.2.0", optional = true}
+keyvalues-parser = {version = "0.2", optional = true}
 
 [target.'cfg(windows)'.dependencies]
 registry = "1.2"

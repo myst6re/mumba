@@ -1,22 +1,30 @@
+#[cfg(feature = "network")]
 use crate::game::env::Env;
 use log::info;
+#[cfg(feature = "network")]
 use serde::de::DeserializeOwned;
+#[cfg(feature = "network")]
 use std::fs::File;
+#[cfg(feature = "network")]
 use std::io::Read;
 use std::path::PathBuf;
 use thiserror::Error;
+#[cfg(feature = "zip")]
 use zip_extensions::*;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[cfg(feature = "network")]
     #[error("HTTP Error: {0}")]
     HttpError(#[from] ureq::Error),
     #[error("I/O Error: {0}")]
     IoError(#[from] std::io::Error),
+    #[cfg(feature = "zip")]
     #[error("Zip Error: {0}")]
     ZipError(#[from] zip::result::ZipError),
 }
 
+#[cfg(feature = "network")]
 #[derive(Error, Debug)]
 pub enum ToJsonError {
     #[error("HTTP Error downloading JSON format: {0}")]
@@ -25,10 +33,12 @@ pub enum ToJsonError {
     IoError(#[from] std::io::Error),
 }
 
+#[cfg(feature = "network")]
 pub fn get_json<T: DeserializeOwned>(url: &str) -> Result<T, ToJsonError> {
     Ok(ureq::get(url).call()?.into_json()?)
 }
 
+#[cfg(all(feature = "network", feature = "zip"))]
 pub fn download_zip(
     url: &str,
     local_zip_name: &str,
@@ -50,6 +60,7 @@ pub fn download_zip(
     ret
 }
 
+#[cfg(feature = "zip")]
 pub fn extract_zip(
     source_file: &PathBuf,
     target_dir: &PathBuf,
@@ -68,6 +79,7 @@ pub fn rename_file(source_file: &PathBuf, target_file: &PathBuf) -> Result<(), s
     std::fs::rename(source_file, target_file).and(Ok(()))
 }
 
+#[cfg(all(feature = "network", feature = "zip"))]
 fn from_reader<R: ?Sized>(
     reader: &mut R,
     archive_path: &PathBuf,

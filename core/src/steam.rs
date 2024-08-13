@@ -1,15 +1,22 @@
 #[cfg(windows)]
 use crate::os::regedit::*;
+#[cfg(feature = "steam")]
 use keyvalues_parser::Vdf;
+#[cfg(feature = "steam")]
 use keyvalues_serde::from_vdf;
+#[cfg(feature = "steam")]
 use serde::Deserialize;
-use std::{borrow::Cow, collections::HashMap, fs, path::PathBuf};
+use std::path::PathBuf;
+#[cfg(feature = "steam")]
+use std::{borrow::Cow, collections::HashMap, fs};
 
+#[cfg(feature = "steam")]
 #[derive(Deserialize)]
 struct SteamLibraryFolders {
     libraries: Vec<Library>,
 }
 
+#[cfg(feature = "steam")]
 #[derive(Deserialize)]
 struct Library {
     path: PathBuf,
@@ -17,6 +24,7 @@ struct Library {
 }
 
 pub struct Steam {
+    #[cfg(feature = "steam")]
     library_folders: Option<SteamLibraryFolders>,
     pub path: PathBuf,
 }
@@ -26,11 +34,13 @@ impl Steam {
         let steam_path = get_steam_path()?;
 
         Ok(Steam {
+            #[cfg(feature = "steam")]
             library_folders: Self::list_library_folders(&steam_path).ok(),
             path: PathBuf::from(steam_path),
         })
     }
 
+    #[cfg(feature = "steam")]
     pub fn find_app(self: &Self, app_id: u64) -> Option<&PathBuf> {
         match &self.library_folders {
             Some(library_folders) => {
@@ -46,6 +56,12 @@ impl Steam {
         }
     }
 
+    #[cfg(not(feature = "steam"))]
+    pub fn find_app(self: &Self, _app_id: u64) -> Option<&PathBuf> {
+        None
+    }
+
+    #[cfg(feature = "steam")]
     fn list_library_folders(
         steam_path: &String,
     ) -> Result<SteamLibraryFolders, Box<dyn std::error::Error>> {
@@ -69,7 +85,7 @@ impl Steam {
 }
 
 #[cfg(windows)]
-pub fn get_steam_path() -> Result<String, crate::regedit::Error> {
+pub fn get_steam_path() -> Result<String, crate::os::regedit::Error> {
     let location = RegLocation::Machine;
     let path = "Software\\Valve\\Steam";
     let key = "InstallPath";

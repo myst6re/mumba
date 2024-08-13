@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["myst6re <myst6re@gmail.com>"]
 
 [dependencies]
-moomba_core = { path = "../core" }
+moomba_core = {path = "../core", default-features = false, features = ["pe"]}
 log = "0.4"
 clap = "4"
 

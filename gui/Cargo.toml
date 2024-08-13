@@ -10,7 +10,7 @@ default-run = "moomba"
 
 [dependencies]
 log = "0.4"
-moomba_core = { path = "../core" }
+moomba_core = { path = "../core", features = ["network", "steam", "zip", "config", "pe"] }
 slint = { version = "1.7", features = ["default", "raw-window-handle-06"] }
 thiserror = "1"
 rfd = "0.14"

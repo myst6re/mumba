@@ -1,4 +1,4 @@
 #[cfg(windows)]
-mod regedit;
+pub mod regedit;
 #[cfg(windows)]
-mod windows;
+pub mod windows;
