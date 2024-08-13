@@ -6,7 +6,7 @@ use version_compare::{compare, Cmp};
 use std::fmt;
 use std::marker::PhantomData;
 
-use regex::Regex;
+use regex_lite::Regex;
 
 #[derive(Deserialize)]
 struct GitHubTag {

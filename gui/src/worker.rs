@@ -179,11 +179,10 @@ fn install_game_and_ffnx(
     };
 
     if matches!(installation.edition, installation::Edition::Steam) {
-        installation.replace_launcher(&env)?
+        installation.replace_launcher(ff8_path, &env)?
     };
 
     if !ff8_path.exists() {
-        info!("Copy {:?} to {:?}...", &source_ff8_path, ff8_path);
         moomba_core::provision::copy_file(&source_ff8_path, ff8_path)?
     }
 
@@ -324,7 +323,8 @@ fn worker_configure_loop(
 }
 
 fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) -> () {
-    let env = match moomba_core::game::env::Env::new() {
+    #[allow(unused_mut)]
+    let mut env = match moomba_core::game::env::Env::new() {
         Ok(env) => env,
         Err(e) => {
             error!("Cannot initialize environment: {:?}", e);
@@ -337,7 +337,6 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) -> () {
         }
     };
     let moomba_config_path = env.config_dir.join("config.toml");
-    let ffnx_config_path = env.ffnx_dir.join("FFNx.toml");
 
     let mut installation = match worker_configure_loop(&rx, handle.clone(), &moomba_config_path) {
         Some(installation) => installation,
@@ -352,13 +351,18 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) -> () {
         &installation.version
     );
 
-    let ff8_path = env.ffnx_dir.join(
-        if matches!(installation.edition, installation::Edition::Steam) {
-            "FF8_Moomba_Steam.exe"
-        } else {
-            "FF8_Moomba.exe"
-        },
-    );
+    let ff8_exe_name = if cfg!(unix) {
+        // Steam refuses to launch the game outside the base dir of the app
+        env.ffnx_dir = PathBuf::from(&installation.app_path);
+        &installation.exe_name
+    } else if matches!(installation.edition, installation::Edition::Steam) {
+        "FF8_Moomba_Steam.exe"
+    } else {
+        "FF8_Moomba.exe"
+    };
+
+    let ff8_path = env.ffnx_dir.join(ff8_exe_name);
+
     let ffnx_version;
     loop {
         match install_game_and_ffnx(handle.clone(), &installation, &ff8_path, &env) {
@@ -383,6 +387,7 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) -> () {
 
     upgrade_ffnx(handle.clone(), &ffnx_version, &installation.edition, &env);
 
+    let ffnx_config_path = env.ffnx_dir.join("FFNx.toml");
     let mut config = match FfnxConfig::from_file(&ffnx_config_path) {
         Ok(c) => c,
         Err(_e) => FfnxConfig::new(),

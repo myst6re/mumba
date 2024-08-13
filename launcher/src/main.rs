@@ -2,19 +2,14 @@
 
 use log::{error, info};
 use same_file::is_same_file;
-use simplelog::{ColorChoice, CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger};
+use simplelog::{CombinedLogger, LevelFilter, SimpleLogger, WriteLogger};
 use std::fs::File;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Command, ExitCode, Stdio};
 
-fn main() -> std::io::Result<()> {
+fn run() -> std::io::Result<()> {
     match CombinedLogger::init(vec![
-        TermLogger::new(
-            LevelFilter::Debug,
-            simplelog::Config::default(),
-            TerminalMode::Mixed,
-            ColorChoice::Auto,
-        ),
+        SimpleLogger::new(LevelFilter::Debug, simplelog::Config::default()),
         WriteLogger::new(
             LevelFilter::Info,
             simplelog::Config::default(),
@@ -63,7 +58,19 @@ fn main() -> std::io::Result<()> {
             .stderr(Stdio::inherit())
             .current_dir(dir)
             .spawn()?;
-        child.wait()?;
+        info!("Wait for child process...");
+        let exit_status = child.wait()?;
+        info!("Child process exited with status {}", exit_status);
         Ok(())
+    }
+}
+
+fn main() -> ExitCode {
+    match run() {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            error!("Error: {:?}", e);
+            ExitCode::FAILURE
+        }
     }
 }

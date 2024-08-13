@@ -1,15 +1,10 @@
 use crate::game::env::Env;
-use simplelog::{ColorChoice, CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger};
+use simplelog::{CombinedLogger, LevelFilter, SimpleLogger, WriteLogger};
 use std::fs::File;
 
 pub fn init(env: &Env, name: &str) {
     CombinedLogger::init(vec![
-        TermLogger::new(
-            LevelFilter::Debug,
-            simplelog::Config::default(),
-            TerminalMode::Mixed,
-            ColorChoice::Auto,
-        ),
+        SimpleLogger::new(LevelFilter::Debug, simplelog::Config::default()),
         WriteLogger::new(
             LevelFilter::Info,
             simplelog::Config::default(),

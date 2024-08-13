@@ -25,7 +25,11 @@ fn main() -> std::io::Result<()> {
     match matches.subcommand() {
         Some(("replace_launcher", sub_matches)) => {
             let app_path = sub_matches.get_one::<String>("APP_PATH").expect("required");
-            Installation::replace_launcher_from_app_path(app_path, &env)
+            Installation::replace_launcher_from_app_path(
+                app_path,
+                &env.ffnx_dir.join("FF8_Moomba_Steam.exe"),
+                &env,
+            )
         }
         Some((_, _)) | None => unreachable!(),
     }

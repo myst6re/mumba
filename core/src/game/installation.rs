@@ -173,7 +173,7 @@ impl Installation {
             }
             None => (),
         };
-        let steam_library_folders = match steam::SteamLibraryFolders::from_config() {
+        let steam_library_folders = match steam::Steam::from_config() {
             Ok(lib_folders) => Some(lib_folders),
             Err(e) => {
                 warn!("Cannot find Steam Client installation: {:?}", e);
@@ -311,11 +311,15 @@ impl Installation {
 
     #[cfg(windows)]
     fn search_steam_edition(
-        steam_library_folders: &Option<steam::SteamLibraryFolders>,
+        steam_library_folders: &Option<steam::Steam>,
     ) -> Option<(String, String, String)> {
         steam_library_folders
             .as_ref()
-            .and_then(|lib_folders| lib_folders.find_app(39150))
+            .and_then(|lib_folders| {
+                lib_folders
+                    .find_app(39150)
+                    .or_else(|| Some(&lib_folders.path))
+            })
             .and_then(|path| {
                 Some(format!(
                     r"{}\\steamapps\\common\\FINAL FANTASY VIII",
@@ -347,11 +351,15 @@ impl Installation {
 
     #[cfg(unix)]
     fn search_steam_edition(
-        steam_library_folders: &Option<steam::SteamLibraryFolders>,
+        steam_library_folders: &Option<steam::Steam>,
     ) -> Option<(String, String, String)> {
         steam_library_folders
             .as_ref()
-            .and_then(|lib_folders| lib_folders.find_app(39150))
+            .and_then(|lib_folders| {
+                lib_folders
+                    .find_app(39150)
+                    .or_else(|| Some(&lib_folders.path))
+            })
             .and_then(|path| {
                 Some(format!(
                     r"{}\\steamapps\\common\\FINAL FANTASY VIII",
@@ -375,11 +383,11 @@ impl Installation {
 
     #[cfg(windows)]
     fn search_remastered_edition(
-        steam_library_folders: &Option<steam::SteamLibraryFolders>,
+        steam_library_folders: &Option<steam::Steam>,
     ) -> Option<(String, String, String)> {
         steam_library_folders
             .as_ref()
-            .and_then(|lib_folders| lib_folders.find_app(1026680))
+            .and_then(|lib_folders| lib_folders.find_app(1026680).or_else(|| Some(&lib_folders.path)))
             .and_then(|path| {
                 Some(format!(
                     r"{}\\steamapps\\common\\FINAL FANTASY VIII Remastered",
@@ -398,7 +406,7 @@ impl Installation {
 
     #[cfg(unix)]
     fn search_remastered_edition(
-        steam_library_folders: &Option<steam::SteamLibraryFolders>,
+        steam_library_folders: &Option<steam::Steam>,
     ) -> Option<(String, String, String)> {
         steam_library_folders
             .as_ref()
@@ -428,8 +436,12 @@ impl Installation {
         provision::extract_zip(source_file, target_dir)
     }
 
-    pub fn replace_launcher(self: &Installation, env: &Env) -> std::io::Result<()> {
-        match Self::replace_launcher_from_app_path(&self.app_path, env) {
+    pub fn replace_launcher(
+        self: &Installation,
+        ff8_path: &PathBuf,
+        env: &Env,
+    ) -> std::io::Result<()> {
+        match Self::replace_launcher_from_app_path(&self.app_path, ff8_path, env) {
             Ok(o) => Ok(o),
             Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
                 if cfg!(windows) {
@@ -447,9 +459,13 @@ impl Installation {
         }
     }
 
-    pub fn replace_launcher_from_app_path(app_path: &String, env: &Env) -> std::io::Result<()> {
+    pub fn replace_launcher_from_app_path(
+        app_path: &String,
+        ff8_path: &PathBuf,
+        env: &Env,
+    ) -> std::io::Result<()> {
         let app_path = PathBuf::from(app_path);
-        Self::create_launcher_config_file(&app_path, env)?;
+        Self::create_launcher_config_file(&app_path, ff8_path)?;
         let launcher_path = app_path.join("FF8_Launcher.exe");
         let launcher_product_name = match pe_format::pe_version_info(&launcher_path) {
             Ok(infos) => match infos.product_name {
@@ -471,11 +487,10 @@ impl Installation {
         Ok(())
     }
 
-    fn create_launcher_config_file(app_path: &PathBuf, env: &Env) -> std::io::Result<()> {
+    fn create_launcher_config_file(app_path: &PathBuf, ff8_path: &PathBuf) -> std::io::Result<()> {
         let config_path = app_path.join("moomba_path.txt");
         let mut file = File::create(config_path)?;
-        let exe_path = env.ffnx_dir.join("FF8_Moomba_Steam.exe");
-        file.write_all(exe_path.to_string_lossy().as_bytes())?;
+        file.write_all(ff8_path.to_string_lossy().as_bytes())?;
         Ok(())
     }
 }

@@ -1,4 +1,5 @@
 use crate::game::env::Env;
+use log::info;
 use serde::de::DeserializeOwned;
 use std::fs::File;
 use std::io::Read;
@@ -53,14 +54,17 @@ pub fn extract_zip(
     source_file: &PathBuf,
     target_dir: &PathBuf,
 ) -> Result<(), zip::result::ZipError> {
+    info!("Extract zip from {:?} to {:?}...", source_file, target_dir);
     zip_extract(source_file, target_dir)
 }
 
 pub fn copy_file(source_file: &PathBuf, target_file: &PathBuf) -> Result<(), std::io::Error> {
+    info!("Copy {:?} to {:?}...", source_file, target_file);
     std::fs::copy(source_file, target_file).and(Ok(()))
 }
 
 pub fn rename_file(source_file: &PathBuf, target_file: &PathBuf) -> Result<(), std::io::Error> {
+    info!("Rename {:?} to {:?}...", source_file, target_file);
     std::fs::rename(source_file, target_file).and(Ok(()))
 }
 

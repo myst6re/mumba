@@ -6,7 +6,7 @@ use serde::Deserialize;
 use std::{borrow::Cow, collections::HashMap, fs, path::PathBuf};
 
 #[derive(Deserialize)]
-pub struct SteamLibraryFolders {
+struct SteamLibraryFolders {
     libraries: Vec<Library>,
 }
 
@@ -16,9 +16,40 @@ struct Library {
     apps: HashMap<u64, u64>,
 }
 
-impl SteamLibraryFolders {
+pub struct Steam {
+    library_folders: Option<SteamLibraryFolders>,
+    pub path: PathBuf,
+}
+
+impl Steam {
     pub fn from_config() -> Result<Self, Box<dyn std::error::Error>> {
-        let asset_path = format!("{}\\config\\libraryfolders.vdf", get_steam_path()?);
+        let steam_path = get_steam_path()?;
+
+        Ok(Steam {
+            library_folders: Self::list_library_folders(&steam_path).ok(),
+            path: PathBuf::from(steam_path),
+        })
+    }
+
+    pub fn find_app(self: &Self, app_id: u64) -> Option<&PathBuf> {
+        match &self.library_folders {
+            Some(library_folders) => {
+                for lib in &library_folders.libraries {
+                    let apps = &lib.apps;
+                    if apps.into_iter().any(|g| *g.0 == app_id) {
+                        return Some(&lib.path);
+                    }
+                }
+                None
+            }
+            None => None,
+        }
+    }
+
+    fn list_library_folders(
+        steam_path: &String,
+    ) -> Result<SteamLibraryFolders, Box<dyn std::error::Error>> {
+        let asset_path = format!("{}\\config\\libraryfolders.vdf", steam_path);
         let vdf_text = fs::read_to_string(asset_path)?;
         let mut vdf = Vdf::parse(&vdf_text)?;
         let obj = vdf.value.get_mut_obj().unwrap();
@@ -34,16 +65,6 @@ impl SteamLibraryFolders {
         }
 
         Ok(from_vdf(vdf)?)
-    }
-
-    pub fn find_app(self: &Self, app_id: u64) -> Option<&PathBuf> {
-        for lib in &self.libraries {
-            let apps = &lib.apps;
-            if apps.into_iter().any(|g| *g.0 == app_id) {
-                return Some(&lib.path);
-            }
-        }
-        None
     }
 }
 
