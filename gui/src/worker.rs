@@ -295,7 +295,7 @@ fn worker_configure_loop(
                         installation::Edition::Remastered => {
                             warn!(
                                 "Ignore remaster at {}, as Moomba is not compatible yet",
-                                inst.app_path
+                                inst.app_path.to_string_lossy()
                             )
                         }
                     }
@@ -392,7 +392,7 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) -> () {
         Ok(c) => c,
         Err(_e) => FfnxConfig::new(),
     };
-    config.set_app_path(&installation.app_path.as_str());
+    config.set_app_path(&installation.app_path.to_string_lossy().to_string());
     config.save(&ffnx_config_path);
 
     for received in rx {

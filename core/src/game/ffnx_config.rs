@@ -59,7 +59,7 @@ impl FfnxConfig {
         }
     }
 
-    pub fn set_app_path(self: &mut Self, app_path: &str) -> () {
-        self.inner[CFG_APP_PATH] = toml_edit::value(app_path)
+    pub fn set_app_path<V: Into<String>>(self: &mut Self, app_path: V) -> () {
+        self.inner[CFG_APP_PATH] = toml_edit::value(app_path.into())
     }
 }

@@ -1,6 +1,7 @@
 use clap::{arg, Command};
 use moomba_core::game::env::Env;
 use moomba_core::game::installation::Installation;
+use std::path::PathBuf;
 
 fn cli() -> Command {
     Command::new("mmb")
@@ -26,7 +27,7 @@ fn main() -> std::io::Result<()> {
         Some(("replace_launcher", sub_matches)) => {
             let app_path = sub_matches.get_one::<String>("APP_PATH").expect("required");
             Installation::replace_launcher_from_app_path(
-                app_path,
+                &PathBuf::from(app_path),
                 &env.ffnx_dir.join("FF8_Moomba_Steam.exe"),
                 &env,
             )

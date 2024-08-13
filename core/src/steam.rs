@@ -40,24 +40,39 @@ impl Steam {
         })
     }
 
-    #[cfg(feature = "steam")]
-    pub fn find_app(self: &Self, app_id: u64) -> Option<&PathBuf> {
-        match &self.library_folders {
-            Some(library_folders) => {
-                for lib in &library_folders.libraries {
-                    let apps = &lib.apps;
-                    if apps.into_iter().any(|g| *g.0 == app_id) {
-                        return Some(&lib.path);
-                    }
-                }
-                None
+    #[allow(unused_variables)]
+    pub fn find_app(self: &Self, app_id: u64, app_name: &'static str) -> Option<PathBuf> {
+        let steam_path = if cfg!(feature = "steam") {
+            #[cfg(feature = "steam")]
+            match &self.library_folders {
+                Some(library_folders) => Self::find_app_in_library_folders(library_folders, app_id)
+                    .unwrap_or_else(|| &self.path),
+                None => &self.path,
             }
-            None => None,
+            #[cfg(not(feature = "steam"))]
+            &self.path
+        } else {
+            &self.path
+        };
+        let app_path = steam_path.join("steamapps").join("common").join(app_name);
+        if app_path.exists() {
+            Some(app_path)
+        } else {
+            None
         }
     }
 
-    #[cfg(not(feature = "steam"))]
-    pub fn find_app(self: &Self, _app_id: u64) -> Option<&PathBuf> {
+    #[cfg(feature = "steam")]
+    fn find_app_in_library_folders(
+        library_folders: &SteamLibraryFolders,
+        app_id: u64,
+    ) -> Option<&PathBuf> {
+        for lib in &library_folders.libraries {
+            let apps = &lib.apps;
+            if apps.into_iter().any(|g| *g.0 == app_id) {
+                return Some(&lib.path);
+            }
+        }
         None
     }
 

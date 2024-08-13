@@ -41,7 +41,7 @@ pub enum Publisher {
 
 #[derive(Clone)]
 pub struct Installation {
-    pub app_path: String,
+    pub app_path: PathBuf,
     pub exe_name: String,
     pub edition: Edition,
     pub version: Option<(Version, Publisher)>,
@@ -58,7 +58,7 @@ pub enum FromExeError {
 
 impl Installation {
     pub fn new(
-        app_path: String,
+        app_path: PathBuf,
         exe_name: String,
         edition: Edition,
         version: Option<(Version, Publisher)>,
@@ -78,13 +78,10 @@ impl Installation {
             return Err(FromExeError::NotFound);
         };
 
-        let app_path = String::from(
-            exe_path
-                .parent()
-                .map(|e| e.as_os_str())
-                .and_then(|e| e.to_str())
-                .unwrap_or_default(),
-        );
+        let app_path = exe_path
+            .parent()
+            .map(|e| e.to_path_buf())
+            .unwrap_or_default();
         // Detect edition and language
         let (edition, language) = match Self::get_steam_edition_lang(&app_path) {
             Ok(lang) => (Edition::Steam, lang),
@@ -107,14 +104,13 @@ impl Installation {
                 return Err(FromExeError::LauncherSelected);
             }
             exe_name = format!("FF8_{}.exe", language);
-            if !PathBuf::from(&app_path).join(&exe_name).exists() {
+            if !app_path.join(&exe_name).exists() {
                 return Err(FromExeError::LauncherSelected);
             }
         }
 
         // Detect version
-        let version = Self::get_version_from_exe(&PathBuf::new().join(&app_path).join(&exe_name))
-            .unwrap_or(None);
+        let version = Self::get_version_from_exe(&app_path.join(&exe_name)).unwrap_or(None);
 
         Ok(Self {
             app_path,
@@ -125,7 +121,7 @@ impl Installation {
         })
     }
 
-    pub fn from_directory(app_path: String) -> Self {
+    pub fn from_directory(app_path: PathBuf) -> Self {
         // Detect exe name and edition
         let (exe_name, edition, language) = match Self::get_steam_edition_lang(&app_path) {
             Ok(lang) => {
@@ -142,8 +138,7 @@ impl Installation {
             ),
         };
         // Detect version
-        let version = Self::get_version_from_exe(&PathBuf::new().join(&app_path).join(&exe_name))
-            .unwrap_or(None);
+        let version = Self::get_version_from_exe(&app_path.join(&exe_name)).unwrap_or(None);
 
         Self {
             app_path,
@@ -185,9 +180,7 @@ impl Installation {
         };
         match Self::search_steam_edition(&steam_library_folders) {
             Some((app_path, exe_name, language)) => {
-                let version =
-                    Self::get_version_from_exe(&PathBuf::new().join(&app_path).join(&exe_name))
-                        .unwrap_or(None);
+                let version = Self::get_version_from_exe(&app_path.join(&exe_name)).unwrap_or(None);
                 installations.push(Self::new(
                     app_path,
                     exe_name,
@@ -200,9 +193,7 @@ impl Installation {
         };
         match Self::search_remastered_edition(&steam_library_folders) {
             Some((app_path, exe_name, language)) => {
-                let version =
-                    Self::get_version_from_exe(&PathBuf::new().join(&app_path).join(&exe_name))
-                        .unwrap_or(None);
+                let version = Self::get_version_from_exe(&app_path.join(&exe_name)).unwrap_or(None);
                 installations.push(Self::new(
                     app_path,
                     exe_name,
@@ -216,8 +207,7 @@ impl Installation {
         installations
     }
 
-    pub fn get_standard_edition_lang(app_path: &String) -> std::io::Result<String> {
-        let path_lang_dat = PathBuf::from(app_path);
+    pub fn get_standard_edition_lang(path_lang_dat: &PathBuf) -> std::io::Result<String> {
         let contents = std::fs::read_to_string(path_lang_dat.join("Data").join("main.fl"))?;
         Ok(String::from(
             match contents.match_indices("ff8\\data\\").next() {
@@ -234,8 +224,7 @@ impl Installation {
         ))
     }
 
-    pub fn get_steam_edition_lang(app_path: &String) -> std::io::Result<String> {
-        let path_lang_dat = PathBuf::from(app_path);
+    pub fn get_steam_edition_lang(path_lang_dat: &PathBuf) -> std::io::Result<String> {
         let contents = std::fs::read_to_string(path_lang_dat.join("lang.dat"))?;
         Ok(contents.to_ascii_uppercase())
     }
@@ -292,7 +281,7 @@ impl Installation {
     }
 
     #[cfg(windows)]
-    fn search_original_version() -> Option<(String, String, String)> {
+    fn search_original_version() -> Option<(PathBuf, String, String)> {
         let locations = [regedit::RegLocation::Machine, regedit::RegLocation::User];
         for loc in locations {
             match regedit::reg_value_str(
@@ -302,6 +291,7 @@ impl Installation {
                 r"AppPath",
             ) {
                 Ok(app_path) => {
+                    let app_path = PathBuf::from(app_path);
                     let lang =
                         Self::get_standard_edition_lang(&app_path).unwrap_or(String::from("eng"));
                     return Some((app_path, String::from("FF8.exe"), lang));
@@ -315,20 +305,10 @@ impl Installation {
     #[cfg(windows)]
     fn search_steam_edition(
         steam_library_folders: &Option<steam::Steam>,
-    ) -> Option<(String, String, String)> {
+    ) -> Option<(PathBuf, String, String)> {
         steam_library_folders
             .as_ref()
-            .and_then(|lib_folders| {
-                lib_folders
-                    .find_app(39150)
-                    .or_else(|| Some(&lib_folders.path))
-            })
-            .and_then(|path| {
-                Some(format!(
-                    r"{}\\steamapps\\common\\FINAL FANTASY VIII",
-                    path.to_string_lossy().to_string()
-                ))
-            })
+            .and_then(|lib_folders| lib_folders.find_app(39150, "FINAL FANTASY VIII"))
             .or_else(|| {
                 warn!(
                     "Cannot find FINAL FANTASY VIII installation path, try with uninstall entries"
@@ -336,6 +316,7 @@ impl Installation {
                 regedit::reg_search_installed_app_by_key(
                     r"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App 39150",
                 )
+                .and_then(|app_path| Some(PathBuf::from(app_path)))
             })
             .and_then(|app_path| match Self::get_steam_edition_lang(&app_path) {
                 Ok(lang) => {
@@ -355,20 +336,10 @@ impl Installation {
     #[cfg(unix)]
     fn search_steam_edition(
         steam_library_folders: &Option<steam::Steam>,
-    ) -> Option<(String, String, String)> {
+    ) -> Option<(PathBuf, String, String)> {
         steam_library_folders
             .as_ref()
-            .and_then(|lib_folders| {
-                lib_folders
-                    .find_app(39150)
-                    .or_else(|| Some(&lib_folders.path))
-            })
-            .and_then(|path| {
-                Some(format!(
-                    r"{}\\steamapps\\common\\FINAL FANTASY VIII",
-                    path.to_string_lossy().to_string()
-                ))
-            })
+            .and_then(|lib_folders| lib_folders.find_app(39150, "FINAL FANTASY VIII"))
             .and_then(|app_path| match Self::get_steam_edition_lang(&app_path) {
                 Ok(lang) => {
                     let mut exe_name = String::new();
@@ -387,21 +358,15 @@ impl Installation {
     #[cfg(windows)]
     fn search_remastered_edition(
         steam_library_folders: &Option<steam::Steam>,
-    ) -> Option<(String, String, String)> {
+    ) -> Option<(PathBuf, String, String)> {
         steam_library_folders
             .as_ref()
-            .and_then(|lib_folders| lib_folders.find_app(1026680).or_else(|| Some(&lib_folders.path)))
-            .and_then(|path| {
-                Some(format!(
-                    r"{}\\steamapps\\common\\FINAL FANTASY VIII Remastered",
-                    path.to_string_lossy().to_string()
-                ))
-            })
+            .and_then(|lib_folders| lib_folders.find_app(1026680, "FINAL FANTASY VIII Remastered"))
             .or_else(|| {
                 warn!("Cannot find FINAL FANTASY VIII Remastered installation path, try with uninstall entries");
                 regedit::reg_search_installed_app_by_key(
                     r"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App 1026680",
-                )
+                ).and_then(|app_path| Some(PathBuf::from(app_path)))
             })
             .and_then(|app_path| Some((app_path, String::from("FFVIII.exe"), String::from("en"))))
         // TODO: lang
@@ -410,16 +375,10 @@ impl Installation {
     #[cfg(unix)]
     fn search_remastered_edition(
         steam_library_folders: &Option<steam::Steam>,
-    ) -> Option<(String, String, String)> {
+    ) -> Option<(PathBuf, String, String)> {
         steam_library_folders
             .as_ref()
-            .and_then(|lib_folders| lib_folders.find_app(1026680))
-            .and_then(|path| {
-                Some(format!(
-                    r"{}\\steamapps\\common\\FINAL FANTASY VIII Remastered",
-                    path.to_string_lossy().to_string()
-                ))
-            })
+            .and_then(|lib_folders| lib_folders.find_app(1026680, "FINAL FANTASY VIII Remastered"))
             .and_then(|app_path| Some((app_path, String::from("FFVIII.exe"), String::from("en"))))
         // TODO: lang
     }
@@ -454,7 +413,13 @@ impl Installation {
                     #[cfg(windows)]
                     crate::os::windows::run_as(
                         &String::from(env.moomba_dir.join("mmb.exe").to_str().unwrap()),
-                        &format!("replace_launcher \"{}\"", self.app_path.replace("\"", "")),
+                        &format!(
+                            "replace_launcher \"{}\"",
+                            self.app_path
+                                .to_string_lossy()
+                                .to_string()
+                                .replace("\"", "")
+                        ),
                     )?;
                     Ok(())
                 } else {
@@ -467,11 +432,10 @@ impl Installation {
 
     #[cfg(feature = "pe")]
     pub fn replace_launcher_from_app_path(
-        app_path: &String,
+        app_path: &PathBuf,
         ff8_path: &PathBuf,
         env: &Env,
     ) -> std::io::Result<()> {
-        let app_path = PathBuf::from(app_path);
         Self::create_launcher_config_file(&app_path, ff8_path)?;
         let launcher_path = app_path.join("FF8_Launcher.exe");
         let launcher_product_name = match pe_format::pe_version_info(&launcher_path) {
