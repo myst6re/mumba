@@ -3,49 +3,25 @@ use serde::de::DeserializeOwned;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
+use thiserror::Error;
 use zip_extensions::*;
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum Error {
-    HttpError(ureq::Error),
-    IoError(std::io::Error),
-    ZipError(zip::result::ZipError),
+    #[error("HTTP Error: {0}")]
+    HttpError(#[from] ureq::Error),
+    #[error("I/O Error: {0}")]
+    IoError(#[from] std::io::Error),
+    #[error("Zip Error: {0}")]
+    ZipError(#[from] zip::result::ZipError),
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum ToJsonError {
-    HttpError(ureq::Error),
-    IoError(std::io::Error),
-}
-
-impl From<ureq::Error> for Error {
-    fn from(e: ureq::Error) -> Self {
-        Self::HttpError(e)
-    }
-}
-
-impl From<std::io::Error> for Error {
-    fn from(e: std::io::Error) -> Self {
-        Self::IoError(e)
-    }
-}
-
-impl From<zip::result::ZipError> for Error {
-    fn from(e: zip::result::ZipError) -> Self {
-        Self::ZipError(e)
-    }
-}
-
-impl From<ureq::Error> for ToJsonError {
-    fn from(e: ureq::Error) -> Self {
-        Self::HttpError(e)
-    }
-}
-
-impl From<std::io::Error> for ToJsonError {
-    fn from(e: std::io::Error) -> Self {
-        Self::IoError(e)
-    }
+    #[error("HTTP Error downloading JSON format: {0}")]
+    HttpError(#[from] ureq::Error),
+    #[error("I/O Error downloading JSON format: {0}")]
+    IoError(#[from] std::io::Error),
 }
 
 pub fn get_json<T: DeserializeOwned>(url: &str) -> Result<T, ToJsonError> {

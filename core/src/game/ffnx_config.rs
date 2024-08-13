@@ -1,34 +1,27 @@
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
+use thiserror::Error;
 use toml_edit::DocumentMut;
 
 pub struct FfnxConfig {
     inner: DocumentMut,
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum FileError {
-    IoError(std::io::Error),
-    TomlError(toml_edit::TomlError),
+    #[error("Error with the FFNx config file: {0}")]
+    IoError(#[from] std::io::Error),
+    #[error("TOML format error: {0}")]
+    TomlError(#[from] toml_edit::TomlError),
 }
 
-impl From<std::io::Error> for FileError {
-    fn from(e: std::io::Error) -> Self {
-        Self::IoError(e)
-    }
-}
-
-impl From<toml_edit::TomlError> for FileError {
-    fn from(e: toml_edit::TomlError) -> Self {
-        Self::TomlError(e)
-    }
-}
-
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum Error {
-    WrongTypeError,
-    NotAValueError,
+    #[error("The key {0} is not a string")]
+    WrongTypeError(String),
+    #[error("The key {0} is not a string value")]
+    NotAValueError(String),
 }
 
 const CFG_APP_PATH: &str = "app_path";
@@ -59,9 +52,9 @@ impl FfnxConfig {
         match self.inner.get(CFG_APP_PATH) {
             Some(toml_edit::Item::Value(v)) => match v.as_str() {
                 Some(s) => Ok(s),
-                None => Err(Error::WrongTypeError),
+                None => Err(Error::WrongTypeError(String::from(CFG_APP_PATH))),
             },
-            Some(_) => Err(Error::NotAValueError),
+            Some(_) => Err(Error::NotAValueError(String::from(CFG_APP_PATH))),
             None => Ok(""),
         }
     }

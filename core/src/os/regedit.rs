@@ -1,4 +1,5 @@
 use registry::{Data, Hive, RegKey, Security};
+use thiserror::Error;
 use utfx::U16CString;
 
 #[derive(Copy, Clone)]
@@ -14,11 +15,15 @@ pub enum RegTarget {
     Wow64,
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum Error {
-    KeyNotFound,
-    ValueNotFound,
+    #[error("Registry Key not found: {0}")]
+    KeyNotFound(String),
+    #[error("Registry Value not found: {0}")]
+    ValueNotFound(String),
+    #[error("Registry Key is not a string")]
     NotAString,
+    #[error("Registry Unknown Error")]
     OtherError,
 }
 
@@ -73,13 +78,13 @@ where
         Ok(reg_key) => match reg_key.value(value_name) {
             Ok(Data::String(s)) => Ok(s.to_string_lossy()),
             Ok(_) => Err(Error::NotAString),
-            Err(registry::value::Error::NotFound(_, _)) => Err(Error::ValueNotFound),
+            Err(registry::value::Error::NotFound(val, _)) => Err(Error::ValueNotFound(val)),
             Err(e) => {
                 warn!("Get regedit value error: {:?}", e);
                 Err(Error::OtherError)
             }
         },
-        Err(registry::key::Error::NotFound(_, _)) => Err(Error::KeyNotFound),
+        Err(registry::key::Error::NotFound(key, _)) => Err(Error::KeyNotFound(key)),
         Err(e) => {
             warn!("Get regedit key error: {:?}", e);
             Err(Error::OtherError)

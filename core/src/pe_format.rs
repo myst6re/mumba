@@ -2,31 +2,18 @@ use pelite::pe32::Pe;
 use std::fs::File;
 use std::io::{Seek, SeekFrom, Write};
 use std::path::Path;
+use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum Error {
-    IoError(std::io::Error),
-    PeliteError(pelite::Error),
-    PeliteFindError(pelite::resources::FindError),
+    #[error("Error when reading/writting EXE/DLL metadata: {0}")]
+    IoError(#[from] std::io::Error),
+    #[error("Error when analyzing EXE/DLL metadata: {0}")]
+    PeliteError(#[from] pelite::Error),
+    #[error("Error extracting version info from EXE/DLL: {0}")]
+    PeliteFindError(#[from] pelite::resources::FindError),
+    #[error("No version available")]
     NoVersion,
-}
-
-impl From<std::io::Error> for Error {
-    fn from(e: std::io::Error) -> Self {
-        Self::IoError(e)
-    }
-}
-
-impl From<pelite::Error> for Error {
-    fn from(e: pelite::Error) -> Self {
-        Self::PeliteError(e)
-    }
-}
-
-impl From<pelite::resources::FindError> for Error {
-    fn from(e: pelite::resources::FindError) -> Self {
-        Self::PeliteFindError(e)
-    }
 }
 
 pub struct VersionInfo {

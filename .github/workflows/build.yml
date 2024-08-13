@@ -9,13 +9,24 @@ on:
 
 jobs:
   main_build:
-    name: Windows
-    runs-on: windows-latest
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+        include:
+          - os: ubuntu-latest
+            name: linux64
+          - os: windows-latest
+            name: windows64
 
     steps:
     - uses: actions/checkout@v4
 
     - name: Install Wix3
+      if: runner.os == 'Windows'
       run: |
         curl -LJO https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip
         7z x wix314-binaries.zip -o${{ github.workspace }}/wix
@@ -32,21 +43,43 @@ jobs:
     - name: Build exe
       run: cargo build --release
 
+    - name: Build launcher
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update -y -qqq
+        sudo apt-get install -y -qqq mingw-w64
+        rustup target add x86_64-pc-windows-gnu
+        cargo build --release --bin ff8_launcher --target x86_64-pc-windows-gnu
+        cp target/x86_64-pc-windows-gnu/release/ff8_launcher.exe target/release/
+
     - name: Install cargo-wix
+      if: runner.os == 'Windows'
       run: cargo install cargo-wix
 
     - name: Build installer
+      if: runner.os == 'Windows'
       working-directory: ${{ github.workspace }}/gui
       run: cargo wix --nocapture --no-build -p moomba --bin-path ${{ github.workspace }}/wix
 
-    - name: Upload
+    - name: Upload installer
+      if: runner.os == 'Windows'
       uses: actions/upload-artifact@v4
       with:
         name: artifact-windows
         path: ${{ github.workspace }}/target/wix/*.msi
 
+    - name: Upload artifacts
+      if: runner.os == 'Linux'
+      uses: actions/upload-artifact@v4
+      with:
+        name: artifact-linux
+        path: |
+          ${{ github.workspace }}/target/release/moomba
+          ${{ github.workspace }}/target/release/mmb
+          ${{ github.workspace }}/target/release/ff8_launcher.exe
+
     - name: Deploy Package
-      if: (github.event.ref_type != 'tag') && (github.ref == 'refs/heads/master')
+      if: (runner.os == 'Windows') && (github.event.ref_type != 'tag') && (github.ref == 'refs/heads/master')
       uses: crowbarmaster/GH-Automatic-Releases@latest
       with:
        repo_token: "${{ secrets.GITHUB_TOKEN }}"
@@ -57,7 +90,7 @@ jobs:
         target/wix/*.msi
 
     - name: Deploy Package
-      if: github.event.ref_type == 'tag'
+      if: (runner.os == 'Windows') && (github.event.ref_type == 'tag')
       uses: crowbarmaster/GH-Automatic-Releases@latest
       with:
        repo_token: "${{ secrets.GITHUB_TOKEN }}"
