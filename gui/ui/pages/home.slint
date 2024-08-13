@@ -17,7 +17,14 @@ export component HomePage inherits VerticalLayout {
             }
 
             Button {
-                text: @tr("Configure…");
+                text: @tr("Configure Launcher…");
+                clicked => {
+                    Installations.current-page = 1;
+                }
+            }
+
+            Button {
+                text: @tr("Configure Game…");
                 clicked => {
                     Installations.current-page = 2;
                 }

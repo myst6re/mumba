@@ -6,13 +6,13 @@ use crate::game::installation::Edition;
 use crate::pe_format;
 #[cfg(any(feature = "network", feature = "zip"))]
 use crate::provision;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub struct Ffnx {}
 
 impl Ffnx {
     #[cfg(all(feature = "network", feature = "zip"))]
-    pub fn from_url(url: &str, target_dir: &PathBuf, env: &Env) -> Result<(), provision::Error> {
+    pub fn from_url(url: &str, target_dir: &PathBuf, env: &Env) -> Result<(), provision::ErrorBox> {
         provision::download_zip(url, "FFNx.zip", target_dir, env)
     }
 
@@ -25,7 +25,7 @@ impl Ffnx {
     }
 
     #[cfg(feature = "pe")]
-    pub fn is_installed(target_dir: &PathBuf, steam: bool) -> Option<String> {
+    pub fn is_installed(target_dir: &Path, steam: bool) -> Option<String> {
         match pe_format::pe_version_info(
             target_dir
                 .join(if steam { "AF3DN.P" } else { "eax.dll" })

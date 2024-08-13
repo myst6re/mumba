@@ -41,12 +41,13 @@ impl Steam {
     }
 
     #[allow(unused_variables)]
-    pub fn find_app(self: &Self, app_id: u64, app_name: &'static str) -> Option<PathBuf> {
+    pub fn find_app(&self, app_id: u64, app_name: &'static str) -> Option<PathBuf> {
         let steam_path = if cfg!(feature = "steam") {
             #[cfg(feature = "steam")]
             match &self.library_folders {
-                Some(library_folders) => Self::find_app_in_library_folders(library_folders, app_id)
-                    .unwrap_or_else(|| &self.path),
+                Some(library_folders) => {
+                    Self::find_app_in_library_folders(library_folders, app_id).unwrap_or(&self.path)
+                }
                 None => &self.path,
             }
             #[cfg(not(feature = "steam"))]
@@ -69,7 +70,7 @@ impl Steam {
     ) -> Option<&PathBuf> {
         for lib in &library_folders.libraries {
             let apps = &lib.apps;
-            if apps.into_iter().any(|g| *g.0 == app_id) {
+            if apps.iter().any(|g| *g.0 == app_id) {
                 return Some(&lib.path);
             }
         }

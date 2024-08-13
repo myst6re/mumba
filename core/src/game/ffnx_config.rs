@@ -26,6 +26,12 @@ pub enum Error {
 
 const CFG_APP_PATH: &str = "app_path";
 
+impl Default for FfnxConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FfnxConfig {
     pub fn new() -> Self {
         Self {
@@ -42,13 +48,13 @@ impl FfnxConfig {
         })
     }
 
-    pub fn save<P: AsRef<Path>>(self: &Self, path: P) -> Result<(), FileError> {
+    pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), FileError> {
         let mut file = File::create(path)?;
         file.write_all(self.inner.to_string().as_bytes())?;
         Ok(())
     }
 
-    pub fn app_path(self: &Self) -> Result<&str, Error> {
+    pub fn app_path(&self) -> Result<&str, Error> {
         match self.inner.get(CFG_APP_PATH) {
             Some(toml_edit::Item::Value(v)) => match v.as_str() {
                 Some(s) => Ok(s),
@@ -59,7 +65,7 @@ impl FfnxConfig {
         }
     }
 
-    pub fn set_app_path<V: Into<String>>(self: &mut Self, app_path: V) -> () {
+    pub fn set_app_path<V: Into<String>>(&mut self, app_path: V) {
         self.inner[CFG_APP_PATH] = toml_edit::value(app_path.into())
     }
 }

@@ -55,9 +55,7 @@ where
                 }
             }
 
-            Ok(String::from(max.ok_or_else(|| {
-                de::Error::custom("no values in seq when looking for maximum")
-            })?))
+            max.ok_or_else(|| de::Error::custom("no values in seq when looking for maximum"))
         }
     }
 
@@ -65,7 +63,7 @@ where
     deserializer.deserialize_seq(visitor)
 }
 
-pub fn find_last_tag_version(repo_name: &str) -> Result<String, provision::ToJsonError> {
+pub fn find_last_tag_version(repo_name: &str) -> Result<String, provision::ToJsonErrorBox> {
     let tags = provision::get_json::<GitHubTags>(
         format!("https://api.github.com/repos/{}/tags", repo_name).as_str(),
     )?;

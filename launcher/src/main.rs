@@ -8,16 +8,15 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode, Stdio};
 
 fn run() -> std::io::Result<()> {
-    match CombinedLogger::init(vec![
+    CombinedLogger::init(vec![
         SimpleLogger::new(LevelFilter::Debug, simplelog::Config::default()),
         WriteLogger::new(
             LevelFilter::Info,
             simplelog::Config::default(),
             File::create("launcher.log").unwrap(),
         ),
-    ]) {
-        _ => (),
-    }
+    ])
+    .unwrap_or_default();
     let current_exe = std::env::current_exe()?;
     let path = match std::env::args().nth(1) {
         Some(ff8_path) => PathBuf::from(ff8_path),

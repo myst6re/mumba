@@ -25,6 +25,12 @@ pub enum Error {
     DoesNotExist(String),
 }
 
+impl Default for Config {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Config {
     pub fn new() -> Self {
         Self {
@@ -41,13 +47,13 @@ impl Config {
         })
     }
 
-    pub fn save<P: AsRef<std::path::Path>>(self: &Self, path: P) -> Result<(), FileError> {
+    pub fn save<P: AsRef<std::path::Path>>(&self, path: P) -> Result<(), FileError> {
         let mut file = File::create(path)?;
         file.write_all(self.inner.to_string().as_bytes())?;
         Ok(())
     }
 
-    pub fn installation(self: &Self) -> Result<Option<Installation>, Error> {
+    pub fn installation(&self) -> Result<Option<Installation>, Error> {
         match self.inner.get("game") {
             Some(toml_edit::Item::Table(t)) => Ok(Some(Self::installation_from_table(t)?)),
             Some(_) => Err(Error::WrongTypeError(
@@ -58,7 +64,7 @@ impl Config {
         }
     }
 
-    pub fn set_installation(self: &mut Self, installation: &Installation) -> () {
+    pub fn set_installation(&mut self, installation: &Installation) {
         self.inner["game"] = toml_edit::Item::Table(
             Self::set_installation_to_table(installation).unwrap_or_default(),
         )
@@ -75,8 +81,7 @@ impl Config {
                 ))
             }
         });
-        Installation::from_exe_path(&exe_path)
-            .or_else(|_| Err(Error::DoesNotExist(String::from(key))))
+        Installation::from_exe_path(&exe_path).map_err(|_| Error::DoesNotExist(String::from(key)))
     }
 
     fn set_installation_to_table(installation: &Installation) -> Option<toml_edit::Table> {

@@ -99,7 +99,7 @@ pub fn pe_patch_4bg(path: &Path) -> Result<bool, Error> {
     // Modify file
     let mut f = File::options().read(false).write(true).open(path)?;
     f.seek(SeekFrom::Start(characteristics_offset))?;
-    f.write(&characteristics.to_le_bytes())?;
+    f.write_all(&characteristics.to_le_bytes())?;
     drop(f);
 
     let file_map = pelite::FileMap::open(path)?;
@@ -111,7 +111,7 @@ pub fn pe_patch_4bg(path: &Path) -> Result<bool, Error> {
     // Modify file
     let mut f = File::options().read(false).write(true).open(path)?;
     f.seek(SeekFrom::Start(checksum_offset))?;
-    f.write(&checksum.to_le_bytes())?;
+    f.write_all(&checksum.to_le_bytes())?;
 
-    return Ok(true);
+    Ok(true)
 }

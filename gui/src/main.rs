@@ -18,9 +18,10 @@ fn main() -> Result<(), slint::PlatformError> {
 
     ui.global::<Installations>().on_setup({
         let tx = worker.tx.clone();
-        move |path| match tx.send(worker::Message::Setup(path)) {
-            Err(e) => error!("Error: {}", e),
-            _ => (),
+        move |path| {
+            if let Err(e) = tx.send(worker::Message::Setup(path)) {
+                error!("Error: {}", e)
+            }
         }
     });
 
@@ -66,5 +67,6 @@ fn main() -> Result<(), slint::PlatformError> {
 
     ui.run()?;
 
-    Ok(worker.join().unwrap())
+    worker.join().unwrap();
+    Ok(())
 }
