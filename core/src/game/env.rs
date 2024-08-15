@@ -5,7 +5,7 @@ use std::str::FromStr;
 pub struct Env {
     pub cache_dir: PathBuf,
     pub data_dir: PathBuf,
-    pub config_dir: PathBuf,
+    pub config_path: PathBuf,
     pub moomba_dir: PathBuf,
     pub ffnx_dir: PathBuf,
 }
@@ -43,7 +43,7 @@ impl Env {
         Ok(Self {
             cache_dir,
             data_dir,
-            config_dir,
+            config_path: config_dir.join("moomba.toml"),
             moomba_dir: exe_path,
             ffnx_dir,
         })

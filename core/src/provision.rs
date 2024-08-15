@@ -12,7 +12,6 @@ use thiserror::Error;
 #[cfg(feature = "zip")]
 use zip_extensions::*;
 
-#[cfg(feature = "network")]
 #[derive(Error, Debug)]
 #[error(transparent)]
 pub struct ErrorBox(Box<Error>);
@@ -43,6 +42,7 @@ pub enum Error {
 #[error(transparent)]
 pub struct ToJsonErrorBox(Box<ToJsonError>);
 
+#[cfg(feature = "network")]
 impl<E> From<E> for ToJsonErrorBox
 where
     ToJsonError: From<E>,
