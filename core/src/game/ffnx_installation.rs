@@ -10,25 +10,25 @@ use std::path::Path;
 #[cfg(any(feature = "network", feature = "zip"))]
 use std::path::PathBuf;
 
-pub struct Ffnx {
+pub struct FfnxInstallation {
     pub version: String,
 }
 
-impl Ffnx {
+impl FfnxInstallation {
     #[cfg(all(feature = "network", feature = "zip"))]
     pub fn download(url: &str, target_dir: &PathBuf, env: &Env) -> Result<(), provision::ErrorBox> {
         provision::download_zip(url, "FFNx.zip", target_dir, env)
     }
 
     #[cfg(feature = "pe")]
-    pub fn from_directory(target_dir: &Path, edition: &Edition) -> Option<Ffnx> {
+    pub fn from_directory(target_dir: &Path, edition: &Edition) -> Option<FfnxInstallation> {
         let dll_name = if matches!(edition, Edition::Steam) {
             "AF3DN.P"
         } else {
             "eax.dll"
         };
         match pe_format::pe_version_info(target_dir.join(dll_name).as_path()) {
-            Ok(infos) => Some(Ffnx {
+            Ok(infos) => Some(FfnxInstallation {
                 version: format!(
                     "{}.{}.{}",
                     infos.product_version.Major,

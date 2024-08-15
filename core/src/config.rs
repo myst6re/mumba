@@ -1,21 +1,10 @@
 use crate::game::installation::Installation;
-use std::fs::File;
-use std::io::prelude::*;
-use std::path::PathBuf;
+use crate::toml;
+use std::path::{Path, PathBuf};
 use thiserror::Error;
 use toml_edit::DocumentMut;
 
-pub struct Config {
-    inner: DocumentMut,
-}
-
-#[derive(Error, Debug)]
-pub enum FileError {
-    #[error("Error with the config file: {0}")]
-    IoError(#[from] std::io::Error),
-    #[error("TOML format error: {0}")]
-    TomlError(#[from] toml_edit::TomlError),
-}
+const CFG_EXE_PATH: &str = "exe_path";
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -25,10 +14,8 @@ pub enum Error {
     DoesNotExist(String),
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self::new()
-    }
+pub struct Config {
+    inner: DocumentMut,
 }
 
 impl Config {
@@ -38,19 +25,14 @@ impl Config {
         }
     }
 
-    pub fn from_file<P: AsRef<std::path::Path>>(path: P) -> Result<Self, FileError> {
-        let mut file = File::open(path)?;
-        let mut contents = String::new();
-        file.read_to_string(&mut contents)?;
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, toml::FileError> {
         Ok(Self {
-            inner: contents.parse::<DocumentMut>()?,
+            inner: toml::parse_from_file(path)?,
         })
     }
 
-    pub fn save<P: AsRef<std::path::Path>>(&self, path: P) -> Result<(), FileError> {
-        let mut file = File::create(path)?;
-        file.write_all(self.inner.to_string().as_bytes())?;
-        Ok(())
+    pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), toml::FileError> {
+        toml::save_to_file(&self.inner, path)
     }
 
     pub fn installation(&self) -> Result<Option<Installation>, Error> {
@@ -58,7 +40,7 @@ impl Config {
             Some(toml_edit::Item::Table(t)) => Ok(Some(Self::installation_from_table(t)?)),
             Some(_) => Err(Error::WrongTypeError(
                 String::from("game"),
-                String::from("table"),
+                String::from("Table"),
             )),
             None => Ok(None),
         }
@@ -71,13 +53,13 @@ impl Config {
     }
 
     fn installation_from_table(table: &toml_edit::Table) -> Result<Installation, Error> {
-        let key = "exe_path";
+        let key = CFG_EXE_PATH;
         let exe_path = PathBuf::from(match table.get(key) {
             Some(toml_edit::Item::Value(toml_edit::Value::String(exe_path))) => exe_path.value(),
             _ => {
                 return Err(Error::WrongTypeError(
                     String::from(key),
-                    String::from("value"),
+                    String::from("String"),
                 ))
             }
         });
@@ -86,7 +68,13 @@ impl Config {
 
     fn set_installation_to_table(installation: &Installation) -> Option<toml_edit::Table> {
         let mut ret = toml_edit::Table::new();
-        ret["exe_path"] = toml_edit::Item::Value(installation.exe_path().to_str()?.into());
+        ret[CFG_EXE_PATH] = toml_edit::Item::Value(installation.exe_path().to_str()?.into());
         Some(ret)
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self::new()
     }
 }

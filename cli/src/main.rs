@@ -28,7 +28,7 @@ fn main() -> std::io::Result<()> {
             let app_path = sub_matches.get_one::<String>("APP_PATH").expect("required");
             Installation::replace_launcher_from_app_path(
                 &PathBuf::from(app_path),
-                &env.ffnx_dir.join("FF8_Moomba_Steam.exe"),
+                &env.ffnx_dir.join("FF8_Moomba.exe"),
                 &env,
             )
         }

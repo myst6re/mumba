@@ -6,6 +6,8 @@ use keyvalues_parser::Vdf;
 use keyvalues_serde::from_vdf;
 #[cfg(feature = "steam")]
 use serde::Deserialize;
+#[cfg(feature = "steam")]
+use std::path::Path;
 use std::path::PathBuf;
 #[cfg(feature = "steam")]
 use std::{borrow::Cow, collections::HashMap, fs};
@@ -31,12 +33,12 @@ pub struct Steam {
 
 impl Steam {
     pub fn from_config() -> Result<Self, Box<dyn std::error::Error>> {
-        let steam_path = get_steam_path()?;
+        let path = get_steam_path()?;
 
         Ok(Steam {
             #[cfg(feature = "steam")]
-            library_folders: Self::list_library_folders(&steam_path).ok(),
-            path: PathBuf::from(steam_path),
+            library_folders: Self::list_library_folders(&path).ok(),
+            path,
         })
     }
 
@@ -79,9 +81,9 @@ impl Steam {
 
     #[cfg(feature = "steam")]
     fn list_library_folders(
-        steam_path: &String,
+        steam_path: &Path,
     ) -> Result<SteamLibraryFolders, Box<dyn std::error::Error>> {
-        let asset_path = format!("{}\\config\\libraryfolders.vdf", steam_path);
+        let asset_path = format!("{}\\config\\libraryfolders.vdf", steam_path.display());
         let vdf_text = fs::read_to_string(asset_path)?;
         let mut vdf = Vdf::parse(&vdf_text)?;
         let obj = vdf.value.get_mut_obj().unwrap();
@@ -101,7 +103,7 @@ impl Steam {
 }
 
 #[cfg(windows)]
-pub fn get_steam_path() -> Result<String, crate::os::regedit::Error> {
+pub fn get_steam_path() -> Result<PathBuf, crate::os::regedit::Error> {
     let location = RegLocation::Machine;
     let path = "Software\\Valve\\Steam";
     let key = "InstallPath";
@@ -109,11 +111,11 @@ pub fn get_steam_path() -> Result<String, crate::os::regedit::Error> {
         .or_else(|_| reg_value_str(RegTarget::Wow32, location, path, key))
         .or_else(|_| reg_value_str(RegTarget::Wow64, location, path, key))?;
 
-    Ok(value)
+    Ok(PathBuf::from(value))
 }
 
 #[cfg(unix)]
-pub fn get_steam_path() -> Result<String, std::env::VarError> {
+pub fn get_steam_path() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let home = std::env::var("HOME")?;
-    Ok(format!("{}/.steam/steam", home))
+    Ok(std::fs::canonicalize(format!("{}/.steam/steam", home))?)
 }

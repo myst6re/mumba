@@ -1,0 +1,134 @@
+import { Switch, ScrollView, SpinBox, ComboBox, GroupBox, Button, Palette, StandardButton, HorizontalBox, GridBox, LineEdit, VerticalBox } from "std-widgets.slint";
+import { Installations } from "../../global.slint";
+
+export component OptionsDisplayPage inherits VerticalLayout {
+    VerticalBox {
+        Text {
+            text: @tr("Display Options");
+            font-size: 20px;
+        }
+    }
+
+    ScrollView {
+        vertical-stretch: 1;
+        horizontal-stretch: 1;
+
+        VerticalBox {
+            max-width: 664px;
+
+            GroupBox {
+                title: @tr("Window configuration");
+                vertical-stretch: 0;
+
+                VerticalBox {
+
+                    HorizontalBox {
+                        alignment: start;
+
+                        fullscreen := Switch {
+                            text: @tr("Fullscreen");
+                        }
+                        borderless := Switch {
+                            text: @tr("Borderless");
+                        }
+                    }
+
+                    HorizontalBox {
+                        alignment: start;
+
+                        Text {
+                            text: @tr("Resolution");
+                            vertical-alignment: TextVerticalAlignment.center;
+                        }
+
+                        ComboBox {
+                            model: ["Auto", "640x480", "800x600", "1024x768", "1280x960", "1600x1200", "2048x1536", "3200x2400"];
+                        }
+                    }
+
+                    HorizontalBox {
+                        alignment: start;
+
+                        Text {
+                            text: @tr("Internal resolution scale");
+                            vertical-alignment: TextVerticalAlignment.center;
+                        }
+
+                        ComboBox {
+                            model: ["Auto", "x1", "x2", "x4", "x8"];
+                        }
+                    }
+
+                    HorizontalBox {
+                        alignment: start;
+
+                        Text {
+                            text: @tr("Screen refresh rate");
+                            vertical-alignment: TextVerticalAlignment.center;
+                        }
+
+                        SpinBox {
+                            vertical-stretch: 0;
+                            minimum: 0;
+                            maximum: 120;
+                        }
+                    }
+
+
+                    Rectangle {
+                        vertical-stretch: 1;
+                    }
+                }
+            }
+
+            GroupBox {
+                title: @tr("Graphics");
+                vertical-stretch: 0;
+
+                VerticalBox {
+                    HorizontalBox {
+                        alignment: start;
+
+                        Text {
+                            text: @tr("Rendering backend");
+                            vertical-alignment: TextVerticalAlignment.center;
+                        }
+
+                        renderer_backend := ComboBox {
+                            model: [@tr("Auto"), @tr("OpenGL"), @tr("Direct3D11"), @tr("Direct3D12"), @tr("Vulkan")];
+                        }
+                    }
+
+                    HorizontalBox {
+                        alignment: start;
+
+                        Text {
+                            text: @tr("Antialiasing");
+                            vertical-alignment: TextVerticalAlignment.center;
+                        }
+
+                        ComboBox {
+                            model: [@tr("Disabled"), "2x", "4x", "8x", "16x"];
+                        }
+                    }
+
+                    HorizontalBox {
+                        alignment: start;
+
+                        vsync := Switch {
+                            text: @tr("VSYNC");
+                        }
+
+                        anisotropic := Switch {
+                            text: @tr("Anisotropic");
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                vertical-stretch: 1;
+            }
+        }
+    }
+}

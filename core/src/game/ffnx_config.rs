@@ -1,35 +1,12 @@
-use std::fs::File;
-use std::io::prelude::*;
+use crate::toml;
 use std::path::Path;
-use thiserror::Error;
 use toml_edit::DocumentMut;
+
+const CFG_APP_PATH: &str = "app_path";
+const CFG_FULLSCREEN: &str = "fullscreen";
 
 pub struct FfnxConfig {
     inner: DocumentMut,
-}
-
-#[derive(Error, Debug)]
-pub enum FileError {
-    #[error("Error with the FFNx config file: {0}")]
-    IoError(#[from] std::io::Error),
-    #[error("TOML format error: {0}")]
-    TomlError(#[from] toml_edit::TomlError),
-}
-
-#[derive(Error, Debug)]
-pub enum Error {
-    #[error("The key {0} is not a string")]
-    WrongTypeError(String),
-    #[error("The key {0} is not a string value")]
-    NotAValueError(String),
-}
-
-const CFG_APP_PATH: &str = "app_path";
-
-impl Default for FfnxConfig {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl FfnxConfig {
@@ -39,33 +16,35 @@ impl FfnxConfig {
         }
     }
 
-    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, FileError> {
-        let mut file = File::open(path)?;
-        let mut contents = String::new();
-        file.read_to_string(&mut contents)?;
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, toml::FileError> {
         Ok(Self {
-            inner: contents.parse::<DocumentMut>()?,
+            inner: toml::parse_from_file(path)?,
         })
     }
 
-    pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), FileError> {
-        let mut file = File::create(path)?;
-        file.write_all(self.inner.to_string().as_bytes())?;
-        Ok(())
+    pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), toml::FileError> {
+        toml::save_to_file(&self.inner, path)
     }
 
-    pub fn app_path(&self) -> Result<&str, Error> {
-        match self.inner.get(CFG_APP_PATH) {
-            Some(toml_edit::Item::Value(v)) => match v.as_str() {
-                Some(s) => Ok(s),
-                None => Err(Error::WrongTypeError(String::from(CFG_APP_PATH))),
-            },
-            Some(_) => Err(Error::NotAValueError(String::from(CFG_APP_PATH))),
-            None => Ok(""),
-        }
+    pub fn app_path(&self) -> Result<&str, toml::Error> {
+        toml::get_string(self.inner.as_table(), CFG_APP_PATH, "")
     }
 
-    pub fn set_app_path<V: Into<String>>(&mut self, app_path: V) {
-        self.inner[CFG_APP_PATH] = toml_edit::value(app_path.into())
+    pub fn set_app_path<V: Into<String>>(&mut self, value: V) {
+        self.inner[CFG_APP_PATH] = toml_edit::value(value.into())
+    }
+
+    pub fn fullscreen(&self) -> Result<bool, toml::Error> {
+        toml::get_boolean(self.inner.as_table(), CFG_FULLSCREEN, true)
+    }
+
+    pub fn set_fullscreen<V: Into<String>>(&mut self, value: V) {
+        self.inner[CFG_FULLSCREEN] = toml_edit::value(value.into())
+    }
+}
+
+impl Default for FfnxConfig {
+    fn default() -> Self {
+        Self::new()
     }
 }

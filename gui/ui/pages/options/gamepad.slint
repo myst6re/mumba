@@ -1,0 +1,35 @@
+import { Switch, ScrollView, SpinBox, ComboBox, GroupBox, Button, Palette, StandardButton, HorizontalBox, GridBox, LineEdit, VerticalBox } from "std-widgets.slint";
+import { Installations } from "../../global.slint";
+
+export component OptionsGamepadPage inherits VerticalLayout {
+    VerticalBox {
+        Text {
+            text: @tr("Gamepad Options");
+            font-size: 20px;
+        }
+    }
+
+    ScrollView {
+        vertical-stretch: 1;
+        horizontal-stretch: 1;
+
+        VerticalBox {
+            max-width: 664px;
+
+            GroupBox {
+                title: @tr("Inputs");
+                vertical-stretch: 0;
+
+                VerticalBox {
+                    gamepad_icons := Switch {
+                        text: @tr("Show PS1 gamepad icons");
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            vertical-stretch: 1;
+        }
+    }
+}

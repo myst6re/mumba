@@ -13,3 +13,5 @@ pub mod os;
 pub mod pe_format;
 pub mod provision;
 pub mod steam;
+#[cfg(feature = "config")]
+pub mod toml;
