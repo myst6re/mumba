@@ -21,8 +21,13 @@ export component OptionsGamepadPage inherits VerticalLayout {
                 vertical-stretch: 0;
 
                 VerticalBox {
-                    gamepad_icons := Switch {
+                    Switch {
                         text: @tr("Show PS1 gamepad icons");
+                        checked: Installations.ffnx-config.ff8_use_gamepad_icons;
+    
+                        toggled() => {
+                            Installations.set-ffnx-config-bool("ff8_use_gamepad_icons", self.checked)
+                        }
                     }
                 }
             }

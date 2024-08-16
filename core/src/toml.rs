@@ -66,3 +66,17 @@ pub fn get_boolean(table: &toml_edit::Table, key: &str, default: bool) -> Result
         None => Ok(default),
     }
 }
+
+pub fn get_integer(table: &toml_edit::Table, key: &str, default: i64) -> Result<i64, Error> {
+    match table.get(key) {
+        Some(toml_edit::Item::Value(v)) => match v.as_integer() {
+            Some(s) => Ok(s),
+            None => Err(Error::WrongTypeError(
+                String::from(key),
+                String::from("Integer"),
+            )),
+        },
+        Some(_) => Err(Error::NotAValueError(String::from(key))),
+        None => Ok(default),
+    }
+}

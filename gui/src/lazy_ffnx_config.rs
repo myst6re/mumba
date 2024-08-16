@@ -1,3 +1,4 @@
+use log::warn;
 use moomba_core::game::env::Env;
 use moomba_core::game::ffnx_config::FfnxConfig;
 use moomba_core::toml::FileError;
@@ -22,6 +23,26 @@ impl LazyFfnxConfig {
         }
 
         self.config.as_mut().unwrap()
+    }
+
+    pub fn get_bool(&mut self, key: &str, default: bool) -> bool {
+        match self.get().get_bool(key, default) {
+            Ok(v) => v,
+            Err(e) => {
+                warn!("Get FFNx config entry error: {}", e);
+                default
+            }
+        }
+    }
+
+    pub fn get_int(&mut self, key: &str, default: i32) -> i32 {
+        match self.get().get_int(key, default as i64) {
+            Ok(v) => v as i32,
+            Err(e) => {
+                warn!("Get FFNx config entry error: {}", e);
+                default
+            }
+        }
     }
 
     pub fn save(&mut self) -> Result<(), FileError> {

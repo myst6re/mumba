@@ -33,8 +33,13 @@ export component OptionsDisplayPage inherits VerticalLayout {
                                 Installations.set-ffnx-config-bool("fullscreen", self.checked)
                             }
                         }
-                        borderless := Switch {
+                        Switch {
                             text: @tr("Borderless");
+                            checked: Installations.ffnx-config.borderless;
+
+                            toggled() => {
+                                Installations.set-ffnx-config-bool("borderless", self.checked)
+                            }
                         }
                     }
 
@@ -99,8 +104,15 @@ export component OptionsDisplayPage inherits VerticalLayout {
                             vertical-alignment: TextVerticalAlignment.center;
                         }
 
-                        renderer_backend := ComboBox {
+                        ComboBox {
+                            property<[int]> values: [0, 1, 3, 4, 5];
+                            property<[int]> reverse: [0, 1, 0, 2, 3, 4];
                             model: [@tr("Auto"), @tr("OpenGL"), @tr("Direct3D11"), @tr("Direct3D12"), @tr("Vulkan")];
+                            current-index: self.reverse[Installations.ffnx-config.renderer_backend];
+
+                            selected() => {
+                                Installations.set-ffnx-config-int("renderer_backend", self.values[self.current-index])
+                            }
                         }
                     }
 
@@ -120,12 +132,22 @@ export component OptionsDisplayPage inherits VerticalLayout {
                     HorizontalBox {
                         alignment: start;
 
-                        vsync := Switch {
+                        Switch {
                             text: @tr("VSYNC");
+                            checked: Installations.ffnx-config.enable_vsync;
+
+                            toggled() => {
+                                Installations.set-ffnx-config-bool("enable_vsync", self.checked)
+                            }
                         }
 
-                        anisotropic := Switch {
+                        Switch {
                             text: @tr("Anisotropic");
+                            checked: Installations.ffnx-config.enable_anisotropic;
+
+                            toggled() => {
+                                Installations.set-ffnx-config-bool("enable_anisotropic", self.checked)
+                            }
                         }
                     }
                 }

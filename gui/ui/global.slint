@@ -1,7 +1,13 @@
 import { Palette } from "std-widgets.slint";
 export enum TextLevel { info, warn, error }
 export struct FfnxConfig {
+    renderer_backend: int,
     fullscreen: bool,
+    borderless: bool,
+    enable_vsync: bool,
+    enable_antialiasing: int,
+    enable_anisotropic: bool,
+    ff8_use_gamepad_icons: bool
 }
 
 export global Installations {

@@ -2,8 +2,14 @@ use crate::toml;
 use std::path::Path;
 use toml_edit::DocumentMut;
 
-const CFG_APP_PATH: &str = "app_path";
-const CFG_FULLSCREEN: &str = "fullscreen";
+pub const CFG_APP_PATH: &str = "app_path";
+pub const CFG_RENDERER_BACKEND: &str = "renderer_backend";
+pub const CFG_FULLSCREEN: &str = "fullscreen";
+pub const CFG_BORDERLESS: &str = "borderless";
+pub const CFG_ENABLE_VSYNC: &str = "enable_vsync";
+pub const CFG_ENABLE_ANTIALIASING: &str = "enable_antialiasing";
+pub const CFG_ENABLE_ANISOTROPIC: &str = "enable_anisotropic";
+pub const CFG_FF8_USE_GAMEPAD_ICONS: &str = "ff8_use_gamepad_icons";
 
 pub struct FfnxConfig {
     inner: DocumentMut,
@@ -38,20 +44,28 @@ impl FfnxConfig {
         self.set_string(CFG_APP_PATH, value)
     }
 
-    pub fn fullscreen(&self) -> Result<bool, toml::Error> {
-        toml::get_boolean(self.root(), CFG_FULLSCREEN, true)
-    }
-
     pub fn set_bool<V: Into<bool>>(&mut self, key: &str, value: V) {
         self.inner[key] = toml_edit::value(value.into())
+    }
+
+    pub fn get_bool(&self, key: &str, default: bool) -> Result<bool, toml::Error> {
+        toml::get_boolean(self.root(), key, default)
     }
 
     pub fn set_int<V: Into<i64>>(&mut self, key: &str, value: V) {
         self.inner[key] = toml_edit::value(value.into())
     }
 
+    pub fn get_int(&self, key: &str, default: i64) -> Result<i64, toml::Error> {
+        toml::get_integer(self.root(), key, default)
+    }
+
     pub fn set_string<V: Into<String>>(&mut self, key: &str, value: V) {
         self.inner[key] = toml_edit::value(value.into())
+    }
+
+    pub fn get_string<'a>(&'a self, key: &str, default: &'a str) -> Result<&'a str, toml::Error> {
+        toml::get_string(self.root(), key, default)
     }
 }
 

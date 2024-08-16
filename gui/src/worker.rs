@@ -4,6 +4,7 @@ use crate::TextLevel;
 use log::{error, info, warn};
 use moomba_core::config::Config;
 use moomba_core::game::env::Env;
+use moomba_core::game::ffnx_config;
 use moomba_core::game::ffnx_installation::FfnxInstallation;
 use moomba_core::game::installation;
 use moomba_core::pe_format;
@@ -97,7 +98,16 @@ fn set_current_page(handle: slint::Weak<AppWindow>, page_id: i32) {
         .unwrap_or_default()
 }
 
-fn set_ffnx_config(handle: slint::Weak<AppWindow>, config: crate::FfnxConfig) {
+fn set_ffnx_config(handle: slint::Weak<AppWindow>, ffnx_config: &mut LazyFfnxConfig) {
+    let config = crate::FfnxConfig {
+        renderer_backend: ffnx_config.get_int(ffnx_config::CFG_RENDERER_BACKEND, 0),
+        fullscreen: ffnx_config.get_bool(ffnx_config::CFG_FULLSCREEN, true),
+        borderless: ffnx_config.get_bool(ffnx_config::CFG_BORDERLESS, false),
+        enable_vsync: ffnx_config.get_bool(ffnx_config::CFG_ENABLE_VSYNC, true),
+        enable_antialiasing: ffnx_config.get_int(ffnx_config::CFG_ENABLE_ANTIALIASING, 0),
+        enable_anisotropic: ffnx_config.get_bool(ffnx_config::CFG_ENABLE_ANISOTROPIC, true),
+        ff8_use_gamepad_icons: ffnx_config.get_bool(ffnx_config::CFG_FF8_USE_GAMEPAD_ICONS, true),
+    };
     handle
         .upgrade_in_event_loop(move |h| h.global::<Installations>().set_ffnx_config(config))
         .unwrap_or_default()
@@ -450,12 +460,8 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
     ffnx_config
         .get()
         .set_app_path(installation.app_path.to_string_lossy().to_string());
-    set_ffnx_config(
-        handle.clone(),
-        crate::FfnxConfig {
-            fullscreen: ffnx_config.get().fullscreen().unwrap_or_default(),
-        },
-    );
+
+    set_ffnx_config(handle.clone(), &mut ffnx_config);
     ffnx_config.save();
 
     for received in &rx {
@@ -502,6 +508,7 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
                 ffnx_config.get().set_string(key.as_str(), value)
             }
             Message::ConfigureFfnx => {
+                set_ffnx_config(handle.clone(), &mut ffnx_config);
                 ffnx_config.save();
             }
             Message::CancelConfigureFfnx => ffnx_config.clear(),
