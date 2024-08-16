@@ -25,13 +25,16 @@ export component OptionsPage inherits VerticalLayout {
 
             StandardButton {
                 kind: cancel;
-                clicked => { Installations.current-page = 0; }
+                clicked => {
+                    Installations.cancel-configure-ffnx();
+                    Installations.current-page = 0;
+                }
             }
             StandardButton {
                 kind: ok;
 
                 clicked => {
-                    Installations.configure-game();
+                    Installations.configure-ffnx();
                     Installations.current-page = 0;
                 }
             }

@@ -26,20 +26,32 @@ impl FfnxConfig {
         toml::save_to_file(&self.inner, path)
     }
 
+    pub fn root(&self) -> &toml_edit::Table {
+        self.inner.as_table()
+    }
+
     pub fn app_path(&self) -> Result<&str, toml::Error> {
-        toml::get_string(self.inner.as_table(), CFG_APP_PATH, "")
+        toml::get_string(self.root(), CFG_APP_PATH, "")
     }
 
     pub fn set_app_path<V: Into<String>>(&mut self, value: V) {
-        self.inner[CFG_APP_PATH] = toml_edit::value(value.into())
+        self.set_string(CFG_APP_PATH, value)
     }
 
     pub fn fullscreen(&self) -> Result<bool, toml::Error> {
-        toml::get_boolean(self.inner.as_table(), CFG_FULLSCREEN, true)
+        toml::get_boolean(self.root(), CFG_FULLSCREEN, true)
     }
 
-    pub fn set_fullscreen<V: Into<String>>(&mut self, value: V) {
-        self.inner[CFG_FULLSCREEN] = toml_edit::value(value.into())
+    pub fn set_bool<V: Into<bool>>(&mut self, key: &str, value: V) {
+        self.inner[key] = toml_edit::value(value.into())
+    }
+
+    pub fn set_int<V: Into<i64>>(&mut self, key: &str, value: V) {
+        self.inner[key] = toml_edit::value(value.into())
+    }
+
+    pub fn set_string<V: Into<String>>(&mut self, key: &str, value: V) {
+        self.inner[key] = toml_edit::value(value.into())
     }
 }
 

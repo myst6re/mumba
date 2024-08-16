@@ -25,8 +25,13 @@ export component OptionsDisplayPage inherits VerticalLayout {
                     HorizontalBox {
                         alignment: start;
 
-                        fullscreen := Switch {
+                        Switch {
                             text: @tr("Fullscreen");
+                            checked: Installations.ffnx-config.fullscreen;
+
+                            toggled() => {
+                                Installations.set-ffnx-config-bool("fullscreen", self.checked)
+                            }
                         }
                         borderless := Switch {
                             text: @tr("Borderless");

@@ -1,5 +1,8 @@
 import { Palette } from "std-widgets.slint";
 export enum TextLevel { info, warn, error }
+export struct FfnxConfig {
+    fullscreen: bool,
+}
 
 export global Installations {
     in property <string> game-path;
@@ -8,9 +11,17 @@ export global Installations {
     in property <string> task-text;
     in property <TextLevel> task-text-type : info;
     in property <bool> is-ready : false;
+
     pure callback setup(string);
     pure callback launch-game();
     pure callback browse-game(string) -> string;
-    pure callback configure-game();
+    pure callback configure-ffnx();
+    pure callback cancel-configure-ffnx();
     pure callback upgrade-ffnx();
+
+    pure callback set-ffnx-config-bool(string, bool);
+    pure callback set-ffnx-config-int(string, int);
+    pure callback set-ffnx-config-string(string, string);
+
+    in property <FfnxConfig> ffnx-config;
 }

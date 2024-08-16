@@ -1,9 +1,9 @@
 use super::{AppWindow, Installations};
+use crate::lazy_ffnx_config::LazyFfnxConfig;
 use crate::TextLevel;
 use log::{error, info, warn};
 use moomba_core::config::Config;
 use moomba_core::game::env::Env;
-use moomba_core::game::ffnx_config::FfnxConfig;
 use moomba_core::game::ffnx_installation::FfnxInstallation;
 use moomba_core::game::installation;
 use moomba_core::pe_format;
@@ -26,7 +26,11 @@ const DETACHED_PROCESS: u32 = 0x8;
 pub enum Message {
     Setup(slint::SharedString),
     LaunchGame,
-    ConfigureGame,
+    ConfigureFfnx,
+    CancelConfigureFfnx,
+    SetFfnxConfigBool(slint::SharedString, bool),
+    SetFfnxConfigInt(slint::SharedString, i64),
+    SetFfnxConfigString(slint::SharedString, slint::SharedString),
     UpdateGame,
     Quit,
 }
@@ -90,6 +94,12 @@ fn set_game_exe_path(handle: slint::Weak<AppWindow>, text: String) {
 fn set_current_page(handle: slint::Weak<AppWindow>, page_id: i32) {
     handle
         .upgrade_in_event_loop(move |h| h.global::<Installations>().set_current_page(page_id))
+        .unwrap_or_default()
+}
+
+fn set_ffnx_config(handle: slint::Weak<AppWindow>, config: crate::FfnxConfig) {
+    handle
+        .upgrade_in_event_loop(move |h| h.global::<Installations>().set_ffnx_config(config))
         .unwrap_or_default()
 }
 
@@ -436,13 +446,17 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
         &env,
     );
 
-    let ffnx_config_path = env.ffnx_dir.join("FFNx.toml");
-    let mut ffnx_config = match FfnxConfig::from_file(&ffnx_config_path) {
-        Ok(c) => c,
-        Err(_e) => FfnxConfig::new(),
-    };
-    ffnx_config.set_app_path(installation.app_path.to_string_lossy().to_string());
-    ffnx_config.save(&ffnx_config_path);
+    let mut ffnx_config = LazyFfnxConfig::new(&env);
+    ffnx_config
+        .get()
+        .set_app_path(installation.app_path.to_string_lossy().to_string());
+    set_ffnx_config(
+        handle.clone(),
+        crate::FfnxConfig {
+            fullscreen: ffnx_config.get().fullscreen().unwrap_or_default(),
+        },
+    );
+    ffnx_config.save();
 
     for received in &rx {
         match received {
@@ -480,9 +494,17 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
                 info!("Launch {:?} in dir {:?}...", &ff8_path, &env.ffnx_dir);
                 launch_game(&ff8_path, &env.ffnx_dir, installation.get_app_id())
             }
-            Message::ConfigureGame => {
-                ffnx_config.save(&ffnx_config_path);
+            Message::SetFfnxConfigBool(key, value) => {
+                ffnx_config.get().set_bool(key.as_str(), value)
             }
+            Message::SetFfnxConfigInt(key, value) => ffnx_config.get().set_int(key.as_str(), value),
+            Message::SetFfnxConfigString(key, value) => {
+                ffnx_config.get().set_string(key.as_str(), value)
+            }
+            Message::ConfigureFfnx => {
+                ffnx_config.save();
+            }
+            Message::CancelConfigureFfnx => ffnx_config.clear(),
             Message::Quit => break,
         };
         set_task_text(handle.clone(), TextLevel::Info, "");

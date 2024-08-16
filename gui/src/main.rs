@@ -3,13 +3,15 @@
 use std::path::Path;
 slint::include_modules!();
 use log::error;
+use moomba_core::game::env::Env;
 
+pub mod lazy_ffnx_config;
 pub mod worker;
 
 use worker::Worker;
 
 fn main() -> Result<(), slint::PlatformError> {
-    let env = moomba_core::game::env::Env::new().unwrap();
+    let env = Env::new().unwrap();
     moomba_core::moomba_log::init(&env, "moomba.log");
 
     let ui = AppWindow::new()?;
@@ -55,14 +57,43 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
 
-    ui.global::<Installations>().on_configure_game({
+    ui.global::<Installations>().on_configure_ffnx({
         let tx = worker.tx.clone();
-        move || tx.send(worker::Message::ConfigureGame).unwrap()
+        move || tx.send(worker::Message::ConfigureFfnx).unwrap()
+    });
+
+    ui.global::<Installations>().on_cancel_configure_ffnx({
+        let tx = worker.tx.clone();
+        move || tx.send(worker::Message::CancelConfigureFfnx).unwrap()
     });
 
     ui.global::<Installations>().on_upgrade_ffnx({
         let tx = worker.tx.clone();
         move || tx.send(worker::Message::UpdateGame).unwrap()
+    });
+
+    ui.global::<Installations>().on_set_ffnx_config_bool({
+        let tx = worker.tx.clone();
+        move |key, value| {
+            tx.send(worker::Message::SetFfnxConfigBool(key, value))
+                .unwrap()
+        }
+    });
+
+    ui.global::<Installations>().on_set_ffnx_config_int({
+        let tx = worker.tx.clone();
+        move |key, value| {
+            tx.send(worker::Message::SetFfnxConfigInt(key, value as i64))
+                .unwrap()
+        }
+    });
+
+    ui.global::<Installations>().on_set_ffnx_config_string({
+        let tx = worker.tx.clone();
+        move |key, value| {
+            tx.send(worker::Message::SetFfnxConfigString(key, value))
+                .unwrap()
+        }
     });
 
     ui.run()?;
