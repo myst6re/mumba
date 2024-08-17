@@ -24,12 +24,18 @@ export component OptionsGamepadPage inherits VerticalLayout {
                     Switch {
                         text: @tr("Show PS1 gamepad icons");
                         checked: Installations.ffnx-config.ff8_use_gamepad_icons;
-    
+
                         toggled() => {
                             Installations.set-ffnx-config-bool("ff8_use_gamepad_icons", self.checked)
                         }
                     }
                 }
+            }
+
+            Image {
+                source: @image-url("../../../data/gamepad_layout.svg");
+                max-width: 664px;
+                max-height: 664px;
             }
         }
 

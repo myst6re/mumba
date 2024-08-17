@@ -20,3 +20,7 @@ rustup target add x86_64-pc-windows-gnu
 cargo build --release --bin ff8_launcher --target x86_64-pc-windows-gnu
 cp target/x86_64-pc-windows-gnu/release/ff8_launcher.exe target/release/
 ```
+
+## Thanks
+
+- Tokyoship: Initial author of [gamepad_layout.svg](https://commons.wikimedia.org/w/index.php?title=File:Dualshock_4_Layout.svg&oldid=769091332)
