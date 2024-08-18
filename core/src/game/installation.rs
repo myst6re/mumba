@@ -247,9 +247,9 @@ impl Installation {
     }
 
     #[cfg(windows)]
-    pub fn get_config_path(edition: &Edition, app_path: &PathBuf) -> PathBuf {
+    pub fn get_config_path(edition: &Edition, app_path: &Path) -> PathBuf {
         match edition {
-            Edition::Standard => app_path.clone(),
+            Edition::Standard => app_path.to_path_buf(),
             Edition::Steam => crate::os::windows::my_documents_path()
                 .join("Square Enix")
                 .join("FINAL FANTASY VIII Steam"),

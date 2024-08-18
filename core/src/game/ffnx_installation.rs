@@ -1,7 +1,7 @@
 #[cfg(all(feature = "network", feature = "zip"))]
 use crate::game::env::Env;
 #[cfg(any(feature = "network", feature = "pe"))]
-use crate::game::installation::Edition;
+use crate::game::installation::{Edition, Installation};
 #[cfg(feature = "pe")]
 use crate::pe_format;
 #[cfg(any(feature = "network", feature = "zip"))]
@@ -12,6 +12,8 @@ use std::path::PathBuf;
 
 pub struct FfnxInstallation {
     pub version: String,
+    pub path: PathBuf,
+    pub exe_name: String,
 }
 
 impl FfnxInstallation {
@@ -21,11 +23,20 @@ impl FfnxInstallation {
     }
 
     #[cfg(feature = "pe")]
-    pub fn from_directory(target_dir: &Path, edition: &Edition) -> Option<FfnxInstallation> {
-        let dll_name = if matches!(edition, Edition::Steam) {
+    pub fn from_directory(
+        target_dir: &Path,
+        installation: &Installation,
+    ) -> Option<FfnxInstallation> {
+        let dll_name = if matches!(installation.edition, Edition::Steam) {
             "AF3DN.P"
         } else {
             "eax.dll"
+        };
+        let ff8_exe_name = if matches!(installation.edition, Edition::Standard) {
+            // Rename exe to prevent Windows Compatibility patches for 2000 edition
+            "FF8_Moomba.exe"
+        } else {
+            &installation.exe_name
         };
         match pe_format::pe_version_info(target_dir.join(dll_name).as_path()) {
             Ok(infos) => Some(FfnxInstallation {
@@ -35,6 +46,8 @@ impl FfnxInstallation {
                     infos.product_version.Minor,
                     infos.product_version.Patch
                 ),
+                path: PathBuf::from(target_dir),
+                exe_name: String::from(ff8_exe_name),
             }),
             Err(pe_format::Error::IoError(e)) if e.kind() == std::io::ErrorKind::NotFound => None,
             Err(e) => {
@@ -66,5 +79,13 @@ impl FfnxInstallation {
             ),
             last_tag,
         )
+    }
+
+    pub fn exe_path(&self) -> PathBuf {
+        self.path.join(&self.exe_name)
+    }
+
+    pub fn config_path(&self) -> PathBuf {
+        self.path.join("FFNx.toml")
     }
 }

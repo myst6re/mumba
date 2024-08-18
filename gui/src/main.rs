@@ -51,7 +51,7 @@ fn main() -> Result<(), slint::PlatformError> {
             }
 
             match dialog.pick_file() {
-                Some(new_path) => String::from(new_path.to_string_lossy()).into(),
+                Some(new_path) => new_path.to_string_lossy().to_string().into(),
                 None => old_path,
             }
         }

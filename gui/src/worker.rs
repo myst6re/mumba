@@ -9,6 +9,7 @@ use moomba_core::game::ffnx_installation::FfnxInstallation;
 use moomba_core::game::installation;
 use moomba_core::pe_format;
 use moomba_core::provision;
+use moomba_core::toml;
 use slint::ComponentHandle;
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
@@ -44,6 +45,8 @@ pub enum InstallError {
     IOError(#[from] std::io::Error),
     #[error("4GB patch Error: {0}")]
     PeFormatError(#[from] pe_format::Error),
+    #[error("Configure Error: {0}")]
+    TomlFileError(#[from] toml::FileError),
 }
 
 pub struct Worker {
@@ -115,17 +118,17 @@ fn set_ffnx_config(handle: slint::Weak<AppWindow>, ffnx_config: &mut LazyFfnxCon
 
 fn upgrade_ffnx(
     handle: slint::Weak<AppWindow>,
-    ffnx_version: &String,
+    ffnx_installation: &FfnxInstallation,
     edition: &installation::Edition,
     env: &Env,
 ) {
     set_task_text(handle.clone(), TextLevel::Info, "Check for FFNx update…");
     let (url, version) =
         FfnxInstallation::find_last_stable_version_on_github("julianxhokaxhiu/FFNx", edition);
-    if *ffnx_version != version {
+    if *ffnx_installation.version != version {
         set_task_text(handle.clone(), TextLevel::Info, "Upgrading FFNx…");
         set_game_ready(handle.clone(), false);
-        match FfnxInstallation::download(url.as_str(), &env.ffnx_dir, env) {
+        match FfnxInstallation::download(url.as_str(), &ffnx_installation.path, env) {
             Ok(()) => (),
             Err(e) => {
                 error!("Error when installing FFNx: {:?}", e);
@@ -173,44 +176,59 @@ fn launch_game(_ff8_path: &Path, _ffnx_dir: &Path, app_id: u64) {
 fn install_game_and_ffnx(
     handle: slint::Weak<AppWindow>,
     installation: &installation::Installation,
-    ff8_path: &PathBuf,
     env: &Env,
 ) -> Result<FfnxInstallation, InstallError> {
-    let ffnx_installation =
-        match FfnxInstallation::from_directory(&env.ffnx_dir, &installation.edition) {
-            Some(ffnx_installation) => {
-                info!("Found FFNx version {}", ffnx_installation.version);
-                ffnx_installation
-            }
-            None => {
-                set_task_text(handle.clone(), TextLevel::Info, "Installing FFNx…");
-                let (url, _) = FfnxInstallation::find_last_stable_version_on_github(
-                    "julianxhokaxhiu/FFNx",
-                    &installation.edition,
-                );
-                FfnxInstallation::download(url.as_str(), &env.ffnx_dir, env)?;
-                if let Some(ffnx_installation) =
-                    FfnxInstallation::from_directory(&env.ffnx_dir, &installation.edition)
-                {
-                    ffnx_installation
-                } else {
-                    return Err(InstallError::IOError(std::io::Error::new(
-                        std::io::ErrorKind::InvalidData,
-                        "Invalid FFNx installation",
-                    )));
-                }
-            }
-        };
-
-    if matches!(installation.edition, installation::Edition::Steam) {
-        installation.replace_launcher(ff8_path, env)?
+    let ffnx_dir = if cfg!(unix) {
+        // Steam + Proton refuses to launch the game if the exe is outside the base dir of the app
+        PathBuf::from(&installation.app_path)
+    } else {
+        env.ffnx_dir.clone()
     };
 
-    if !ff8_path.exists() {
-        moomba_core::provision::copy_file(&installation.exe_path(), ff8_path)?
+    let ffnx_installation = match FfnxInstallation::from_directory(&ffnx_dir, installation) {
+        Some(ffnx_installation) => {
+            info!("Found FFNx version {}", ffnx_installation.version);
+            ffnx_installation
+        }
+        None => {
+            set_task_text(handle.clone(), TextLevel::Info, "Installing FFNx…");
+            let (url, _) = FfnxInstallation::find_last_stable_version_on_github(
+                "julianxhokaxhiu/FFNx",
+                &installation.edition,
+            );
+            FfnxInstallation::download(url.as_str(), &ffnx_dir, env)?;
+            if let Some(ffnx_installation) =
+                FfnxInstallation::from_directory(&ffnx_dir, installation)
+            {
+                ffnx_installation
+            } else {
+                return Err(InstallError::IOError(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Invalid FFNx installation",
+                )));
+            }
+        }
+    };
+
+    let mut lazy_ffnx_config = LazyFfnxConfig::new(&ffnx_installation);
+    let ffnx_config = lazy_ffnx_config.get();
+    ffnx_config.set_bool("show_fps", false);
+    ffnx_config.set_bool("show_renderer_backend", false);
+    ffnx_config.set_bool("show_stats", false);
+    ffnx_config.set_bool("show_version", false);
+    lazy_ffnx_config.save()?;
+
+    let exe_path = ffnx_installation.exe_path();
+
+    if matches!(installation.edition, installation::Edition::Steam) {
+        installation.replace_launcher(&exe_path, env)?
+    };
+
+    if !exe_path.exists() {
+        moomba_core::provision::copy_file(&installation.exe_path(), &exe_path)?
     }
 
-    let bink_dll_path = env.ffnx_dir.join("binkw32.dll");
+    let bink_dll_path = ffnx_installation.path.join("binkw32.dll");
     if !bink_dll_path.exists() {
         if matches!(installation.edition, installation::Edition::Standard) {
             if !matches!(installation.version, Some((installation::Version::V120, _))) {
@@ -230,12 +248,12 @@ fn install_game_and_ffnx(
                         moomba_core::provision::download_zip(
                             url.as_str(),
                             "FF8Patch1.02.zip",
-                            &env.ffnx_dir,
+                            &ffnx_installation.path,
                             env,
                         )?;
                         moomba_core::provision::rename_file(
-                            &env.ffnx_dir.join("FF8.exe"),
-                            ff8_path,
+                            &ffnx_installation.path.join("FF8.exe"),
+                            &exe_path,
                         )?;
                     }
                     None => {
@@ -249,15 +267,15 @@ fn install_game_and_ffnx(
                 &bink_dll_path,
             )?;
             // Clean
-            let eax_dll_path = env.ffnx_dir.join("eax.dll");
+            let eax_dll_path = ffnx_installation.path.join("eax.dll");
             if eax_dll_path.exists() {
                 std::fs::remove_file(eax_dll_path)?;
             }
         }
     }
-    let ff8_input = env.ffnx_dir.join("override").join("ff8input.cfg");
+    let ff8_input = ffnx_installation.path.join("override").join("ff8input.cfg");
     if !ff8_input.exists() {
-        std::fs::create_dir_all(env.ffnx_dir.join("override"))?;
+        std::fs::create_dir_all(ffnx_installation.path.join("override"))?;
         moomba_core::provision::copy_file(
             &installation.config_path.join("ff8input.cfg"),
             &ff8_input,
@@ -271,7 +289,7 @@ fn install_game_and_ffnx(
                 .to_file(&ff8_input)
         })?
     }
-    moomba_core::pe_format::pe_patch_4bg(ff8_path)?;
+    moomba_core::pe_format::pe_patch_4bg(&exe_path)?;
     Ok(ffnx_installation)
 }
 
@@ -387,11 +405,10 @@ fn retrieve_ffnx_installation(
     handle: slint::Weak<AppWindow>,
     moomba_config: &mut Config,
     installation: &mut installation::Installation,
-    ff8_path: &PathBuf,
     env: &Env,
 ) -> Option<FfnxInstallation> {
     loop {
-        match install_game_and_ffnx(handle.clone(), installation, ff8_path, env) {
+        match install_game_and_ffnx(handle.clone(), installation, env) {
             Ok(ffnx_installation) => return Some(ffnx_installation),
             Err(e) => {
                 error!("Installation error: {}", e);
@@ -437,25 +454,11 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
         &installation.version
     );
 
-    if cfg!(unix) {
-        // Steam + Proton refuses to launch the game if the exe is outside the base dir of the app
-        env.ffnx_dir = PathBuf::from(&installation.app_path)
-    }
-
-    let ff8_exe_name = if matches!(installation.edition, installation::Edition::Standard) {
-        // Rename exe to prevent Windows Compatibility patches for 2000 edition
-        "FF8_Moomba.exe"
-    } else {
-        &installation.exe_name
-    };
-    let ff8_path = env.ffnx_dir.join(ff8_exe_name);
-
     let mut ffnx_installation = match retrieve_ffnx_installation(
         &rx,
         handle.clone(),
         &mut moomba_config,
         &mut installation,
-        &ff8_path,
         &env,
     ) {
         Some(ffnx_installation) => ffnx_installation,
@@ -465,14 +468,7 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
     set_task_text(handle.clone(), TextLevel::Info, "");
     set_game_ready(handle.clone(), true);
 
-    upgrade_ffnx(
-        handle.clone(),
-        &ffnx_installation.version,
-        &installation.edition,
-        &env,
-    );
-
-    let mut ffnx_config = LazyFfnxConfig::new(&env);
+    let mut ffnx_config = LazyFfnxConfig::new(&ffnx_installation);
     ffnx_config
         .get()
         .set_app_path(installation.app_path.to_string_lossy().to_string());
@@ -498,7 +494,6 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
                     handle.clone(),
                     &mut moomba_config,
                     &mut installation,
-                    &ff8_path,
                     &env,
                 ) {
                     Some(version) => version,
@@ -508,13 +503,21 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
             }
             Message::UpdateGame => upgrade_ffnx(
                 handle.clone(),
-                &ffnx_installation.version,
+                &ffnx_installation,
                 &installation.edition,
                 &env,
             ),
             Message::LaunchGame => {
-                info!("Launch {:?} in dir {:?}...", &ff8_path, &env.ffnx_dir);
-                launch_game(&ff8_path, &env.ffnx_dir, installation.get_app_id())
+                let exe_path = ffnx_installation.exe_path();
+                info!(
+                    "Launch {:?} in dir {:?}...",
+                    &exe_path, &ffnx_installation.path
+                );
+                launch_game(
+                    &exe_path,
+                    &ffnx_installation.path,
+                    installation.get_app_id(),
+                )
             }
             Message::SetFfnxConfigBool(key, value) => {
                 ffnx_config.get().set_bool(key.as_str(), value)

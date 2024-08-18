@@ -1,6 +1,6 @@
 use log::warn;
-use moomba_core::game::env::Env;
 use moomba_core::game::ffnx_config::FfnxConfig;
+use moomba_core::game::ffnx_installation::FfnxInstallation;
 use moomba_core::toml::FileError;
 use std::path::PathBuf;
 
@@ -10,10 +10,10 @@ pub struct LazyFfnxConfig {
 }
 
 impl LazyFfnxConfig {
-    pub fn new(env: &Env) -> Self {
+    pub fn new(installation: &FfnxInstallation) -> Self {
         Self {
             config: None,
-            config_path: env.ffnx_dir.join("FFNx.toml"),
+            config_path: installation.config_path(),
         }
     }
 
@@ -49,7 +49,8 @@ impl LazyFfnxConfig {
         if let Some(config) = &self.config {
             config.save(&self.config_path)?
         }
-        Ok(self.clear())
+        self.clear();
+        Ok(())
     }
 
     pub fn clear(&mut self) {

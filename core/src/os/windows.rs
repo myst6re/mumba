@@ -17,11 +17,8 @@ pub fn saved_games_path() -> PathBuf {
     };
     if path.is_empty() {
         let dirs = directories::UserDirs::new();
-        dirs.map_or_else(
-            || PathBuf::new(),
-            |d| d.document_dir().unwrap().to_path_buf(),
-        )
-        .join("My Games")
+        dirs.map_or_else(PathBuf::new, |d| d.document_dir().unwrap().to_path_buf())
+            .join("My Games")
     } else {
         PathBuf::from(path)
     }
@@ -43,10 +40,7 @@ pub fn my_documents_path() -> PathBuf {
     let path = OsString::from_wide(&path);
     if path.is_empty() {
         let dirs = directories::UserDirs::new();
-        dirs.map_or_else(
-            || PathBuf::new(),
-            |d| d.document_dir().unwrap().to_path_buf(),
-        )
+        dirs.map_or_else(PathBuf::new, |d| d.document_dir().unwrap().to_path_buf())
     } else {
         PathBuf::from(path)
     }
