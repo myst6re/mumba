@@ -43,6 +43,8 @@ cargo install cargo-deb
 cargo deb -p moomba
 ```
 
+The DEB file is produced in `target/debian/`.
+
 ## Thanks
 
 - Tokyoship: Initial author of [gamepad_layout.svg](https://commons.wikimedia.org/w/index.php?title=File:Dualshock_4_Layout.svg&oldid=769091332)
