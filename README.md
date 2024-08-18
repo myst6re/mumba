@@ -21,6 +21,28 @@ cargo build --release --bin ff8_launcher --target x86_64-pc-windows-gnu
 cp target/x86_64-pc-windows-gnu/release/ff8_launcher.exe target/release/
 ```
 
+## Create installer
+
+### Windows
+
+Download Wix **3** from here: https://github.com/wixtoolset/wix3/releases
+
+```sh
+cargo install cargo-wix
+cd gui
+cargo wix --nocapture --no-build -p moomba
+```
+
+The MSI file is produced in `target/wix/`.
+
+### Debian-like linuxes
+
+```sh
+apt-get install liblzma-dev dpkg-dev
+cargo install cargo-deb
+cargo deb -p moomba
+```
+
 ## Thanks
 
 - Tokyoship: Initial author of [gamepad_layout.svg](https://commons.wikimedia.org/w/index.php?title=File:Dualshock_4_Layout.svg&oldid=769091332)

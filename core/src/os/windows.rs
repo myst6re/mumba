@@ -1,29 +1,54 @@
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::os::windows::ffi::OsStrExt;
+use std::os::windows::prelude::*;
 use std::path::PathBuf;
-use windows::Win32::Foundation::{self, HANDLE, HWND, WIN32_ERROR};
+use windows::Win32::Foundation::{self, HANDLE, HWND, MAX_PATH, WIN32_ERROR};
 use windows::Win32::UI::Shell;
 
-pub fn saved_games_path() -> String {
+pub fn saved_games_path() -> PathBuf {
     let path = unsafe {
+        // Rematered version uses this call
         Shell::SHGetKnownFolderPath(
             &Shell::FOLDERID_SavedGames,
             Shell::KF_FLAG_DEFAULT,
             HANDLE::default(),
         )
-        .map(|e| e.to_string().unwrap_or_default())
-        .unwrap_or_default()
+        .map_or_else(|_| String::new(), |e| e.to_string().unwrap_or_default())
     };
     if path.is_empty() {
         let dirs = directories::UserDirs::new();
-        String::from(
-            dirs.map_or(PathBuf::new(), |d| d.document_dir().unwrap().to_path_buf())
-                .join("My Games")
-                .to_str()
-                .unwrap(),
+        dirs.map_or_else(
+            || PathBuf::new(),
+            |d| d.document_dir().unwrap().to_path_buf(),
+        )
+        .join("My Games")
+    } else {
+        PathBuf::from(path)
+    }
+}
+
+pub fn my_documents_path() -> PathBuf {
+    let mut path = [0u16; MAX_PATH as usize];
+    unsafe {
+        // Steam 2013 version uses this obsolete implementation instead of SHGetKnownFolderPath
+        Shell::SHGetFolderPathW(
+            HWND::default(),
+            (Shell::CSIDL_MYDOCUMENTS | Shell::CSIDL_FLAG_CREATE) as i32,
+            HANDLE::default(),
+            0,
+            &mut path,
+        )
+        .unwrap_or_default()
+    };
+    let path = OsString::from_wide(&path);
+    if path.is_empty() {
+        let dirs = directories::UserDirs::new();
+        dirs.map_or_else(
+            || PathBuf::new(),
+            |d| d.document_dir().unwrap().to_path_buf(),
         )
     } else {
-        path
+        PathBuf::from(path)
     }
 }
 

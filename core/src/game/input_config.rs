@@ -1,3 +1,4 @@
+use crate::game::installation::Edition;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
@@ -10,6 +11,21 @@ pub struct InputConfig {
 }
 
 impl InputConfig {
+    pub fn new(edition: &Edition) -> InputConfig {
+        InputConfig {
+            keyboard: [32, 45, 30, 17, 16, 18, 44, 46, 31, 33, 200, 208, 203, 205],
+            joystick: if matches!(edition, Edition::Standard) {
+                [
+                    226, 225, 224, 227, 228, 229, 230, 231, 232, 233, 252, 253, 254, 255,
+                ]
+            } else {
+                [
+                    225, 224, 226, 227, 228, 229, 232, 233, 230, 231, 252, 253, 254, 255,
+                ]
+            },
+        }
+    }
+
     pub fn from_file<P: AsRef<Path>>(path: P) -> io::Result<InputConfig> {
         let mut reader = BufReader::new(File::open(path)?);
         let mut line = String::new();

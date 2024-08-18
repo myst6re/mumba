@@ -245,7 +245,7 @@ fn install_game_and_ffnx(
             }
         } else {
             moomba_core::provision::copy_file(
-                &PathBuf::from(&installation.app_path).join("binkw32.dll"),
+                &installation.app_path.join("binkw32.dll"),
                 &bink_dll_path,
             )?;
             // Clean
@@ -254,6 +254,22 @@ fn install_game_and_ffnx(
                 std::fs::remove_file(eax_dll_path)?;
             }
         }
+    }
+    let ff8_input = env.ffnx_dir.join("override").join("ff8input.cfg");
+    if !ff8_input.exists() {
+        std::fs::create_dir_all(env.ffnx_dir.join("override"))?;
+        moomba_core::provision::copy_file(
+            &installation.config_path.join("ff8input.cfg"),
+            &ff8_input,
+        )
+        .or_else(|e| {
+            warn!(
+                "Error when copying ff8input.cfg, creating a new one instead: {}",
+                e
+            );
+            moomba_core::game::input_config::InputConfig::new(&installation.edition)
+                .to_file(&ff8_input)
+        })?
     }
     moomba_core::pe_format::pe_patch_4bg(ff8_path)?;
     Ok(ffnx_installation)
