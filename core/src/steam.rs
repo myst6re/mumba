@@ -13,13 +13,13 @@ use std::path::PathBuf;
 use std::{borrow::Cow, collections::HashMap, fs};
 
 #[cfg(feature = "steam")]
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct SteamLibraryFolders {
     libraries: Vec<Library>,
 }
 
 #[cfg(feature = "steam")]
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct Library {
     path: PathBuf,
     apps: HashMap<u64, u64>,
@@ -83,7 +83,11 @@ impl Steam {
     fn list_library_folders(
         steam_path: &Path,
     ) -> Result<SteamLibraryFolders, Box<dyn std::error::Error>> {
-        let asset_path = format!("{}\\config\\libraryfolders.vdf", steam_path.display());
+        let asset_path = steam_path
+            .to_path_buf()
+            .join("config")
+            .join("libraryfolders.vdf");
+        info!("list_library_folders {:?}", asset_path);
         let vdf_text = fs::read_to_string(asset_path)?;
         let mut vdf = Vdf::parse(&vdf_text)?;
         let obj = vdf.value.get_mut_obj().unwrap();
@@ -98,7 +102,11 @@ impl Steam {
             index += 1;
         }
 
-        Ok(from_vdf(vdf)?)
+        let res = from_vdf(vdf)?;
+
+        info!("Found Libaries: {:?}", res);
+
+        Ok(res)
     }
 }
 

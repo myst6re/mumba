@@ -261,11 +261,34 @@ impl Installation {
     }
 
     #[cfg(unix)]
-    pub fn get_config_path(edition: &Edition, app_path: &PathBuf) -> PathBuf {
+    pub fn get_config_path(edition: &Edition, app_path: &Path) -> PathBuf {
         match edition {
-            Edition::Standard => app_path.clone(),
-            Edition::Steam => app_path.clone(),      // TODO
-            Edition::Remastered => app_path.clone(), // TODO
+            Edition::Standard => app_path.to_path_buf(),
+            Edition::Steam => app_path
+                .join("..")
+                .join("..")
+                .join("compatdata")
+                .join((Edition::Steam as u64).to_string())
+                .join("pfx")
+                .join("drive_c")
+                .join("users")
+                .join("steamuser")
+                .join("My Documents")
+                .join("Square Enix")
+                .join("FINAL FANTASY VIII Steam"),
+            Edition::Remastered => app_path
+                .join("..")
+                .join("..")
+                .join("compatdata")
+                .join((Edition::Remastered as u64).to_string())
+                .join("pfx")
+                .join("drive_c")
+                .join("users")
+                .join("steamuser")
+                .join("My Documents")
+                .join("My Games")
+                .join("FINAL FANTASY VIII Remastered")
+                .join("game_data"),
         }
     }
 
@@ -296,7 +319,9 @@ impl Installation {
     fn search_steam_edition(steam_library_folders: &Option<steam::Steam>) -> Option<Self> {
         steam_library_folders
             .as_ref()
-            .and_then(|lib_folders| lib_folders.find_app(39150, "FINAL FANTASY VIII"))
+            .and_then(|lib_folders| {
+                lib_folders.find_app(Edition::Steam as u64, "FINAL FANTASY VIII")
+            })
             .or_else(|| {
                 warn!(
                     "Cannot find FINAL FANTASY VIII installation path, try with uninstall entries"
@@ -313,7 +338,9 @@ impl Installation {
     fn search_steam_edition(steam_library_folders: &Option<steam::Steam>) -> Option<Self> {
         steam_library_folders
             .as_ref()
-            .and_then(|lib_folders| lib_folders.find_app(39150, "FINAL FANTASY VIII"))
+            .and_then(|lib_folders| {
+                lib_folders.find_app(Edition::Steam as u64, "FINAL FANTASY VIII")
+            })
             .and_then(|app_path| Self::from_directory(app_path, Edition::Steam))
     }
 
@@ -321,7 +348,7 @@ impl Installation {
     fn search_remastered_edition(steam_library_folders: &Option<steam::Steam>) -> Option<Self> {
         steam_library_folders
             .as_ref()
-            .and_then(|lib_folders| lib_folders.find_app(1026680, "FINAL FANTASY VIII Remastered"))
+            .and_then(|lib_folders| lib_folders.find_app(Edition::Remastered as u64, "FINAL FANTASY VIII Remastered"))
             .or_else(|| {
                 warn!("Cannot find FINAL FANTASY VIII Remastered installation path, try with uninstall entries");
                 regedit::reg_search_installed_app_by_key(
@@ -335,7 +362,9 @@ impl Installation {
     fn search_remastered_edition(steam_library_folders: &Option<steam::Steam>) -> Option<Self> {
         steam_library_folders
             .as_ref()
-            .and_then(|lib_folders| lib_folders.find_app(1026680, "FINAL FANTASY VIII Remastered"))
+            .and_then(|lib_folders| {
+                lib_folders.find_app(Edition::Remastered as u64, "FINAL FANTASY VIII Remastered")
+            })
             .and_then(|app_path| Self::from_directory(app_path, Edition::Remastered))
     }
 
