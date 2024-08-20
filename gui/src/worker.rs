@@ -273,21 +273,23 @@ fn install_game_and_ffnx(
             }
         }
     }
-    let ff8_input = ffnx_installation.path.join("override").join("ff8input.cfg");
-    if !ff8_input.exists() {
-        std::fs::create_dir_all(ffnx_installation.path.join("override"))?;
-        moomba_core::provision::copy_file(
-            &installation.config_path.join("ff8input.cfg"),
-            &ff8_input,
-        )
-        .or_else(|e| {
-            warn!(
-                "Error when copying ff8input.cfg, creating a new one instead: {}",
-                e
-            );
-            moomba_core::game::input_config::InputConfig::new(&installation.edition)
-                .to_file(&ff8_input)
-        })?
+    if matches!(&installation.edition, installation::Edition::Standard) {
+        let ff8_input = ffnx_installation.path.join("override").join("ff8input.cfg");
+        if !ff8_input.exists() {
+            std::fs::create_dir_all(ffnx_installation.path.join("override"))?;
+            moomba_core::provision::copy_file(
+                &installation.app_path.join("ff8input.cfg"),
+                &ff8_input,
+            )
+            .or_else(|e| {
+                warn!(
+                    "Error when copying ff8input.cfg, creating a new one instead: {}",
+                    e
+                );
+                moomba_core::game::input_config::InputConfig::new(&installation.edition)
+                    .to_file(&ff8_input)
+            })?
+        }
     }
     moomba_core::pe_format::pe_patch_4bg(&exe_path)?;
     Ok(ffnx_installation)
