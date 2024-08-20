@@ -30,3 +30,10 @@ windows = {version = "0", features = ["Win32_UI_WindowsAndMessaging"]}
 [build-dependencies]
 slint-build = "1.7"
 winresource = "0.1"
+
+[package.metadata.deb]
+assets = [
+    ["target/release/moomba", "usr/bin/", "755"],
+    ["../target/x86_64-pc-windows-gnu/release/ff8_launcher.exe", "var/lib/moomba/", "644"],
+    ["../README.md", "usr/share/doc/moomba/README", "644"],
+]
