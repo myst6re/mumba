@@ -27,6 +27,21 @@ impl InputConfig {
         }
     }
 
+    /// Game implementation:
+    ///  - search for the first non-space character and then for the first space.
+    ///  - Do atoi() on the characters between and store the number 1
+    ///  - Then search for the first digit character
+    ///  - And do atoi() on the character until the end of the buffer and store the number 2
+    ///  - if the first number > 0 and <= 14 and the second number < 255, then use thoses
+    ///  - repeat until 28 entries are found
+    ///
+    /// Launcher implementation:
+    ///  - skip the first line (keyboard)
+    ///  - skip the first two words (the number and the description), and store the last word as a number (the second number)
+    ///  - do the last step 14 times
+    ///  - repeat the first 3 steps one more time (joystick)
+    ///
+    /// We choose to open like the Game does, but the launcher completely ignores the first number on each line.
     pub fn from_file<P: AsRef<Path>>(path: P) -> io::Result<InputConfig> {
         let mut reader = BufReader::new(File::open(path)?);
         let mut line = String::new();
@@ -36,6 +51,7 @@ impl InputConfig {
             joystick: [0; 14],
         };
         'outer: while current < 28 {
+            line.clear();
             let len = reader.read_line(&mut line)?;
             if len == 0 {
                 break;
@@ -95,7 +111,7 @@ impl InputConfig {
 
             current += 1
         }
-        if current >= 28 {
+        if current < 28 {
             Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "The file needs 28 entries to be valid",

@@ -53,6 +53,9 @@ jobs:
     - name: Build exe
       run: cargo build --release
 
+    - name: Tests
+      run: cargo test --release --tests --workspace
+
     - name: Build launcher
       if: runner.os == 'Linux'
       run: |
