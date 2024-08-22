@@ -73,7 +73,7 @@ jobs:
 
     - name: Build installer
       if: runner.os == 'Linux'
-      run: cargo deb -p moomba
+      run: cargo deb --no-build -p moomba
 
     - name: Upload installer
       uses: actions/upload-artifact@v4

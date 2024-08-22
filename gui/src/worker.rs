@@ -178,14 +178,7 @@ fn install_game_and_ffnx(
     installation: &installation::Installation,
     env: &Env,
 ) -> Result<FfnxInstallation, InstallError> {
-    let ffnx_dir = if cfg!(unix) {
-        // Steam + Proton refuses to launch the game if the exe is outside the base dir of the app
-        PathBuf::from(&installation.app_path)
-    } else {
-        env.ffnx_dir.clone()
-    };
-
-    let ffnx_installation = match FfnxInstallation::from_directory(&ffnx_dir, installation) {
+    let ffnx_installation = match FfnxInstallation::from_directory(&env.ffnx_dir, installation) {
         Some(ffnx_installation) => {
             info!("Found FFNx version {}", ffnx_installation.version);
             ffnx_installation
@@ -196,9 +189,9 @@ fn install_game_and_ffnx(
                 "julianxhokaxhiu/FFNx",
                 &installation.edition,
             );
-            FfnxInstallation::download(url.as_str(), &ffnx_dir, env)?;
+            FfnxInstallation::download(url.as_str(), &env.ffnx_dir, env)?;
             if let Some(ffnx_installation) =
-                FfnxInstallation::from_directory(&ffnx_dir, installation)
+                FfnxInstallation::from_directory(&env.ffnx_dir, installation)
             {
                 ffnx_installation
             } else {
@@ -266,12 +259,15 @@ fn install_game_and_ffnx(
                 &installation.app_path.join("binkw32.dll"),
                 &bink_dll_path,
             )?;
-            // Clean
-            let eax_dll_path = ffnx_installation.path.join("eax.dll");
-            if eax_dll_path.exists() {
-                std::fs::remove_file(eax_dll_path)?;
-            }
         }
+    }
+    let eax_dll_path = ffnx_installation.path.join("eax.dll");
+    if !eax_dll_path.exists() {
+        moomba_core::provision::copy_file(
+            &installation.app_path.join("eax.dll"),
+            &ffnx_installation.path.join("eax.dll"),
+        )?
+        // TODO: system eax.dll on Standard edition
     }
     if matches!(&installation.edition, installation::Edition::Standard) {
         let ff8_input = ffnx_installation.path.join("override").join("ff8input.cfg");
