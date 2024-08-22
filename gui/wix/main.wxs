@@ -129,6 +129,12 @@
                     DiskId='1'
                     Source='$(var.CargoTargetBinDir)\ff8_launcher.exe'
                     KeyPath='no'/>
+                <File
+                    Id='dll1'
+                    Name='eax.dll'
+                    DiskId='1'
+                    Source='$(var.CargoTargetBinDir)\..\..\vendor\creative\eax.dll'
+                    KeyPath='no'/>
             </Component>
         </DirectoryRef>
 

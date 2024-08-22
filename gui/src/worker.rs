@@ -218,7 +218,7 @@ fn install_game_and_ffnx(
     };
 
     if !exe_path.exists() {
-        moomba_core::provision::copy_file(&installation.exe_path(), &exe_path)?
+        provision::copy_file(&installation.exe_path(), &exe_path)?
     }
 
     let bink_dll_path = ffnx_installation.path.join("binkw32.dll");
@@ -238,16 +238,13 @@ fn install_game_and_ffnx(
                 match file_name {
                     Some(file_name) => {
                         let url = format!("https://www.ff8.fr/download/programs/{}.zip", file_name);
-                        moomba_core::provision::download_zip(
+                        provision::download_zip(
                             url.as_str(),
                             "FF8Patch1.02.zip",
                             &ffnx_installation.path,
                             env,
                         )?;
-                        moomba_core::provision::rename_file(
-                            &ffnx_installation.path.join("FF8.exe"),
-                            &exe_path,
-                        )?;
+                        provision::rename_file(&ffnx_installation.path.join("FF8.exe"), &exe_path)?;
                     }
                     None => {
                         error!("Cannot detect the language of your game!");
@@ -255,39 +252,48 @@ fn install_game_and_ffnx(
                 }
             }
         } else {
-            moomba_core::provision::copy_file(
-                &installation.app_path.join("binkw32.dll"),
-                &bink_dll_path,
-            )?;
+            provision::copy_file(&installation.app_path.join("binkw32.dll"), &bink_dll_path)?;
         }
     }
-    let eax_dll_path = ffnx_installation.path.join("eax.dll");
-    if !eax_dll_path.exists() {
-        moomba_core::provision::copy_file(
-            &installation.app_path.join("eax.dll"),
-            &ffnx_installation.path.join("eax.dll"),
-        )?
-        // TODO: system eax.dll on Standard edition
+    match installation.edition {
+        installation::Edition::Steam => {
+            let eax_dll_path = ffnx_installation.path.join("eax.dll");
+            if !eax_dll_path.exists()
+                || pe_format::pe_version_info(&eax_dll_path)?
+                    .product_name
+                    .unwrap_or_default()
+                    != "FFNx"
+            {
+                provision::copy_file(&installation.app_path.join("eax.dll"), &eax_dll_path)?
+            }
+        }
+        installation::Edition::Standard | installation::Edition::Remastered => {
+            let eax_dll_path = ffnx_installation.path.join("creative_eax.dll");
+            if !eax_dll_path.exists() {
+                if let Err(e) = provision::copy_file(&env.moomba_dir.join("eax.dll"), &eax_dll_path)
+                {
+                    warn!("Cannot install eax.dll: {}", e);
+                }
+            }
+        }
     }
     if matches!(&installation.edition, installation::Edition::Standard) {
         let ff8_input = ffnx_installation.path.join("override").join("ff8input.cfg");
         if !ff8_input.exists() {
             std::fs::create_dir_all(ffnx_installation.path.join("override"))?;
-            moomba_core::provision::copy_file(
-                &installation.app_path.join("ff8input.cfg"),
-                &ff8_input,
-            )
-            .or_else(|e| {
-                warn!(
-                    "Error when copying ff8input.cfg, creating a new one instead: {}",
-                    e
-                );
-                moomba_core::game::input_config::InputConfig::new(&installation.edition)
-                    .to_file(&ff8_input)
-            })?
+            provision::copy_file(&installation.app_path.join("ff8input.cfg"), &ff8_input).or_else(
+                |e| {
+                    warn!(
+                        "Error when copying ff8input.cfg, creating a new one instead: {}",
+                        e
+                    );
+                    moomba_core::game::input_config::InputConfig::new(&installation.edition)
+                        .to_file(&ff8_input)
+                },
+            )?
         }
     }
-    moomba_core::pe_format::pe_patch_4bg(&exe_path)?;
+    pe_format::pe_patch_4bg(&exe_path)?;
     Ok(ffnx_installation)
 }
 
