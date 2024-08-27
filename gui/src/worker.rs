@@ -224,31 +224,32 @@ fn install_game_and_ffnx(
     let bink_dll_path = ffnx_installation.path.join("binkw32.dll");
     if !bink_dll_path.exists() {
         if matches!(installation.edition, installation::Edition::Standard) {
-            if !matches!(installation.version, Some((installation::Version::V120, _))) {
-                info!("Patch game to 1.02...");
-                let file_name = match installation.language.as_str() {
-                    "fre" | "FR" => Some("FF8EidosFre"),
-                    "ger" | "DE" => Some("FF8EidosGerV12"),
-                    "eng" | "EN" => Some("FF8SqeaPatch"),
-                    "spa" | "ES" => Some("ff8ngspa"),
-                    "ita" | "IT" => Some("ff8ngita"),
-                    "jp" | "JP" => Some("FF8EasqPatch"),
-                    _ => None,
-                };
-                match file_name {
-                    Some(file_name) => {
-                        let url = format!("https://www.ff8.fr/download/programs/{}.zip", file_name);
-                        provision::download_zip(
-                            url.as_str(),
-                            "FF8Patch1.02.zip",
-                            &ffnx_installation.path,
-                            env,
-                        )?;
-                        provision::rename_file(&ffnx_installation.path.join("FF8.exe"), &exe_path)?;
+            let file_name = match &installation.version {
+                Some((installation::Version::V100, publisher)) => match publisher {
+                    installation::Publisher::EaJp => Some("FF8EasqPatch"),
+                    installation::Publisher::EaUs | installation::Publisher::EidosUk => {
+                        Some("FF8SqeaPatch")
                     }
-                    None => {
-                        error!("Cannot detect the language of your game!");
-                    }
+                    installation::Publisher::EidosDe => Some("FF8EidosGerV12"),
+                    installation::Publisher::EidosFr => Some("FF8EidosFre"),
+                    installation::Publisher::EidosIt => Some("ff8ngita"),
+                    installation::Publisher::EidosSp => Some("ff8ngspa"),
+                },
+                _ => None,
+            };
+            match file_name {
+                Some(file_name) => {
+                    let url = format!("https://www.ff8.fr/download/programs/{}.zip", file_name);
+                    provision::download_zip(
+                        url.as_str(),
+                        "FF8Patch1.02.zip",
+                        &ffnx_installation.path,
+                        env,
+                    )?;
+                    provision::rename_file(&ffnx_installation.path.join("FF8.exe"), &exe_path)?;
+                }
+                None => {
+                    error!("Cannot detect the language of your game!");
                 }
             }
         } else {

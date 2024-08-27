@@ -62,8 +62,9 @@ impl FfnxInstallation {
         repo_name: &str,
         edition: &Edition,
     ) -> (String, String) {
-        let last_tag =
-            crate::github::find_last_tag_version(repo_name).unwrap_or(String::from("1.19.1"));
+        let last_tag = crate::github::find_last_tag_version(repo_name)
+            .and_then(|tag| Ok(tag.name))
+            .unwrap_or(String::from("1.19.1"));
 
         let url = "https://github.com/julianxhokaxhiu/FFNx/releases/download";
         let filename_prefix = if matches!(edition, Edition::Steam) {

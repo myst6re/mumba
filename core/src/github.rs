@@ -9,31 +9,37 @@ use std::marker::PhantomData;
 use regex_lite::Regex;
 
 #[derive(Deserialize)]
-struct GitHubTag {
-    name: String,
+pub struct GitHubCommit {
+    pub sha: String,
+}
+
+#[derive(Deserialize)]
+pub struct GitHubTag {
+    pub name: String,
+    pub commit: GitHubCommit,
 }
 
 #[derive(Deserialize)]
 #[serde(transparent)]
 struct GitHubTags {
     #[serde(deserialize_with = "deserialize_max")]
-    max_version: String,
+    max_version: GitHubTag,
 }
 
-fn deserialize_max<'de, D>(deserializer: D) -> Result<String, D::Error>
+fn deserialize_max<'de, D>(deserializer: D) -> Result<GitHubTag, D::Error>
 where
     D: Deserializer<'de>,
 {
-    struct MaxVisitor(PhantomData<fn() -> String>);
+    struct MaxVisitor(PhantomData<fn() -> GitHubTag>);
 
     impl<'de> Visitor<'de> for MaxVisitor {
-        type Value = String;
+        type Value = GitHubTag;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
             formatter.write_str("a nonempty sequence of numbers")
         }
 
-        fn visit_seq<S>(self, mut seq: S) -> Result<String, S::Error>
+        fn visit_seq<S>(self, mut seq: S) -> Result<GitHubTag, S::Error>
         where
             S: SeqAccess<'de>,
         {
@@ -43,10 +49,10 @@ where
             while let Some(value) = seq.next_element::<GitHubTag>()? {
                 if version_regex.is_match(&value.name) {
                     max = match &max {
-                        None => Some(value.name),
+                        None => Some(value),
                         Some(v) => {
-                            if compare(v, &value.name) == Ok(Cmp::Lt) {
-                                Some(value.name)
+                            if compare(&v.name, &value.name) == Ok(Cmp::Lt) {
+                                Some(value)
                             } else {
                                 max
                             }
@@ -63,7 +69,7 @@ where
     deserializer.deserialize_seq(visitor)
 }
 
-pub fn find_last_tag_version(repo_name: &str) -> Result<String, provision::ToJsonErrorBox> {
+pub fn find_last_tag_version(repo_name: &str) -> Result<GitHubTag, provision::ToJsonErrorBox> {
     let tags = provision::get_json::<GitHubTags>(
         format!("https://api.github.com/repos/{}/tags", repo_name).as_str(),
     )?;
