@@ -3,8 +3,11 @@ use moomba_core::game::env::Env;
 use moomba_core::game::installation::{Edition, Installation};
 use std::path::PathBuf;
 
+include!(concat!(env!("OUT_DIR"), "/built.rs"));
+
 fn cli() -> Command {
     Command::new("mmb")
+        .version(GIT_VERSION)
         .about("Modern and fast FFNx configurator")
         .subcommand_required(true)
         .arg_required_else_help(true)

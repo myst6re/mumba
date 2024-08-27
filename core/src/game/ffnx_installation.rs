@@ -7,7 +7,6 @@ use crate::pe_format;
 #[cfg(any(feature = "network", feature = "zip"))]
 use crate::provision;
 use std::path::Path;
-#[cfg(any(feature = "network", feature = "zip"))]
 use std::path::PathBuf;
 
 pub struct FfnxInstallation {

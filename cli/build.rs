@@ -6,4 +6,6 @@ fn main() {
         res.set("CompanyName", "The Great Moomba Community");
         res.compile().unwrap();
     }
+
+    built::write_built_file().expect("Failed to acquire build-time information");
 }

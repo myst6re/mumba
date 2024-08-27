@@ -433,7 +433,14 @@ impl Installation {
         if !backup_path.exists() || launcher_product_name == "FINAL FANTASY VIII for PC" {
             provision::copy_file(&launcher_path, &backup_path)?
         }
-        provision::copy_file(&env.moomba_dir.join("ff8_launcher.exe"), &launcher_path)?;
+        provision::copy_file(&env.moomba_dir.join("ff8_launcher.exe"), &launcher_path).or_else(
+            |_| {
+                provision::copy_file(
+                    &PathBuf::from("/var/lib/moomba/ff8_launcher.exe"),
+                    &launcher_path,
+                )
+            },
+        )?;
         Ok(())
     }
 
