@@ -39,7 +39,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update -qqq
-        sudo apt-get install -y -qqq mingw-w64 liblzma-dev dpkg-dev
+        sudo apt-get install -y -qqq mingw-w64 liblzma-dev dpkg-dev libxcb-shape0-dev libxcb-xfixes0-dev
 
     - run: rustup toolchain install stable --profile minimal
 
