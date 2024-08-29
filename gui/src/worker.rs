@@ -2,7 +2,7 @@ use super::{AppWindow, Installations};
 use crate::lazy_ffnx_config::LazyFfnxConfig;
 use crate::TextLevel;
 use log::{error, info, warn};
-use moomba_core::config::Config;
+use moomba_core::config::{Config, UpdateChannel};
 use moomba_core::game::env::Env;
 use moomba_core::game::ffnx_config;
 use moomba_core::game::ffnx_installation::FfnxInstallation;
@@ -26,7 +26,7 @@ const DETACHED_PROCESS: u32 = 0x8;
 
 #[derive(Debug)]
 pub enum Message {
-    Setup(slint::SharedString),
+    Setup(slint::SharedString, UpdateChannel),
     LaunchGame,
     ConfigureFfnx,
     CancelConfigureFfnx,
@@ -120,22 +120,21 @@ fn upgrade_ffnx(
     handle: slint::Weak<AppWindow>,
     ffnx_installation: &FfnxInstallation,
     edition: &installation::Edition,
+    update_channel: UpdateChannel,
     env: &Env,
 ) {
     set_task_text(handle.clone(), TextLevel::Info, "Check for FFNx update…");
-    let (url, version) =
-        FfnxInstallation::find_last_stable_version_on_github("julianxhokaxhiu/FFNx", edition);
-    if *ffnx_installation.version != version {
-        set_task_text(handle.clone(), TextLevel::Info, "Upgrading FFNx…");
-        set_game_ready(handle.clone(), false);
-        match FfnxInstallation::download(url.as_str(), &ffnx_installation.path, env) {
-            Ok(()) => (),
-            Err(e) => {
-                error!("Error when installing FFNx: {:?}", e);
-            }
-        };
-        set_game_ready(handle.clone(), true)
+    let url =
+        FfnxInstallation::find_version_on_github("julianxhokaxhiu/FFNx", edition, update_channel);
+    set_task_text(handle.clone(), TextLevel::Info, "Upgrading FFNx…");
+    set_game_ready(handle.clone(), false);
+    match FfnxInstallation::download(url.as_str(), &ffnx_installation.path, env) {
+        Ok(()) => (),
+        Err(e) => {
+            error!("Error when installing FFNx: {:?}", e);
+        }
     };
+    set_game_ready(handle.clone(), true);
     set_task_text(handle.clone(), TextLevel::Info, "")
 }
 
@@ -176,22 +175,30 @@ fn launch_game(_ff8_path: &Path, _ffnx_dir: &Path, app_id: u64) {
 fn install_game_and_ffnx(
     handle: slint::Weak<AppWindow>,
     installation: &installation::Installation,
+    update_channel: UpdateChannel,
     env: &Env,
 ) -> Result<FfnxInstallation, InstallError> {
-    let ffnx_installation = match FfnxInstallation::from_directory(&env.ffnx_dir, installation) {
+    let ffnx_dir = if cfg!(unix) {
+        // The game runs inside a fake Windows filesystem
+        installation.app_path.join("moomba")
+    } else {
+        PathBuf::from(&env.ffnx_dir)
+    };
+    let ffnx_installation = match FfnxInstallation::from_directory(&ffnx_dir, installation) {
         Some(ffnx_installation) => {
             info!("Found FFNx version {}", ffnx_installation.version);
             ffnx_installation
         }
         None => {
             set_task_text(handle.clone(), TextLevel::Info, "Installing FFNx…");
-            let (url, _) = FfnxInstallation::find_last_stable_version_on_github(
+            let url = FfnxInstallation::find_version_on_github(
                 "julianxhokaxhiu/FFNx",
                 &installation.edition,
+                update_channel,
             );
-            FfnxInstallation::download(url.as_str(), &env.ffnx_dir, env)?;
+            FfnxInstallation::download(url.as_str(), &ffnx_dir, env)?;
             if let Some(ffnx_installation) =
-                FfnxInstallation::from_directory(&env.ffnx_dir, installation)
+                FfnxInstallation::from_directory(&ffnx_dir, installation)
             {
                 ffnx_installation
             } else {
@@ -303,11 +310,13 @@ fn setup(
     moomba_config: &mut Config,
     moomba_config_path: &PathBuf,
     exe_path: &slint::SharedString,
+    update_channel: UpdateChannel,
 ) -> Option<installation::Installation> {
     info!("Setup with EXE path {}", exe_path);
     match installation::Installation::from_exe_path(&PathBuf::from(exe_path.as_str())) {
         Ok(installation) => {
             moomba_config.set_installation(&installation);
+            moomba_config.set_update_channel(update_channel);
             set_game_exe_path(
                 handle.clone(),
                 installation.exe_path().to_string_lossy().to_string(),
@@ -347,8 +356,14 @@ fn go_to_setup_page(
     loop {
         set_current_page(handle.clone(), 1);
         match rx.recv() {
-            Ok(Message::Setup(exe_path)) => {
-                match setup(handle.clone(), moomba_config, moomba_config_path, &exe_path) {
+            Ok(Message::Setup(exe_path, update_channel)) => {
+                match setup(
+                    handle.clone(),
+                    moomba_config,
+                    moomba_config_path,
+                    &exe_path,
+                    update_channel,
+                ) {
                     Some(installation) => return Some(installation),
                     None => continue,
                 }
@@ -413,7 +428,14 @@ fn retrieve_ffnx_installation(
     env: &Env,
 ) -> Option<FfnxInstallation> {
     loop {
-        match install_game_and_ffnx(handle.clone(), installation, env) {
+        match install_game_and_ffnx(
+            handle.clone(),
+            installation,
+            moomba_config
+                .update_channel()
+                .unwrap_or(UpdateChannel::Stable),
+            env,
+        ) {
             Ok(ffnx_installation) => return Some(ffnx_installation),
             Err(e) => {
                 error!("Installation error: {}", e);
@@ -474,22 +496,25 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
     set_game_ready(handle.clone(), true);
 
     let mut ffnx_config = LazyFfnxConfig::new(&ffnx_installation);
-    ffnx_config
-        .get()
-        .set_app_path(installation.app_path.to_string_lossy().to_string());
+    ffnx_config.get().set_app_path(if cfg!(unix) {
+        String::from("..")
+    } else {
+        installation.app_path.to_string_lossy().to_string()
+    });
 
     set_ffnx_config(handle.clone(), &mut ffnx_config);
     ffnx_config.save();
 
     for received in &rx {
         match received {
-            Message::Setup(exe_path) => {
+            Message::Setup(exe_path, update_channel) => {
                 set_game_ready(handle.clone(), false);
                 installation = match setup(
                     handle.clone(),
                     &mut moomba_config,
                     &env.config_path,
                     &exe_path,
+                    update_channel,
                 ) {
                     Some(inst) => inst,
                     None => break,
@@ -501,7 +526,7 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
                     &mut installation,
                     &env,
                 ) {
-                    Some(version) => version,
+                    Some(ffnx_inst) => ffnx_inst,
                     None => return, // Exit
                 };
                 set_game_ready(handle.clone(), true);
@@ -510,6 +535,9 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
                 handle.clone(),
                 &ffnx_installation,
                 &installation.edition,
+                moomba_config
+                    .update_channel()
+                    .unwrap_or_else(|_| UpdateChannel::Stable),
                 &env,
             ),
             Message::LaunchGame => {

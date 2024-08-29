@@ -3,6 +3,7 @@
 use std::path::Path;
 slint::include_modules!();
 use log::error;
+use moomba_core::config::UpdateChannel;
 use moomba_core::game::env::Env;
 
 pub mod lazy_ffnx_config;
@@ -20,8 +21,14 @@ fn main() -> Result<(), slint::PlatformError> {
 
     ui.global::<Installations>().on_setup({
         let tx = worker.tx.clone();
-        move |path| {
-            if let Err(e) = tx.send(worker::Message::Setup(path)) {
+        move |path, update_channel| {
+            let update_channel = match update_channel {
+                0 => UpdateChannel::Stable,
+                1 => UpdateChannel::Beta,
+                2 => UpdateChannel::Alpha,
+                _ => UpdateChannel::Stable,
+            };
+            if let Err(e) = tx.send(worker::Message::Setup(path, update_channel)) {
                 error!("Error: {}", e)
             }
         }

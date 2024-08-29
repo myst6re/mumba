@@ -447,6 +447,7 @@ impl Installation {
     #[cfg(feature = "pe")]
     fn create_launcher_config_file(app_path: &Path, ff8_path: &Path) -> std::io::Result<()> {
         let config_path = app_path.join("moomba_path.txt");
+        info!("Creates launcher config file at {:?}", &config_path);
         let mut file = File::create(config_path)?;
         file.write_all(ff8_path.to_string_lossy().as_bytes())?;
         Ok(())

@@ -1,67 +1,90 @@
 use crate::provision;
+use jiff::Timestamp;
 use serde::de::{self, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer};
-use version_compare::{compare, Cmp};
 
 use std::fmt;
 use std::marker::PhantomData;
 
-use regex_lite::Regex;
-
-#[derive(Deserialize)]
-pub struct GitHubCommit {
-    pub sha: String,
+#[derive(Deserialize, Clone)]
+pub struct GitHubReleaseAsset {
+    pub browser_download_url: String,
+    pub name: String,
 }
 
-#[derive(Deserialize)]
-pub struct GitHubTag {
-    pub name: String,
-    pub commit: GitHubCommit,
+#[derive(Deserialize, Clone)]
+pub struct GitHubRelease {
+    pub tag_name: String,
+    pub id: i64,
+    pub assets: Vec<GitHubReleaseAsset>,
+    pub prerelease: bool,
+    pub draft: bool,
+    pub published_at: String,
+}
+
+pub struct LatestRelease {
+    pub latest: Option<GitHubRelease>,
+    pub prerelease: Option<GitHubRelease>,
+    pub latest_not_recent: Option<GitHubRelease>,
 }
 
 #[derive(Deserialize)]
 #[serde(transparent)]
-struct GitHubTags {
+struct GitHubReleases {
     #[serde(deserialize_with = "deserialize_max")]
-    max_version: GitHubTag,
+    latest_release: LatestRelease,
 }
 
-fn deserialize_max<'de, D>(deserializer: D) -> Result<GitHubTag, D::Error>
+fn deserialize_max<'de, D>(deserializer: D) -> Result<LatestRelease, D::Error>
 where
     D: Deserializer<'de>,
 {
-    struct MaxVisitor(PhantomData<fn() -> GitHubTag>);
+    struct MaxVisitor(PhantomData<fn() -> LatestRelease>);
 
     impl<'de> Visitor<'de> for MaxVisitor {
-        type Value = GitHubTag;
+        type Value = LatestRelease;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
             formatter.write_str("a nonempty sequence of numbers")
         }
 
-        fn visit_seq<S>(self, mut seq: S) -> Result<GitHubTag, S::Error>
+        fn visit_seq<S>(self, mut seq: S) -> Result<LatestRelease, S::Error>
         where
             S: SeqAccess<'de>,
         {
-            let version_regex = Regex::new(r"^[vV]?([0-9]+\.)*[0-9]+$").unwrap();
-            let mut max = None;
+            let mut latest = None;
+            let mut prerelease = None;
 
-            while let Some(value) = seq.next_element::<GitHubTag>()? {
-                if version_regex.is_match(&value.name) {
-                    max = match &max {
+            while let Some(value) = seq.next_element::<GitHubRelease>()? {
+                if value.prerelease {
+                    prerelease = Some(value)
+                } else if !value.draft {
+                    latest = match &latest {
                         None => Some(value),
                         Some(v) => {
-                            if compare(&v.name, &value.name) == Ok(Cmp::Lt) {
+                            let published_at: Timestamp = value
+                                .published_at
+                                .parse()
+                                .map_err(|_| de::Error::custom("Cannot parse date"))?;
+                            let current_published_at: Timestamp = v
+                                .published_at
+                                .parse()
+                                .map_err(|_| de::Error::custom("Cannot parse date"))?;
+                            if published_at > current_published_at {
                                 Some(value)
                             } else {
-                                max
+                                latest
                             }
                         }
                     }
                 }
             }
 
-            max.ok_or_else(|| de::Error::custom("no values in seq when looking for maximum"))
+            Ok(LatestRelease {
+                latest_not_recent: latest.clone(),
+                latest,
+                prerelease,
+            })
         }
     }
 
@@ -69,9 +92,9 @@ where
     deserializer.deserialize_seq(visitor)
 }
 
-pub fn find_last_tag_version(repo_name: &str) -> Result<GitHubTag, provision::ToJsonErrorBox> {
-    let tags = provision::get_json::<GitHubTags>(
-        format!("https://api.github.com/repos/{}/tags", repo_name).as_str(),
+pub fn find_last_release(repo_name: &str) -> Result<LatestRelease, provision::ToJsonErrorBox> {
+    let releases = provision::get_json::<GitHubReleases>(
+        format!("https://api.github.com/repos/{}/releases", repo_name).as_str(),
     )?;
-    Ok(tags.max_version)
+    Ok(releases.latest_release)
 }

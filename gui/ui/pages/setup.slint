@@ -1,4 +1,4 @@
-import { CheckBox, GroupBox, Palette, Button, StandardButton, HorizontalBox, GridBox, LineEdit, VerticalBox } from "std-widgets.slint";
+import { GroupBox, Palette, Button, StandardButton, HorizontalBox, LineEdit, VerticalBox, ComboBox } from "std-widgets.slint";
 import { Installations } from "../global.slint";
 import { Message } from "../components/message.slint";
 
@@ -29,6 +29,19 @@ export component SetupPage inherits VerticalLayout {
                     }
                 }
             }
+            GroupBox {
+                title: @tr("Canal de mise à jour");
+                vertical-stretch: 0;
+
+                HorizontalBox {
+                    padding: 0px;
+                    max-width: 664px;
+
+                    update-channel := ComboBox {
+                        model: [@tr("Stable"), @tr("Beta"), @tr("Alpha")];
+                    }
+                }
+            }
         }
     }
     Rectangle {
@@ -43,7 +56,7 @@ export component SetupPage inherits VerticalLayout {
             StandardButton {
                 kind: ok;
                 clicked => {
-                    Installations.setup(game-exe-path.text);
+                    Installations.setup(game-exe-path.text, update-channel.current-index);
                     Installations.current-page = 0;
                 }
             }

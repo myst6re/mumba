@@ -1,7 +1,11 @@
+#[cfg(feature = "network")]
+use crate::config::UpdateChannel;
 #[cfg(all(feature = "network", feature = "zip"))]
 use crate::game::env::Env;
 #[cfg(any(feature = "network", feature = "pe"))]
 use crate::game::installation::{Edition, Installation};
+#[cfg(feature = "network")]
+use crate::github::GitHubReleaseAsset;
 #[cfg(feature = "pe")]
 use crate::pe_format;
 #[cfg(any(feature = "network", feature = "zip"))]
@@ -57,28 +61,57 @@ impl FfnxInstallation {
     }
 
     #[cfg(feature = "network")]
-    pub fn find_last_stable_version_on_github(
+    pub fn find_version_on_github(
         repo_name: &str,
         edition: &Edition,
-    ) -> (String, String) {
-        let last_tag = crate::github::find_last_tag_version(repo_name)
-            .and_then(|tag| Ok(tag.name))
-            .unwrap_or(String::from("1.19.1"));
-
-        let url = "https://github.com/julianxhokaxhiu/FFNx/releases/download";
-        let filename_prefix = if matches!(edition, Edition::Steam) {
-            "Steam"
-        } else {
-            "FF8_2000"
+        update_channel: UpdateChannel,
+    ) -> String {
+        let last_release = match crate::github::find_last_release(repo_name) {
+            Ok(last_release) => Some(last_release),
+            Err(e) => {
+                warn!("Unable to find the last release from GitHub: {}", e);
+                None
+            }
         };
 
-        (
-            format!(
-                "{}/{}/FFNx-{}-v{}.0.zip",
-                url, last_tag, filename_prefix, last_tag
-            ),
-            last_tag,
-        )
+        let release = match update_channel {
+            UpdateChannel::Stable => last_release.and_then(|r| r.latest),
+            UpdateChannel::Beta => last_release.and_then(|r| r.latest_not_recent),
+            UpdateChannel::Alpha => last_release.and_then(|r| r.prerelease),
+        };
+
+        release.and_then(|release| {
+            Self::find_asset_from_github_release(&release, edition)
+        }).map(|asset| asset.browser_download_url)
+        .unwrap_or_else(|| {
+            String::from(match edition {
+                Edition::Steam => "https://github.com/julianxhokaxhiu/FFNx/releases/download/canary/FFNx-Steam-v1.19.1.114.zip",
+                Edition::Standard | Edition::Remastered => "https://github.com/julianxhokaxhiu/FFNx/releases/download/canary/FFNx-FF8_2000-v1.19.1.114.zip",
+            })
+        })
+    }
+
+    #[cfg(feature = "network")]
+    pub fn find_asset_from_github_release(
+        release: &crate::github::GitHubRelease,
+        edition: &Edition,
+    ) -> Option<GitHubReleaseAsset> {
+        let keyword = match edition {
+            Edition::Steam => "steam",
+            Edition::Standard | Edition::Remastered => "ff8_2000",
+        };
+        release
+            .assets
+            .iter()
+            .find(|asset| {
+                asset
+                    .name
+                    .to_ascii_lowercase()
+                    .replace('-', "_")
+                    .replace(' ', "_")
+                    .contains(keyword)
+            })
+            .cloned()
     }
 
     pub fn exe_path(&self) -> PathBuf {

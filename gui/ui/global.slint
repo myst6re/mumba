@@ -18,7 +18,7 @@ export global Installations {
     in property <TextLevel> task-text-type : info;
     in property <bool> is-ready : false;
 
-    pure callback setup(string);
+    pure callback setup(string, int);
     pure callback launch-game();
     pure callback browse-game(string) -> string;
     pure callback configure-ffnx();
