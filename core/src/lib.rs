@@ -7,7 +7,7 @@ pub mod config;
 pub mod game;
 #[cfg(feature = "network")]
 pub mod github;
-pub mod moomba_log;
+pub mod mumba_log;
 pub mod os;
 #[cfg(feature = "pe")]
 pub mod pe_format;

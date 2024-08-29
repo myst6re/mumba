@@ -397,7 +397,7 @@ impl Installation {
                 if cfg!(windows) {
                     #[cfg(windows)]
                     crate::os::windows::run_as(
-                        &String::from(env.moomba_dir.join("mmb.exe").to_str().unwrap()),
+                        &String::from(env.mumba_dir.join("mmb.exe").to_str().unwrap()),
                         &format!(
                             "replace_launcher \"{}\"",
                             self.app_path.to_string_lossy().to_string().replace('"', "")
@@ -433,10 +433,10 @@ impl Installation {
         if !backup_path.exists() || launcher_product_name == "FINAL FANTASY VIII for PC" {
             provision::copy_file(&launcher_path, &backup_path)?
         }
-        provision::copy_file(&env.moomba_dir.join("ff8_launcher.exe"), &launcher_path).or_else(
+        provision::copy_file(&env.mumba_dir.join("ff8_launcher.exe"), &launcher_path).or_else(
             |_| {
                 provision::copy_file(
-                    &PathBuf::from("/var/lib/moomba/ff8_launcher.exe"),
+                    &PathBuf::from("/var/lib/mumba/ff8_launcher.exe"),
                     &launcher_path,
                 )
             },
@@ -446,7 +446,7 @@ impl Installation {
 
     #[cfg(feature = "pe")]
     fn create_launcher_config_file(app_path: &Path, ff8_path: &Path) -> std::io::Result<()> {
-        let config_path = app_path.join("moomba_path.txt");
+        let config_path = app_path.join("mumba_path.txt");
         info!("Creates launcher config file at {:?}", &config_path);
         let mut file = File::create(config_path)?;
         file.write_all(ff8_path.to_string_lossy().as_bytes())?;

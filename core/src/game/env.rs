@@ -6,7 +6,7 @@ pub struct Env {
     pub cache_dir: PathBuf,
     pub data_dir: PathBuf,
     pub config_path: PathBuf,
-    pub moomba_dir: PathBuf,
+    pub mumba_dir: PathBuf,
     pub ffnx_dir: PathBuf,
 }
 
@@ -43,8 +43,8 @@ impl Env {
         Ok(Self {
             cache_dir,
             data_dir,
-            config_path: config_dir.join("moomba.toml"),
-            moomba_dir: exe_path,
+            config_path: config_dir.join("mumba.toml"),
+            mumba_dir: exe_path,
             ffnx_dir,
         })
     }
@@ -58,6 +58,6 @@ impl Env {
     }
 
     fn add_app_dir(path: &Path) -> PathBuf {
-        path.to_path_buf().join("moomba")
+        path.to_path_buf().join("mumba")
     }
 }

@@ -1,4 +1,4 @@
-# The Great Moomba
+# The Yellow Mumba
 
 Modern and fast FFNx configurator
 
@@ -30,7 +30,7 @@ Download Wix **3** from here: https://github.com/wixtoolset/wix3/releases
 ```sh
 cargo install cargo-wix
 cd gui
-cargo wix --nocapture --no-build -p moomba
+cargo wix --nocapture --no-build -p mumba
 ```
 
 The MSI file is produced in `target/wix/`.
@@ -40,7 +40,7 @@ The MSI file is produced in `target/wix/`.
 ```sh
 apt-get install liblzma-dev dpkg-dev
 cargo install cargo-deb
-cargo deb -p moomba
+cargo deb -p mumba
 ```
 
 The DEB file is produced in `target/debian/`.

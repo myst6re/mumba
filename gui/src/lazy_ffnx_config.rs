@@ -1,7 +1,7 @@
 use log::warn;
-use moomba_core::game::ffnx_config::FfnxConfig;
-use moomba_core::game::ffnx_installation::FfnxInstallation;
-use moomba_core::toml::FileError;
+use mumba_core::game::ffnx_config::FfnxConfig;
+use mumba_core::game::ffnx_installation::FfnxInstallation;
+use mumba_core::toml::FileError;
 use std::path::PathBuf;
 
 pub struct LazyFfnxConfig {

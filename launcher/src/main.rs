@@ -23,7 +23,7 @@ fn run() -> std::io::Result<()> {
         None => {
             let mut exe_path = current_exe.clone();
             exe_path.pop();
-            let config_path = exe_path.join("moomba_path.txt");
+            let config_path = exe_path.join("mumba_path.txt");
             let path = std::fs::read_to_string(config_path);
             match path {
                 Ok(path) => PathBuf::from(path.trim()),

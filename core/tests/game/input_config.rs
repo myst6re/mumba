@@ -1,5 +1,5 @@
-use moomba_core::game::input_config::InputConfig;
-use moomba_core::game::installation::Edition;
+use mumba_core::game::input_config::InputConfig;
+use mumba_core::game::installation::Edition;
 use std::path::PathBuf;
 
 #[test]

@@ -3,8 +3,8 @@
 use std::path::Path;
 slint::include_modules!();
 use log::error;
-use moomba_core::config::UpdateChannel;
-use moomba_core::game::env::Env;
+use mumba_core::config::UpdateChannel;
+use mumba_core::game::env::Env;
 
 pub mod lazy_ffnx_config;
 pub mod worker;
@@ -13,7 +13,7 @@ use worker::Worker;
 
 fn main() -> Result<(), slint::PlatformError> {
     let env = Env::new().unwrap();
-    moomba_core::moomba_log::init(&env, "moomba.log");
+    mumba_core::mumba_log::init(&env, "mumba.log");
 
     let ui = AppWindow::new()?;
 

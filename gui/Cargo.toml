@@ -1,16 +1,16 @@
 [package]
-name = "moomba"
+name = "mumba"
 description = "Modern and fast FFNx configurator"
 version = "0.1.0"
 edition = "2021"
 authors = ["myst6re <myst6re@gmail.com>"]
 license = "GPL-3.0"
 build = "build.rs"
-default-run = "moomba"
+default-run = "mumba"
 
 [dependencies]
 log = "0.4"
-moomba_core = { path = "../core", features = ["network", "steam", "zip", "config", "pe"] }
+mumba_core = { path = "../core", features = ["network", "steam", "zip", "config", "pe"] }
 slint = { version = "1.7", default-features = false, features = [
     "std",
     "backend-default",
@@ -34,7 +34,7 @@ built = { version = "0.7", features = ["git2"] }
 
 [package.metadata.deb]
 assets = [
-    ["target/release/moomba", "usr/bin/", "755"],
-    ["../target/x86_64-pc-windows-gnu/release/ff8_launcher.exe", "var/lib/moomba/", "644"],
-    ["../README.md", "usr/share/doc/moomba/README", "644"],
+    ["target/release/mumba", "usr/bin/", "755"],
+    ["../target/x86_64-pc-windows-gnu/release/ff8_launcher.exe", "var/lib/mumba/", "644"],
+    ["../README.md", "usr/share/doc/mumba/README", "644"],
 ]

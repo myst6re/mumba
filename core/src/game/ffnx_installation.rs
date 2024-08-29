@@ -37,7 +37,7 @@ impl FfnxInstallation {
         };
         let ff8_exe_name = if matches!(installation.edition, Edition::Standard) {
             // Rename exe to prevent Windows Compatibility patches for 2000 edition
-            "FF8_Moomba.exe"
+            "FF8_Mumba.exe"
         } else {
             &installation.exe_name
         };

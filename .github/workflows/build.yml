@@ -69,11 +69,11 @@ jobs:
     - name: Build installer
       if: runner.os == 'Windows'
       working-directory: ${{ github.workspace }}/gui
-      run: cargo wix --nocapture --no-build -p moomba --bin-path ${{ github.workspace }}/wix
+      run: cargo wix --nocapture --no-build -p mumba --bin-path ${{ github.workspace }}/wix
 
     - name: Build installer
       if: runner.os == 'Linux'
-      run: cargo deb --no-build -p moomba
+      run: cargo deb --no-build -p mumba
 
     - name: Upload installer
       uses: actions/upload-artifact@v4

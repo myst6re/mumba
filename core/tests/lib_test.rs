@@ -1,3 +1,3 @@
-extern crate moomba_core;
+extern crate mumba_core;
 
 mod game;

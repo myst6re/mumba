@@ -2,14 +2,14 @@ use super::{AppWindow, Installations};
 use crate::lazy_ffnx_config::LazyFfnxConfig;
 use crate::TextLevel;
 use log::{error, info, warn};
-use moomba_core::config::{Config, UpdateChannel};
-use moomba_core::game::env::Env;
-use moomba_core::game::ffnx_config;
-use moomba_core::game::ffnx_installation::FfnxInstallation;
-use moomba_core::game::installation;
-use moomba_core::pe_format;
-use moomba_core::provision;
-use moomba_core::toml;
+use mumba_core::config::{Config, UpdateChannel};
+use mumba_core::game::env::Env;
+use mumba_core::game::ffnx_config;
+use mumba_core::game::ffnx_installation::FfnxInstallation;
+use mumba_core::game::installation;
+use mumba_core::pe_format;
+use mumba_core::provision;
+use mumba_core::toml;
 use slint::ComponentHandle;
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
@@ -180,7 +180,7 @@ fn install_game_and_ffnx(
 ) -> Result<FfnxInstallation, InstallError> {
     let ffnx_dir = if cfg!(unix) {
         // The game runs inside a fake Windows filesystem
-        installation.app_path.join("moomba")
+        installation.app_path.join("mumba")
     } else {
         PathBuf::from(&env.ffnx_dir)
     };
@@ -278,7 +278,7 @@ fn install_game_and_ffnx(
         installation::Edition::Standard | installation::Edition::Remastered => {
             let eax_dll_path = ffnx_installation.path.join("creative_eax.dll");
             if !eax_dll_path.exists() {
-                if let Err(e) = provision::copy_file(&env.moomba_dir.join("eax.dll"), &eax_dll_path)
+                if let Err(e) = provision::copy_file(&env.mumba_dir.join("eax.dll"), &eax_dll_path)
                 {
                     warn!("Cannot install eax.dll: {}", e);
                 }
@@ -295,7 +295,7 @@ fn install_game_and_ffnx(
                         "Error when copying ff8input.cfg, creating a new one instead: {}",
                         e
                     );
-                    moomba_core::game::input_config::InputConfig::new(&installation.edition)
+                    mumba_core::game::input_config::InputConfig::new(&installation.edition)
                         .to_file(&ff8_input)
                 },
             )?
@@ -307,21 +307,21 @@ fn install_game_and_ffnx(
 
 fn setup(
     handle: slint::Weak<AppWindow>,
-    moomba_config: &mut Config,
-    moomba_config_path: &PathBuf,
+    mumba_config: &mut Config,
+    mumba_config_path: &PathBuf,
     exe_path: &slint::SharedString,
     update_channel: UpdateChannel,
 ) -> Option<installation::Installation> {
     info!("Setup with EXE path {}", exe_path);
     match installation::Installation::from_exe_path(&PathBuf::from(exe_path.as_str())) {
         Ok(installation) => {
-            moomba_config.set_installation(&installation);
-            moomba_config.set_update_channel(update_channel);
+            mumba_config.set_installation(&installation);
+            mumba_config.set_update_channel(update_channel);
             set_game_exe_path(
                 handle.clone(),
                 installation.exe_path().to_string_lossy().to_string(),
             );
-            match moomba_config.save(moomba_config_path) {
+            match mumba_config.save(mumba_config_path) {
                 Ok(()) => Some(installation),
                 Err(e) => {
                     error!("Cannot save configuration to config.toml: {:?}", e);
@@ -350,8 +350,8 @@ fn setup(
 fn go_to_setup_page(
     rx: &Receiver<Message>,
     handle: slint::Weak<AppWindow>,
-    moomba_config: &mut Config,
-    moomba_config_path: &PathBuf,
+    mumba_config: &mut Config,
+    mumba_config_path: &PathBuf,
 ) -> Option<installation::Installation> {
     loop {
         set_current_page(handle.clone(), 1);
@@ -359,8 +359,8 @@ fn go_to_setup_page(
             Ok(Message::Setup(exe_path, update_channel)) => {
                 match setup(
                     handle.clone(),
-                    moomba_config,
-                    moomba_config_path,
+                    mumba_config,
+                    mumba_config_path,
                     &exe_path,
                     update_channel,
                 ) {
@@ -385,10 +385,10 @@ fn go_to_setup_page(
 fn retrieve_installation(
     rx: &Receiver<Message>,
     handle: slint::Weak<AppWindow>,
-    moomba_config: &mut Config,
-    moomba_config_path: &PathBuf,
+    mumba_config: &mut Config,
+    mumba_config_path: &PathBuf,
 ) -> Option<installation::Installation> {
-    match moomba_config.installation() {
+    match mumba_config.installation() {
         Ok(Some(installation)) => {
             set_game_exe_path(
                 handle.clone(),
@@ -408,14 +408,14 @@ fn retrieve_installation(
                     }
                     installation::Edition::Remastered => {
                         warn!(
-                            "Ignore remaster at {}, as Moomba is not compatible yet",
+                            "Ignore remaster at {}, as The Yellow Mumba is not compatible yet",
                             inst.app_path.to_string_lossy()
                         )
                     }
                 }
             }
 
-            go_to_setup_page(rx, handle.clone(), moomba_config, moomba_config_path)
+            go_to_setup_page(rx, handle.clone(), mumba_config, mumba_config_path)
         }
     }
 }
@@ -423,7 +423,7 @@ fn retrieve_installation(
 fn retrieve_ffnx_installation(
     rx: &Receiver<Message>,
     handle: slint::Weak<AppWindow>,
-    moomba_config: &mut Config,
+    mumba_config: &mut Config,
     installation: &mut installation::Installation,
     env: &Env,
 ) -> Option<FfnxInstallation> {
@@ -431,7 +431,7 @@ fn retrieve_ffnx_installation(
         match install_game_and_ffnx(
             handle.clone(),
             installation,
-            moomba_config
+            mumba_config
                 .update_channel()
                 .unwrap_or(UpdateChannel::Stable),
             env,
@@ -442,7 +442,7 @@ fn retrieve_ffnx_installation(
                 set_task_text(handle.clone(), TextLevel::Error, "Cannot install FFNx");
 
                 *installation =
-                    match go_to_setup_page(rx, handle.clone(), moomba_config, &env.config_path) {
+                    match go_to_setup_page(rx, handle.clone(), mumba_config, &env.config_path) {
                         Some(inst) => inst,
                         None => return None, // Exit
                     }
@@ -453,7 +453,7 @@ fn retrieve_ffnx_installation(
 
 fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
     #[allow(unused_mut)]
-    let mut env = match moomba_core::game::env::Env::new() {
+    let mut env = match mumba_core::game::env::Env::new() {
         Ok(env) => env,
         Err(e) => {
             error!("Cannot initialize environment: {:?}", e);
@@ -465,10 +465,10 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
             return;
         }
     };
-    let mut moomba_config = Config::from_file(&env.config_path).unwrap_or_else(|_| Config::new());
+    let mut mumba_config = Config::from_file(&env.config_path).unwrap_or_else(|_| Config::new());
 
     let mut installation =
-        match retrieve_installation(&rx, handle.clone(), &mut moomba_config, &env.config_path) {
+        match retrieve_installation(&rx, handle.clone(), &mut mumba_config, &env.config_path) {
             Some(installation) => installation,
             None => return, // Exit
         };
@@ -484,7 +484,7 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
     let mut ffnx_installation = match retrieve_ffnx_installation(
         &rx,
         handle.clone(),
-        &mut moomba_config,
+        &mut mumba_config,
         &mut installation,
         &env,
     ) {
@@ -511,7 +511,7 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
                 set_game_ready(handle.clone(), false);
                 installation = match setup(
                     handle.clone(),
-                    &mut moomba_config,
+                    &mut mumba_config,
                     &env.config_path,
                     &exe_path,
                     update_channel,
@@ -522,7 +522,7 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
                 ffnx_installation = match retrieve_ffnx_installation(
                     &rx,
                     handle.clone(),
-                    &mut moomba_config,
+                    &mut mumba_config,
                     &mut installation,
                     &env,
                 ) {
@@ -535,7 +535,7 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
                 handle.clone(),
                 &ffnx_installation,
                 &installation.edition,
-                moomba_config
+                mumba_config
                     .update_channel()
                     .unwrap_or_else(|_| UpdateChannel::Stable),
                 &env,

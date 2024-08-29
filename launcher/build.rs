@@ -16,7 +16,7 @@ fn main() {
     if std::env::var("CARGO_CFG_TARGET_OS").unwrap() == "windows" {
         let mut res = winresource::WindowsResource::new();
         res.set_icon("../gui/data/icon.ico");
-        res.set("CompanyName", "The Great Moomba Community");
+        res.set("CompanyName", "The Yellow Mumba Community");
         let tag = get_repo_tag();
         if tag.contains("continuous") {
             res.set_version_info(winresource::VersionInfo::PRODUCTVERSION, 0);

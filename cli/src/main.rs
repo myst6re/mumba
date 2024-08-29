@@ -1,6 +1,6 @@
 use clap::{arg, Command};
-use moomba_core::game::env::Env;
-use moomba_core::game::installation::{Edition, Installation};
+use mumba_core::game::env::Env;
+use mumba_core::game::installation::{Edition, Installation};
 use std::path::PathBuf;
 
 include!(concat!(env!("OUT_DIR"), "/built.rs"));
@@ -22,7 +22,7 @@ fn cli() -> Command {
 
 fn main() -> std::io::Result<()> {
     let env = Env::new()?;
-    moomba_core::moomba_log::init(&env, "mmb.log");
+    mumba_core::mumba_log::init(&env, "mmb.log");
 
     let matches = cli().get_matches();
 
