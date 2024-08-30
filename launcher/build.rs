@@ -20,7 +20,7 @@ fn main() {
         let tag = get_repo_tag();
         if tag.contains("continuous") {
             res.set_version_info(winresource::VersionInfo::PRODUCTVERSION, 0);
-            res.set("Comments", &tag);
+            res.set("FileDescription", &tag);
         }
         res.compile().unwrap();
     };
