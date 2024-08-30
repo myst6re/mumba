@@ -106,7 +106,7 @@
             <Component Id='License' Guid='*'>
                 <File Id='LicenseFile'
                     DiskId='1'
-                    Source='wix\License.rtf'
+                    Source='$(var.CargoTargetBinDir)\..\..\gui\wix\License.rtf'
                     KeyPath='yes'/>
             </Component>
 
@@ -141,7 +141,7 @@
         <DirectoryRef Id="ApplicationProgramsFolder">
             <Component Id="ApplicationShortcut" Guid="*">
                 <Shortcut Id="ApplicationStartMenuShortcut"
-                    Name="Mumba"
+                    Name="The Yellow Mumba"
                     Description="Modern and fast FFNx configurator"
                     Target="[APPLICATIONFOLDER]mumba.exe"
                     WorkingDirectory="APPLICATIONFOLDER"/>
@@ -179,8 +179,8 @@
           The product icon is the graphic that appears in the Add/Remove
           Programs control panel for the application.
         -->
-        <!--<Icon Id='ProductICO' SourceFile='wix\Product.ico'/>-->
-        <!--<Property Id='ARPPRODUCTICON' Value='ProductICO' />-->
+        <Icon Id='ProductICO' SourceFile='$(var.CargoTargetBinDir)\..\..\gui\data\icon.ico'/>
+        <Property Id='ARPPRODUCTICON' Value='ProductICO' />
 
 
         <!--
@@ -192,10 +192,12 @@
           2. Change the value for `Value` attribute of the following
              `Property` tag to a valid URL.
         -->
-        <!--<Property Id='ARPHELPLINK' Value='ChangeMe'/>-->
+        <Property Id='ARPHELPLINK' Value='https://github.com/myst6re/mumba'/>
+        <!-- <Property Id="LicenseAccepted" Value="1"/> -->
+        <Property Id="WIXUI_INSTALLDIR" Value="APPLICATIONFOLDER"/>
 
         <UI>
-            <UIRef Id='WixUI_FeatureTree'/>
+            <UIRef Id='WixUI_InstallDir'/>
             <!--
               Disabling the EULA dialog in the installer is a two step process:
 
@@ -203,17 +205,25 @@
                  2. Comment out or remove the `<WiXVariable Id='WixUILicenseRtf'...` tag further down
 
             -->
-            <!--<Publish Dialog='WelcomeDlg' Control='Next' Event='NewDialog' Value='CustomizeDlg' Order='99'>1</Publish>-->
-            <!--<Publish Dialog='CustomizeDlg' Control='Back' Event='NewDialog' Value='WelcomeDlg' Order='99'>1</Publish>-->
-
+            <!-- <Publish Dialog='WelcomeDlg' Control='Next' Event='NewDialog' Value='CustomizeDlg' Order='99'>1</Publish>
+            <Publish Dialog='CustomizeDlg' Control='Back' Event='NewDialog' Value='WelcomeDlg' Order='99'>1</Publish> -->
+            <Publish Dialog="WelcomeDlg"
+                     Control="Next"
+                     Event="NewDialog"
+                     Value="InstallDirDlg"
+                     Order="2">1</Publish>
+            <Publish Dialog="InstallDirDlg"
+                     Control="Back"
+                     Event="NewDialog"
+                     Value="WelcomeDlg"
+                     Order="2">1</Publish>
         </UI>
 
         <!--
           Disabling the EULA dialog in the installer requires commenting out
           or removing the following `WixVariable` tag
         -->
-        <WixVariable Id='WixUILicenseRtf' Value='wix\License.rtf'/>
-
+        <!-- <WixVariable Id='WixUILicenseRtf' Value='$(var.CargoTargetBinDir)\..\..\gui\wix\License.rtf'/> -->
 
         <!--
           Uncomment the next `WixVariable` tag to customize the installer's
