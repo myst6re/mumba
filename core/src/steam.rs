@@ -127,3 +127,13 @@ pub fn get_steam_path() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let home = std::env::var("HOME")?;
     Ok(std::fs::canonicalize(format!("{}/.steam/steam", home))?)
 }
+
+#[cfg(windows)]
+pub fn get_steam_exe() -> Result<PathBuf, crate::os::regedit::Error> {
+    Ok(get_steam_path()?.join("steam.exe"))
+}
+
+#[cfg(unix)]
+pub fn get_steam_exe() -> Result<PathBuf, Box<dyn std::error::Error>> {
+    Ok(get_steam_path()?.join("steam"))
+}

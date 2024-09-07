@@ -6,8 +6,6 @@ use crate::pe_format;
 use crate::provision;
 use crate::steam;
 use std::fs::File;
-#[cfg(feature = "pe")]
-use std::io::Write;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -296,6 +294,14 @@ impl Installation {
         self.edition.clone() as u64
     }
 
+    pub fn get_launcher_path(&self) -> PathBuf {
+        match self.edition {
+            Edition::Standard => self.app_path.join("FF8Config.exe"),
+            Edition::Steam => self.app_path.join("FF8_Launcher.exe"),
+            Edition::Remastered => self.app_path.join("FFVIII_LAUNCHER.exe"),
+        }
+    }
+
     #[cfg(windows)]
     fn search_original_version() -> Option<Self> {
         let locations = [regedit::RegLocation::Machine, regedit::RegLocation::User];
@@ -386,12 +392,8 @@ impl Installation {
     }
 
     #[cfg(feature = "pe")]
-    pub fn replace_launcher(
-        self: &Installation,
-        ff8_path: &Path,
-        env: &Env,
-    ) -> std::io::Result<()> {
-        match Self::replace_launcher_from_app_path(&self.app_path, ff8_path, env) {
+    pub fn replace_launcher(self: &Installation, env: &Env) -> std::io::Result<()> {
+        match self.replace_launcher_from_app_path(env) {
             Ok(o) => Ok(o),
             Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
                 if cfg!(windows) {
@@ -413,43 +415,50 @@ impl Installation {
     }
 
     #[cfg(feature = "pe")]
-    pub fn replace_launcher_from_app_path(
-        app_path: &Path,
-        ff8_path: &Path,
-        env: &Env,
-    ) -> std::io::Result<()> {
-        Self::create_launcher_config_file(app_path, ff8_path)?;
-        let launcher_path = app_path.join("FF8_Launcher.exe");
-        let launcher_product_name = match pe_format::pe_version_info(&launcher_path) {
-            Ok(infos) => infos.product_name.unwrap_or_default(),
-            Err(_) => String::new(),
-        };
+    pub fn replace_launcher_from_app_path(&self, env: &Env) -> std::io::Result<()> {
+        let launcher_path = self.get_launcher_path();
+        let resource_launcher_path = Self::get_resource_launcher_path(env);
+        let (launcher_product_name, file_description) =
+            match pe_format::pe_version_info(&launcher_path) {
+                Ok(infos) => (
+                    infos.product_name.unwrap_or_default(),
+                    infos.file_description.unwrap_or_default(),
+                ),
+                Err(_) => (String::new(), String::new()),
+            };
         info!(
             "Launcher product name: {} (path: {})",
             launcher_product_name,
             launcher_path.to_string_lossy()
         );
-        let backup_path = app_path.join("FF8_Launcher_Original.exe");
+        let backup_path = self.app_path.join(format!(
+            "{}_Original.exe",
+            launcher_path
+                .with_extension("")
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+        ));
         if !backup_path.exists() || launcher_product_name == "FINAL FANTASY VIII for PC" {
             provision::copy_file(&launcher_path, &backup_path)?
         }
-        provision::copy_file(&env.mumba_dir.join("ff8_launcher.exe"), &launcher_path).or_else(
-            |_| {
-                provision::copy_file(
-                    &PathBuf::from("/var/lib/mumba/ff8_launcher.exe"),
-                    &launcher_path,
-                )
-            },
-        )?;
+        if file_description
+            != pe_format::pe_version_info(&resource_launcher_path)
+                .map(|infos| infos.file_description.unwrap_or_default())
+                .unwrap_or_default()
+        {
+            provision::copy_file(&resource_launcher_path, &launcher_path)?
+        }
+
         Ok(())
     }
 
-    #[cfg(feature = "pe")]
-    fn create_launcher_config_file(app_path: &Path, ff8_path: &Path) -> std::io::Result<()> {
-        let config_path = app_path.join("mumba_path.txt");
-        info!("Creates launcher config file at {:?}", &config_path);
-        let mut file = File::create(config_path)?;
-        file.write_all(ff8_path.to_string_lossy().as_bytes())?;
-        Ok(())
+    fn get_resource_launcher_path(env: &Env) -> PathBuf {
+        let resource_launcher_path = env.mumba_dir.join("ff8_launcher.exe");
+        if resource_launcher_path.exists() {
+            resource_launcher_path
+        } else {
+            PathBuf::from("/var/lib/mumba/ff8_launcher.exe")
+        }
     }
 }

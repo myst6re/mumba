@@ -7,6 +7,10 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode, Stdio};
 
+fn path_fallback(exe_path: &Path) -> PathBuf {
+    exe_path.join("FF8_Launcher_Original.exe")
+}
+
 fn run() -> std::io::Result<()> {
     CombinedLogger::init(vec![
         SimpleLogger::new(LevelFilter::Debug, simplelog::Config::default()),
@@ -18,30 +22,46 @@ fn run() -> std::io::Result<()> {
     ])
     .unwrap_or_default();
     let current_exe = std::env::current_exe()?;
-    let path = match std::env::args().nth(1) {
-        Some(ff8_path) => PathBuf::from(ff8_path),
+    let mut exe_path = current_exe.clone();
+    exe_path.pop();
+    let mut path = match std::env::args().nth(1) {
+        Some(ff8_path) => {
+            info!("Build ff8 path from arg");
+            PathBuf::from(ff8_path)
+        }
         None => {
-            let mut exe_path = current_exe.clone();
-            exe_path.pop();
             let config_path = exe_path.join("mumba_path.txt");
+            info!(
+                "Build ff8 path from file at {}",
+                config_path.to_string_lossy()
+            );
             let path = std::fs::read_to_string(config_path);
             match path {
                 Ok(path) => PathBuf::from(path.trim()),
                 Err(e) => {
-                    error!("Error reading link: {}", e);
-                    exe_path.join("FF8_Launcher_Original.exe")
+                    error!("Error reading mumba_path.txt: {}", e);
+                    path_fallback(&exe_path)
                 }
             }
         }
     };
+
+    if !path.exists() {
+        error!(
+            "Path {} does not exist, fallback to the original launcher",
+            path.to_string_lossy()
+        );
+        path = path_fallback(&exe_path)
+    }
+
     let dir = match path.parent() {
         Some(dir) => dir,
         None => Path::new("."),
     };
     info!(
         "Path={} Dir={}",
-        &path.to_str().unwrap(),
-        &dir.to_str().unwrap()
+        &path.to_string_lossy(),
+        &dir.to_string_lossy()
     );
 
     if is_same_file(&path, current_exe)? {

@@ -9,6 +9,7 @@ use mumba_core::game::ffnx_installation::FfnxInstallation;
 use mumba_core::game::installation;
 use mumba_core::pe_format;
 use mumba_core::provision;
+use mumba_core::steam::get_steam_exe;
 use mumba_core::toml;
 use slint::ComponentHandle;
 #[cfg(windows)]
@@ -17,7 +18,7 @@ use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::{
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::{Child, Command, Stdio},
 };
 use thiserror::Error;
 
@@ -217,37 +218,66 @@ fn upgrade_ffnx(
     set_task_text(handle.clone(), TextLevel::Info, "")
 }
 
-#[cfg(windows)]
-fn launch_game(ff8_path: &Path, ffnx_dir: &Path, _app_id: u64) {
-    if let Err(e) = Command::new(ff8_path)
-        .creation_flags(DETACHED_PROCESS)
+fn run_detached(command: &mut Command) -> &mut Command {
+    if cfg!(windows) {
+        #[cfg(windows)]
+        return command.creation_flags(DETACHED_PROCESS);
+    }
+
+    command
+}
+
+fn launch_game_via_steam(
+    game_installation: &installation::Installation,
+    ffnx_installation: &FfnxInstallation,
+    steam_exe: &Path,
+) -> Result<Child, std::io::Error> {
+    let app_id = game_installation.get_app_id();
+    let ffnx_dir = &ffnx_installation.path;
+    let ff8_path = ffnx_installation.exe_path();
+    info!(
+        "Launch \"{:?} -applaunch {}\" in dir \"{:?}\"...",
+        steam_exe, app_id, ffnx_dir
+    );
+    run_detached(&mut Command::new(steam_exe))
+        .args(["-applaunch", app_id.to_string().as_str()])
+        .arg(ff8_path.as_os_str())
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .current_dir(ffnx_dir)
         .spawn()
-    {
-        error!("Unable to launch game: {:?}", e)
-    }
 }
 
-#[cfg(unix)]
-fn launch_game(_ff8_path: &Path, _ffnx_dir: &Path, app_id: u64) {
-    match app_id {
-        0 => {
-            error!("Unable to launch game: only the Steam version is supported")
+fn launch_game_directly(ff8_path: &Path, ffnx_dir: &Path) -> Result<Child, std::io::Error> {
+    info!("Launch \"{:?}\" in dir \"{:?}\"...", ff8_path, ffnx_dir);
+    run_detached(&mut Command::new(ff8_path))
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .current_dir(ffnx_dir)
+        .spawn()
+}
+
+fn launch_game(
+    game_installation: &installation::Installation,
+    ffnx_installation: &FfnxInstallation,
+    steam_exe: &Path,
+) {
+    if let Err(e) = match game_installation.edition {
+        installation::Edition::Standard => {
+            launch_game_directly(&ffnx_installation.exe_path(), &ffnx_installation.path)
         }
-        app_id => {
-            if let Err(e) = Command::new("steam")
-                .args(["-applaunch", app_id.to_string().as_str()])
-                .stdin(Stdio::inherit())
-                .stdout(Stdio::inherit())
-                .stderr(Stdio::inherit())
-                .spawn()
-            {
-                error!("Unable to launch game: {:?}", e)
-            }
+        installation::Edition::Steam | installation::Edition::Remastered => {
+            launch_game_via_steam(game_installation, ffnx_installation, steam_exe).or_else(|_| {
+                launch_game_directly(
+                    &game_installation.get_launcher_path(),
+                    &ffnx_installation.path,
+                )
+            })
         }
+    } {
+        error!("Unable to launch game: {:?}", e)
     }
 }
 
@@ -300,7 +330,7 @@ fn install_game_and_ffnx(
     let exe_path = ffnx_installation.exe_path();
 
     if matches!(installation.edition, installation::Edition::Steam) {
-        installation.replace_launcher(&exe_path, env)?
+        installation.replace_launcher(env)?
     };
 
     if !exe_path.exists() {
@@ -589,6 +619,7 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
     let screen_resolutions = crate::screen::Screen::list_screens_resolutions();
     let ui_ffnx_config = set_ffnx_config(handle.clone(), &mut ffnx_config, &screen_resolutions);
     ffnx_config.save();
+    let steam_exe = get_steam_exe().unwrap_or_default();
 
     set_resolutions(
         handle.clone(),
@@ -631,18 +662,7 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
                     .unwrap_or(UpdateChannel::Stable),
                 &env,
             ),
-            Message::LaunchGame => {
-                let exe_path = ffnx_installation.exe_path();
-                info!(
-                    "Launch {:?} in dir {:?}...",
-                    &exe_path, &ffnx_installation.path
-                );
-                launch_game(
-                    &exe_path,
-                    &ffnx_installation.path,
-                    installation.get_app_id(),
-                )
-            }
+            Message::LaunchGame => launch_game(&installation, &ffnx_installation, &steam_exe),
             Message::SetFfnxConfigBool(key, value) => {
                 ffnx_config.get().set_bool(key.as_str(), value)
             }
