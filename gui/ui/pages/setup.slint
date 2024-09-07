@@ -39,6 +39,7 @@ export component SetupPage inherits VerticalLayout {
 
                     update-channel := ComboBox {
                         model: [@tr("Stable"), @tr("Beta"), @tr("Alpha")];
+                        current-index: Installations.update-channel;
                     }
                 }
             }

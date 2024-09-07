@@ -7,7 +7,7 @@ export component HomePage inherits VerticalLayout {
         background: Palette.background.darker(0.2);
 
         HorizontalBox {
-            alignment: end;
+            alignment: start;
 
             Button {
                 text: @tr("Check for updates");
@@ -34,6 +34,12 @@ export component HomePage inherits VerticalLayout {
     Rectangle {
         background: Palette.background;
         vertical-stretch: 1;
+
+        HorizontalBox {
+            Image {
+                source: @image-url("../../data/background.png");
+            }
+        }
     }
     Rectangle {
         background: Palette.background.darker(0.2);

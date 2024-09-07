@@ -96,6 +96,15 @@ fn set_game_exe_path(handle: slint::Weak<AppWindow>, text: String) {
         .unwrap_or_default()
 }
 
+fn set_update_channel(handle: slint::Weak<AppWindow>, update_channel: UpdateChannel) {
+    handle
+        .upgrade_in_event_loop(move |h| {
+            h.global::<Installations>()
+                .set_update_channel(update_channel as i32)
+        })
+        .unwrap_or_default()
+}
+
 fn set_current_page(handle: slint::Weak<AppWindow>, page_id: i32) {
     handle
         .upgrade_in_event_loop(move |h| h.global::<Installations>().set_current_page(page_id))
@@ -386,11 +395,12 @@ fn setup(
     match installation::Installation::from_exe_path(&PathBuf::from(exe_path.as_str())) {
         Ok(installation) => {
             mumba_config.set_installation(&installation);
-            mumba_config.set_update_channel(update_channel);
+            mumba_config.set_update_channel(update_channel.clone());
             set_game_exe_path(
                 handle.clone(),
                 installation.exe_path().to_string_lossy().to_string(),
             );
+            set_update_channel(handle.clone(), update_channel);
             match mumba_config.save(mumba_config_path) {
                 Ok(()) => Some(installation),
                 Err(e) => {
@@ -458,6 +468,11 @@ fn retrieve_installation(
     mumba_config: &mut Config,
     mumba_config_path: &PathBuf,
 ) -> Option<installation::Installation> {
+    let update_channel = mumba_config
+        .update_channel()
+        .unwrap_or(UpdateChannel::Stable);
+    set_update_channel(handle.clone(), update_channel);
+
     match mumba_config.installation() {
         Ok(Some(installation)) => {
             set_game_exe_path(

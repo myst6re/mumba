@@ -16,6 +16,7 @@ export struct FfnxConfig {
 export global Installations {
     in property <string> game-path;
     in property <string> game-exe-path;
+    in property <int> update-channel : 0;
     in-out property <int> current-page : 0;
     in property <string> task-text;
     in property <TextLevel> task-text-type : info;
