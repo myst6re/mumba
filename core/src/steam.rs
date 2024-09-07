@@ -135,5 +135,5 @@ pub fn get_steam_exe() -> Result<PathBuf, crate::os::regedit::Error> {
 
 #[cfg(unix)]
 pub fn get_steam_exe() -> Result<PathBuf, Box<dyn std::error::Error>> {
-    Ok(get_steam_path()?.join("steam"))
+    Ok(PathBuf::from("steam"))
 }

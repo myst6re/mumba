@@ -169,7 +169,7 @@ fn set_ffnx_config(
         let window_size_y = ffnx_config.get_int("window_size_y_fullscreen", 0) as u32;
         screen_resolutions
             .position(window_size_x, window_size_y)
-            .unwrap_or(std::cmp::max(screen_resolutions.resolutions.len() - 1, 0))
+            .unwrap_or(screen_resolutions.resolutions.len().saturating_sub(1))
     };
     let config = crate::FfnxConfig {
         renderer_backend: ffnx_config.get_int(ffnx_config::CFG_RENDERER_BACKEND, 0),

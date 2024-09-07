@@ -1,4 +1,6 @@
+#[cfg(windows)]
 use fraction::Fraction;
+#[cfg(windows)]
 use log::info;
 #[cfg(windows)]
 use windows::core::PCWSTR;

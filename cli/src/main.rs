@@ -30,9 +30,7 @@ fn main() -> std::io::Result<()> {
         Some(("replace_launcher", sub_matches)) => {
             let app_path = sub_matches.get_one::<String>("APP_PATH").expect("required");
             match Installation::from_directory(PathBuf::from(app_path), Edition::Steam) {
-                Some(installation) => {
-                    installation.replace_launcher_from_app_path(&env)
-                }
+                Some(installation) => installation.replace_launcher_from_app_path(&env),
                 None => Err(std::io::Error::new(
                     std::io::ErrorKind::NotFound,
                     "App not found",
