@@ -107,8 +107,7 @@ impl FfnxInstallation {
                 asset
                     .name
                     .to_ascii_lowercase()
-                    .replace('-', "_")
-                    .replace(' ', "_")
+                    .replace(['-', ' '], "_")
                     .contains(keyword)
             })
             .cloned()

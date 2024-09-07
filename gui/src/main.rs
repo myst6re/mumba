@@ -7,6 +7,7 @@ use mumba_core::config::UpdateChannel;
 use mumba_core::game::env::Env;
 
 pub mod lazy_ffnx_config;
+pub mod screen;
 pub mod worker;
 
 use worker::Worker;
@@ -102,6 +103,18 @@ fn main() -> Result<(), slint::PlatformError> {
                 .unwrap()
         }
     });
+
+    ui.global::<Installations>()
+        .on_set_ffnx_config_current_refresh_rate({
+            let tx = worker.tx.clone();
+            move |current_resolution, current_refresh_rate| {
+                tx.send(worker::Message::SetFfnxConfigCurrentRefreshRate(
+                    current_resolution,
+                    current_refresh_rate,
+                ))
+                .unwrap()
+            }
+        });
 
     ui.run()?;
 

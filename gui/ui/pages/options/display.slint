@@ -30,7 +30,8 @@ export component OptionsDisplayPage inherits VerticalLayout {
                             checked: Installations.ffnx-config.fullscreen;
 
                             toggled() => {
-                                Installations.set-ffnx-config-bool("fullscreen", self.checked)
+                                Installations.set-ffnx-config-bool("fullscreen", self.checked);
+                                Installations.set-ffnx-config-int("current_resolution", resolution.current-index)
                             }
                         }
                         Switch {
@@ -47,12 +48,18 @@ export component OptionsDisplayPage inherits VerticalLayout {
                         alignment: start;
 
                         Text {
-                            text: @tr("Resolution");
+                            text: @tr("Fullscreen resolution");
                             vertical-alignment: TextVerticalAlignment.center;
                         }
 
-                        ComboBox {
-                            model: [@tr("Auto"), "640x480", "800x600", "1024x768", "1280x960", "1600x1200", "2048x1536", "3200x2400"];
+                        resolution := ComboBox {
+                            model: Installations.resolutions;
+                            enabled: self.model.length > 1;
+                            current-index: Installations.ffnx-config.current-resolution;
+
+                            selected() => {
+                                Installations.set-ffnx-config-int("current_resolution", self.current-index)
+                            }
                         }
                     }
 
@@ -65,7 +72,14 @@ export component OptionsDisplayPage inherits VerticalLayout {
                         }
 
                         ComboBox {
+                            property<[int]> values: [0, 1, 2, 4, 8];
+                            property<[int]> reverse: [0, 1, 2, 2, 3, 3, 3, 3, 4];
                             model: [@tr("Auto"), "x1", "x2", "x4", "x8"];
+                            current-index: self.reverse[Installations.ffnx-config.internal-resolution-scale];
+
+                            selected() => {
+                                Installations.set-ffnx-config-int("internal_resolution_scale", self.values[self.current-index])
+                            }
                         }
                     }
 
@@ -77,13 +91,16 @@ export component OptionsDisplayPage inherits VerticalLayout {
                             vertical-alignment: TextVerticalAlignment.center;
                         }
 
-                        SpinBox {
-                            vertical-stretch: 0;
-                            minimum: 0;
-                            maximum: 120;
+                        ComboBox {
+                            model: Installations.refresh-rates;
+                            enabled: self.model.length > 1;
+                            current-index: Installations.ffnx-config.current-refresh-rate;
+
+                            selected() => {
+                                Installations.set-ffnx-config-current-refresh-rate(resolution.current-index, self.current-index)
+                            }
                         }
                     }
-
 
                     Rectangle {
                         vertical-stretch: 1;
@@ -125,7 +142,14 @@ export component OptionsDisplayPage inherits VerticalLayout {
                         }
 
                         ComboBox {
+                            property<[int]> values: [0, 2, 4, 8, 16];
+                            property<[int]> reverse: [0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4];
                             model: [@tr("Disabled"), "2x", "4x", "8x", "16x"];
+                            current-index: self.reverse[Installations.ffnx-config.enable_antialiasing];
+
+                            selected() => {
+                                Installations.set-ffnx-config-int("enable_antialiasing", self.values[self.current-index])
+                            }
                         }
                     }
 

@@ -2,6 +2,7 @@ use std::ffi::{OsStr, OsString};
 use std::os::windows::ffi::OsStrExt;
 use std::os::windows::prelude::*;
 use std::path::PathBuf;
+use windows::core::PCWSTR;
 use windows::Win32::Foundation::{self, HANDLE, HWND, MAX_PATH, WIN32_ERROR};
 use windows::Win32::UI::Shell;
 
@@ -51,27 +52,27 @@ pub fn run_as(program: &String, parameters: &String) -> Result<u32, std::io::Err
         let hwnd: HWND = std::mem::zeroed();
         windows::Win32::UI::Shell::ShellExecuteW(
             hwnd,
-            windows::core::PCWSTR::from_raw(
+            PCWSTR::from_raw(
                 OsStr::new("runas\0")
                     .encode_wide()
                     .collect::<Vec<_>>()
                     .as_ptr(),
             ),
-            windows::core::PCWSTR::from_raw(
+            PCWSTR::from_raw(
                 OsStr::new(program)
                     .encode_wide()
                     .chain(Some(0))
                     .collect::<Vec<_>>()
                     .as_ptr(),
             ),
-            windows::core::PCWSTR::from_raw(
+            PCWSTR::from_raw(
                 OsStr::new(parameters)
                     .encode_wide()
                     .chain(Some(0))
                     .collect::<Vec<_>>()
                     .as_ptr(),
             ),
-            windows::core::PCWSTR::null(),
+            PCWSTR::null(),
             windows::Win32::UI::WindowsAndMessaging::SW_SHOW,
         )
     };

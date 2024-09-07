@@ -10,6 +10,8 @@ pub const CFG_ENABLE_VSYNC: &str = "enable_vsync";
 pub const CFG_ENABLE_ANTIALIASING: &str = "enable_antialiasing";
 pub const CFG_ENABLE_ANISOTROPIC: &str = "enable_anisotropic";
 pub const CFG_FF8_USE_GAMEPAD_ICONS: &str = "ff8_use_gamepad_icons";
+pub const CFG_REFRESH_RATE: &str = "refresh_rate";
+pub const CFG_INTERNAL_RESOLUTION_SCALE: &str = "internal_resolution_scale";
 
 pub struct FfnxConfig {
     inner: DocumentMut,

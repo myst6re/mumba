@@ -33,6 +33,7 @@ pub enum Message {
     SetFfnxConfigBool(slint::SharedString, bool),
     SetFfnxConfigInt(slint::SharedString, i64),
     SetFfnxConfigString(slint::SharedString, slint::SharedString),
+    SetFfnxConfigCurrentRefreshRate(i32, i32),
     UpdateGame,
     Quit,
 }
@@ -101,7 +102,65 @@ fn set_current_page(handle: slint::Weak<AppWindow>, page_id: i32) {
         .unwrap_or_default()
 }
 
-fn set_ffnx_config(handle: slint::Weak<AppWindow>, ffnx_config: &mut LazyFfnxConfig) {
+fn set_resolutions(
+    handle: slint::Weak<AppWindow>,
+    screen_resolutions: &crate::screen::Screen,
+    current_resolution: i32,
+) {
+    let resolutions: Vec<slint::SharedString> = screen_resolutions
+        .resolutions
+        .iter()
+        .map(|screen| slint::SharedString::from(format!("{}x{}", screen.w, screen.h)))
+        .collect();
+    let refresh_rates: Vec<slint::SharedString> = screen_resolutions
+        .resolutions
+        .get(current_resolution as usize)
+        .map(|sr| sr.freqs.clone())
+        .unwrap_or_default()
+        .iter()
+        .map(|freq| slint::SharedString::from(format!("{} Hz", freq)))
+        .collect();
+
+    handle
+        .upgrade_in_event_loop(move |h| {
+            let installations = h.global::<Installations>();
+            installations.set_resolutions(slint::ModelRc::<slint::SharedString>::from(
+                resolutions.as_slice(),
+            ));
+            installations.set_refresh_rates(slint::ModelRc::<slint::SharedString>::from(
+                refresh_rates.as_slice(),
+            ));
+        })
+        .unwrap_or_default()
+}
+
+fn update_refresh_rates(handle: slint::Weak<AppWindow>, refresh_rates: Vec<u32>) {
+    let refresh_rates: Vec<slint::SharedString> = refresh_rates
+        .iter()
+        .map(|freq| slint::SharedString::from(format!("{} Hz", freq)))
+        .collect();
+
+    handle
+        .upgrade_in_event_loop(move |h| {
+            h.global::<Installations>().set_refresh_rates(
+                slint::ModelRc::<slint::SharedString>::from(refresh_rates.as_slice()),
+            );
+        })
+        .unwrap_or_default()
+}
+
+fn set_ffnx_config(
+    handle: slint::Weak<AppWindow>,
+    ffnx_config: &mut LazyFfnxConfig,
+    screen_resolutions: &crate::screen::Screen,
+) -> crate::FfnxConfig {
+    let current_resolution = {
+        let window_size_x = ffnx_config.get_int("window_size_x_fullscreen", 0) as u32;
+        let window_size_y = ffnx_config.get_int("window_size_y_fullscreen", 0) as u32;
+        screen_resolutions
+            .position(window_size_x, window_size_y)
+            .unwrap_or(std::cmp::max(screen_resolutions.resolutions.len() - 1, 0))
+    };
     let config = crate::FfnxConfig {
         renderer_backend: ffnx_config.get_int(ffnx_config::CFG_RENDERER_BACKEND, 0),
         fullscreen: ffnx_config.get_bool(ffnx_config::CFG_FULLSCREEN, true),
@@ -110,10 +169,21 @@ fn set_ffnx_config(handle: slint::Weak<AppWindow>, ffnx_config: &mut LazyFfnxCon
         enable_antialiasing: ffnx_config.get_int(ffnx_config::CFG_ENABLE_ANTIALIASING, 0),
         enable_anisotropic: ffnx_config.get_bool(ffnx_config::CFG_ENABLE_ANISOTROPIC, true),
         ff8_use_gamepad_icons: ffnx_config.get_bool(ffnx_config::CFG_FF8_USE_GAMEPAD_ICONS, true),
+        current_resolution: current_resolution as i32,
+        current_refresh_rate: {
+            let refresh_rate = ffnx_config.get_int(ffnx_config::CFG_REFRESH_RATE, 0) as u32;
+            screen_resolutions
+                .refresh_rate_position(current_resolution, refresh_rate)
+                .unwrap_or(0) as i32
+        },
+        internal_resolution_scale: ffnx_config
+            .get_int(ffnx_config::CFG_INTERNAL_RESOLUTION_SCALE, 0),
     };
+    let config2 = config.clone();
     handle
         .upgrade_in_event_loop(move |h| h.global::<Installations>().set_ffnx_config(config))
-        .unwrap_or_default()
+        .unwrap_or_default();
+    config2
 }
 
 fn upgrade_ffnx(
@@ -501,9 +571,15 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
     } else {
         installation.app_path.to_string_lossy().to_string()
     });
-
-    set_ffnx_config(handle.clone(), &mut ffnx_config);
+    let screen_resolutions = crate::screen::Screen::list_screens_resolutions();
+    let ui_ffnx_config = set_ffnx_config(handle.clone(), &mut ffnx_config, &screen_resolutions);
     ffnx_config.save();
+
+    set_resolutions(
+        handle.clone(),
+        &screen_resolutions,
+        ui_ffnx_config.current_resolution,
+    );
 
     for received in &rx {
         match received {
@@ -537,7 +613,7 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
                 &installation.edition,
                 mumba_config
                     .update_channel()
-                    .unwrap_or_else(|_| UpdateChannel::Stable),
+                    .unwrap_or(UpdateChannel::Stable),
                 &env,
             ),
             Message::LaunchGame => {
@@ -555,12 +631,53 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
             Message::SetFfnxConfigBool(key, value) => {
                 ffnx_config.get().set_bool(key.as_str(), value)
             }
-            Message::SetFfnxConfigInt(key, value) => ffnx_config.get().set_int(key.as_str(), value),
+            Message::SetFfnxConfigInt(key, value) => {
+                if key == "current_resolution" {
+                    let resolutions = screen_resolutions.resolutions.get(value as usize);
+                    let (w, h) = match resolutions {
+                        Some(e) => (e.w, e.h),
+                        None => (0, 0),
+                    };
+                    let fullscreen = ffnx_config
+                        .get()
+                        .get_bool(ffnx_config::CFG_FULLSCREEN, true)
+                        .unwrap_or(true);
+                    if fullscreen {
+                        ffnx_config.get().set_int("window_size_x", w);
+                        ffnx_config.get().set_int("window_size_y", h);
+                    } else {
+                        ffnx_config.get().set_int("window_size_x", 0);
+                        ffnx_config.get().set_int("window_size_y", 0);
+                    }
+                    ffnx_config.get().set_int("window_size_x_fullscreen", w);
+                    ffnx_config.get().set_int("window_size_y_fullscreen", h);
+                    update_refresh_rates(
+                        handle.clone(),
+                        match resolutions {
+                            Some(e) => e.freqs.clone(),
+                            None => vec![],
+                        },
+                    )
+                } else {
+                    ffnx_config.get().set_int(key.as_str(), value)
+                }
+            }
             Message::SetFfnxConfigString(key, value) => {
                 ffnx_config.get().set_string(key.as_str(), value)
             }
+            Message::SetFfnxConfigCurrentRefreshRate(current_resolution, current_refresh_rate) => {
+                let freqs = screen_resolutions
+                    .resolutions
+                    .get(current_resolution as usize)
+                    .map(|r| r.freqs.clone())
+                    .unwrap_or_default();
+                ffnx_config.get().set_int(
+                    "refresh_rate",
+                    *freqs.get(current_refresh_rate as usize).unwrap_or(&0) as i64,
+                )
+            }
             Message::ConfigureFfnx => {
-                set_ffnx_config(handle.clone(), &mut ffnx_config);
+                set_ffnx_config(handle.clone(), &mut ffnx_config, &screen_resolutions);
                 ffnx_config.save();
             }
             Message::CancelConfigureFfnx => ffnx_config.clear(),
