@@ -2,6 +2,7 @@ use super::{AppWindow, Installations};
 use crate::lazy_ffnx_config::LazyFfnxConfig;
 use crate::TextLevel;
 use log::{error, info, warn};
+use mumba_core::screen::Screen;
 use mumba_core::config::{Config, UpdateChannel};
 use mumba_core::game::env::Env;
 use mumba_core::game::ffnx_config;
@@ -114,7 +115,7 @@ fn set_current_page(handle: slint::Weak<AppWindow>, page_id: i32) {
 
 fn set_resolutions(
     handle: slint::Weak<AppWindow>,
-    screen_resolutions: &crate::screen::Screen,
+    screen_resolutions: &Screen,
     current_resolution: i32,
 ) {
     let resolutions: Vec<slint::SharedString> = screen_resolutions
@@ -162,7 +163,7 @@ fn update_refresh_rates(handle: slint::Weak<AppWindow>, refresh_rates: Vec<u32>)
 fn set_ffnx_config(
     handle: slint::Weak<AppWindow>,
     ffnx_config: &mut LazyFfnxConfig,
-    screen_resolutions: &crate::screen::Screen,
+    screen_resolutions: &Screen,
 ) -> crate::FfnxConfig {
     let current_resolution = {
         let window_size_x = ffnx_config.get_int("window_size_x_fullscreen", 0) as u32;
@@ -242,9 +243,9 @@ fn launch_game_via_steam(
     run_detached(&mut Command::new(steam_exe))
         .args(["-applaunch", app_id.to_string().as_str()])
         .arg(ff8_path.as_os_str())
-        .stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .current_dir(ffnx_dir)
         .spawn()
 }
@@ -252,9 +253,9 @@ fn launch_game_via_steam(
 fn launch_game_directly(ff8_path: &Path, ffnx_dir: &Path) -> Result<Child, std::io::Error> {
     info!("Launch \"{:?}\" in dir \"{:?}\"...", ff8_path, ffnx_dir);
     run_detached(&mut Command::new(ff8_path))
-        .stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .current_dir(ffnx_dir)
         .spawn()
 }
@@ -389,7 +390,7 @@ fn install_game_and_ffnx(
             if !eax_dll_path.exists() {
                 if let Err(e) = provision::copy_file(&env.mumba_dir.join("eax.dll"), &eax_dll_path)
                 {
-                    warn!("Cannot install eax.dll: {}", e);
+                    warn!("Cannot install creative_eax.dll: {}", e);
                 }
             }
         }
@@ -616,7 +617,7 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
     } else {
         installation.app_path.to_string_lossy().to_string()
     });
-    let screen_resolutions = crate::screen::Screen::list_screens_resolutions();
+    let screen_resolutions = Screen::list_screens_resolutions();
     let ui_ffnx_config = set_ffnx_config(handle.clone(), &mut ffnx_config, &screen_resolutions);
     ffnx_config.save();
     let steam_exe = get_steam_exe().unwrap_or_default();

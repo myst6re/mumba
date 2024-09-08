@@ -7,7 +7,6 @@ use mumba_core::config::UpdateChannel;
 use mumba_core::game::env::Env;
 
 pub mod lazy_ffnx_config;
-pub mod screen;
 pub mod worker;
 
 use worker::Worker;

@@ -12,6 +12,7 @@ pub mod os;
 #[cfg(feature = "pe")]
 pub mod pe_format;
 pub mod provision;
+pub mod screen;
 pub mod steam;
 #[cfg(feature = "config")]
 pub mod toml;
