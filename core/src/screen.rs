@@ -189,7 +189,7 @@ impl Screen {
         let re_current = Regex::new(r"current (\d+) ?x ?(\d+)").unwrap();
         let re_primary = Regex::new(r" primary ").unwrap();
         let re_res = Regex::new(r"^ +(\d+)x(\d+) +(.*)$").unwrap();
-        let re_freq = Regex::new(r"^(\d+)").unwrap();
+        let re_freq = Regex::new(r"^(\d+\.\d+)").unwrap();
         let mut resolutions: Vec<Resolution> = vec![];
         let mut current_resolution = None;
         let mut current_ratio = None;
@@ -215,7 +215,7 @@ impl Screen {
                     let freqs = String::from(captures.get(3).unwrap().as_str());
                     let freqs = freqs.split_whitespace().map(|freq| {
                         if let Some(captures) = re_freq.captures(freq) {
-                            captures.get(1).unwrap().as_str().parse::<u32>().unwrap()
+                            captures.get(1).unwrap().as_str().parse::<f32>().unwrap().round() as u32
                         } else {
                             0
                         }
