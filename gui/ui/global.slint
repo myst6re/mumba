@@ -14,6 +14,10 @@ export struct FfnxConfig {
     enable_bilinear: bool,
 }
 
+export global Fluent {
+    pure callback get-message(string) -> string;
+}
+
 export global Installations {
     in property <string> game-path;
     in property <string> game-exe-path;
@@ -22,8 +26,8 @@ export global Installations {
     in property <string> task-text;
     in property <TextLevel> task-text-type : info;
     in property <bool> is-ready : false;
-    in property <[string]> resolutions : [@tr("Auto")];
-    in property <[string]> refresh-rates : [@tr("Auto")];
+    in property <[string]> resolutions : [Fluent.get-message("auto")];
+    in property <[string]> refresh-rates : [Fluent.get-message("auto")];
 
     pure callback setup(string, int);
     pure callback launch-game();

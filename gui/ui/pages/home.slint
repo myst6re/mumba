@@ -1,5 +1,5 @@
 import { Button, ComboBox, Palette, VerticalBox, HorizontalBox } from "std-widgets.slint";
-import { Installations, TextLevel } from "../global.slint";
+import { Installations, TextLevel, Fluent } from "../global.slint";
 import { Message } from "../components/message.slint";
 
 export component HomePage inherits VerticalLayout {
@@ -10,7 +10,7 @@ export component HomePage inherits VerticalLayout {
             alignment: start;
 
             Button {
-                text: @tr("Check for updates");
+                text: Fluent.get-message("check-update");
                 enabled: Installations.is-ready;
                 clicked => {
                     Installations.upgrade-ffnx()
@@ -18,14 +18,14 @@ export component HomePage inherits VerticalLayout {
             }
 
             Button {
-                text: @tr("Configure Mumba…");
+                text: Fluent.get-message("configure-app");
                 clicked => {
                     Installations.current-page = 1;
                 }
             }
 
             Button {
-                text: @tr("Game Options…");
+                text: Fluent.get-message("configure-game");
                 clicked => {
                     Installations.current-page = 2;
                 }
@@ -49,9 +49,10 @@ export component HomePage inherits VerticalLayout {
             Message {}
 
             Button {
-                text: @tr("Launch game");
+                text: Fluent.get-message("launch-game");
                 enabled: Installations.is-ready;
                 primary: true;
+
                 clicked => {
                     Installations.launch-game();
                 }

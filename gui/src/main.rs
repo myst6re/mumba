@@ -5,6 +5,7 @@ slint::include_modules!();
 use log::error;
 use mumba_core::config::UpdateChannel;
 use mumba_core::game::env::Env;
+use mumba_core::i18n::I18n;
 
 pub mod lazy_ffnx_config;
 pub mod worker;
@@ -14,10 +15,14 @@ use worker::Worker;
 fn main() -> Result<(), slint::PlatformError> {
     let env = Env::new().unwrap();
     mumba_core::mumba_log::init(&env, "mumba.log");
+    let i18n = I18n::new();
 
     let ui = AppWindow::new()?;
 
     let worker = Worker::new(&ui);
+
+    ui.global::<Fluent>()
+        .on_get_message(move |id| slint::SharedString::from(i18n.tr(id.as_str())));
 
     ui.global::<Installations>().on_setup({
         let tx = worker.tx.clone();

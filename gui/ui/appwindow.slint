@@ -2,14 +2,14 @@ import { Button, ComboBox, StyleMetrics, VerticalBox, HorizontalBox } from "std-
 import { SetupPage } from "pages/setup.slint";
 import { OptionsPage } from "pages/options.slint";
 import { HomePage } from "pages/home.slint";
-import { Installations } from "global.slint";
+import { Installations, Fluent } from "global.slint";
 
-export { Installations }
+export { Installations, Fluent }
 
 export component AppWindow inherits Window {
     preferred-width: 640px;
     preferred-height: 480px;
-    title: @tr("The Yellow Mumba");
+    title: Fluent.get-message("window-title");
     icon: @image-url("../data/icon.png");
 
     if Installations.current-page == 0 : HomePage {}

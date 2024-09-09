@@ -1,16 +1,16 @@
 import { GroupBox, Palette, Button, StandardButton, HorizontalBox, LineEdit, VerticalBox, ComboBox } from "std-widgets.slint";
-import { Installations } from "../global.slint";
+import { Installations, Fluent } from "../global.slint";
 import { Message } from "../components/message.slint";
 
 export component SetupPage inherits VerticalLayout {
     Rectangle {
         VerticalBox {
             Text {
-                text: @tr("Initial Setup");
+                text: Fluent.get-message("setup-page-title");
                 font-size: 20px;
             }
             GroupBox {
-                title: @tr("FF8 EXE path");
+                title: Fluent.get-message("config-group-ff8-exe-path");
                 vertical-stretch: 0;
 
                 HorizontalBox {
@@ -22,7 +22,7 @@ export component SetupPage inherits VerticalLayout {
                     }
 
                     Button {
-                        text: @tr("Browse…");
+                        text: Fluent.get-message("button-browse");
                         clicked => {
                             game-exe-path.text = Installations.browse-game(game-exe-path.text);
                         }
@@ -30,7 +30,7 @@ export component SetupPage inherits VerticalLayout {
                 }
             }
             GroupBox {
-                title: @tr("Canal de mise à jour");
+                title: Fluent.get-message("config-group-update-channel");
                 vertical-stretch: 0;
 
                 HorizontalBox {
@@ -38,7 +38,11 @@ export component SetupPage inherits VerticalLayout {
                     max-width: 664px;
 
                     update-channel := ComboBox {
-                        model: [@tr("Stable"), @tr("Beta"), @tr("Alpha")];
+                        model: [
+                            Fluent.get-message("update-channel-stable"),
+                            Fluent.get-message("update-channel-beta"),
+                            Fluent.get-message("update-channel-alpha")
+                        ];
                         current-index: Installations.update-channel;
                     }
                 }
@@ -54,15 +58,18 @@ export component SetupPage inherits VerticalLayout {
         HorizontalBox {
             Message {}
 
-            StandardButton {
-                kind: cancel;
+            Button {
+                text: Fluent.get-message("button-cancel");
+
                 clicked => {
                     Installations.current-page = 0;
                 }
             }
 
-            StandardButton {
-                kind: ok;
+            Button {
+                text: Fluent.get-message("button-ok");
+                primary: true;
+
                 clicked => {
                     Installations.setup(game-exe-path.text, update-channel.current-index);
                     Installations.current-page = 0;

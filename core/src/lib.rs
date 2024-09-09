@@ -7,6 +7,8 @@ pub mod config;
 pub mod game;
 #[cfg(feature = "network")]
 pub mod github;
+#[cfg(feature = "i18n")]
+pub mod i18n;
 pub mod mumba_log;
 pub mod os;
 #[cfg(feature = "pe")]

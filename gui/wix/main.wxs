@@ -135,6 +135,18 @@
                     DiskId='1'
                     Source='$(var.CargoTargetBinDir)\..\..\vendor\creative\eax.dll'
                     KeyPath='no'/>
+                <File
+                    Id='langen'
+                    Name='lang\mumba.en.ftl'
+                    DiskId='1'
+                    Source='$(var.CargoTargetBinDir)\..\..\lang\mumba.en.ftl'
+                    KeyPath='no'/>
+                <File
+                    Id='langfr'
+                    Name='lang\mumba.fr.ftl'
+                    DiskId='1'
+                    Source='$(var.CargoTargetBinDir)\..\..\lang\mumba.fr.ftl'
+                    KeyPath='no'/>
             </Component>
         </DirectoryRef>
 

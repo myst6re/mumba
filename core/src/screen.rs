@@ -1,6 +1,10 @@
 use fraction::Fraction;
 #[cfg(windows)]
 use log::info;
+#[cfg(unix)]
+use regex_lite::Regex;
+#[cfg(unix)]
+use std::process::Command;
 #[cfg(windows)]
 use windows::core::PCWSTR;
 #[cfg(windows)]
@@ -8,10 +12,6 @@ use windows::Win32::Graphics::Gdi::{
     EnumDisplayDevicesW, EnumDisplaySettingsW, DEVMODEW, DISPLAY_DEVICEW, DISPLAY_DEVICE_ACTIVE,
     DISPLAY_DEVICE_PRIMARY_DEVICE, ENUM_CURRENT_SETTINGS, ENUM_DISPLAY_SETTINGS_MODE,
 };
-#[cfg(unix)]
-use std::process::Command;
-#[cfg(unix)]
-use regex_lite::Regex;
 
 #[derive(Eq, PartialEq, Debug, PartialOrd, Ord)]
 pub struct Resolution {
@@ -168,22 +168,27 @@ impl Screen {
     #[cfg(unix)]
     fn list_screens_resolutions_xorg() -> Option<Screen> {
         let output = match Command::new("xrandr").output() {
-            Ok(output) => if output.status.success() {
-                let out = output.stdout.clone();
-                match String::from_utf8(out) {
-                    Ok(output) => output,
-                    Err(e) => {
-                        warn!("List screen resolutions xrandr to string error: {}", e);
-                        return None
+            Ok(output) => {
+                if output.status.success() {
+                    let out = output.stdout.clone();
+                    match String::from_utf8(out) {
+                        Ok(output) => output,
+                        Err(e) => {
+                            warn!("List screen resolutions xrandr to string error: {}", e);
+                            return None;
+                        }
                     }
+                } else {
+                    warn!(
+                        "List screen resolutions xrandr status error: {}",
+                        output.status
+                    );
+                    return None;
                 }
-            } else {
-                warn!("List screen resolutions xrandr status error: {}", output.status);
-                return None
-            },
+            }
             Err(e) => {
                 warn!("Error with xrandr: {}", e);
-                return None
+                return None;
             }
         };
         let re_current = Regex::new(r"current (\d+) ?x ?(\d+)").unwrap();
@@ -202,7 +207,7 @@ impl Screen {
                 current_resolution = Some(Resolution {
                     w,
                     h,
-                    freqs: vec![0]
+                    freqs: vec![0],
                 });
                 current_ratio = Some(Fraction::new(w, h));
                 info!("Current screen ratio: {}", current_ratio.unwrap());
@@ -213,13 +218,22 @@ impl Screen {
                     let w: u32 = captures.get(1).unwrap().as_str().parse().unwrap();
                     let h: u32 = captures.get(2).unwrap().as_str().parse().unwrap();
                     let freqs = String::from(captures.get(3).unwrap().as_str());
-                    let freqs = freqs.split_whitespace().map(|freq| {
-                        if let Some(captures) = re_freq.captures(freq) {
-                            captures.get(1).unwrap().as_str().parse::<f32>().unwrap().round() as u32
-                        } else {
-                            0
-                        }
-                    }).filter(|freq| *freq != 0);
+                    let freqs = freqs
+                        .split_whitespace()
+                        .map(|freq| {
+                            if let Some(captures) = re_freq.captures(freq) {
+                                captures
+                                    .get(1)
+                                    .unwrap()
+                                    .as_str()
+                                    .parse::<f32>()
+                                    .unwrap()
+                                    .round() as u32
+                            } else {
+                                0
+                            }
+                        })
+                        .filter(|freq| *freq != 0);
                     let mut unique_freqs = vec![];
                     for freq in freqs {
                         if !unique_freqs.contains(&freq) {
@@ -230,7 +244,7 @@ impl Screen {
                         resolutions.push(Resolution {
                             w,
                             h,
-                            freqs: unique_freqs
+                            freqs: unique_freqs,
                         });
                     }
                 }
@@ -240,8 +254,6 @@ impl Screen {
         }
 
         resolutions.sort();
-
-        info!("resolutions: {:?}", resolutions);
 
         Some(Screen {
             resolutions,

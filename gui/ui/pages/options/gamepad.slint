@@ -1,10 +1,10 @@
 import { Switch, ScrollView, SpinBox, ComboBox, GroupBox, Button, Palette, StandardButton, HorizontalBox, GridBox, LineEdit, VerticalBox } from "std-widgets.slint";
-import { Installations } from "../../global.slint";
+import { Installations, Fluent } from "../../global.slint";
 
 export component OptionsGamepadPage inherits VerticalLayout {
     VerticalBox {
         Text {
-            text: @tr("Gamepad Options");
+            text: Fluent.get-message("options-page-gamepad-title");
             font-size: 20px;
         }
     }
@@ -17,12 +17,12 @@ export component OptionsGamepadPage inherits VerticalLayout {
             max-width: 664px;
 
             GroupBox {
-                title: @tr("Inputs");
+                title: Fluent.get-message("config-group-inputs");
                 vertical-stretch: 0;
 
                 VerticalBox {
                     Switch {
-                        text: @tr("Show PS1 gamepad icons");
+                        text: Fluent.get-message("show-ps1-gamepad-icons");
                         checked: Installations.ffnx-config.ff8_use_gamepad_icons;
 
                         toggled() => {

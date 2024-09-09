@@ -11,6 +11,7 @@ steam = ["dep:keyvalues-serde", "dep:keyvalues-parser", "dep:serde"]
 zip = ["dep:zip", "dep:zip-extensions"]
 config = ["dep:toml_edit"]
 pe = ["dep:pelite"]
+i18n = ["dep:fluent-bundle", "dep:unic-langid"]
 
 [dependencies]
 log = "0.4"
@@ -28,8 +29,10 @@ keyvalues-parser = {version = "0.2", optional = true}
 jiff = {version = "0.1", default-features = false, features = ["std"], optional = true}
 fraction = { version = "0", default-features = false }
 regex-lite = "0"
+fluent-bundle = { version = "0", optional = true }
+unic-langid = { version = "0", optional = true, features = ["macros"] }
 
 [target.'cfg(windows)'.dependencies]
 registry = "1.2"
 utfx = "0.1"
-windows = {version = "0", features = ["Win32_UI_Shell", "Win32_Graphics_Gdi"]}
+windows = {version = "0", features = ["Win32_UI_Shell", "Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging"]}

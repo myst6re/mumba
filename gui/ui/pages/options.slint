@@ -1,9 +1,9 @@
-import { HorizontalBox, StandardButton, Palette } from "std-widgets.slint";
+import { HorizontalBox, Button, Palette } from "std-widgets.slint";
 import { OptionsDisplayPage } from "options/display.slint";
 import { OptionsGamepadPage } from "options/gamepad.slint";
 import { SideBar } from "../components/side_bar.slint";
 import { Message } from "../components/message.slint";
-import { Installations } from "../global.slint";
+import { Installations, Fluent } from "../global.slint";
 
 export component OptionsPage inherits VerticalLayout {
     HorizontalLayout {
@@ -23,15 +23,17 @@ export component OptionsPage inherits VerticalLayout {
         HorizontalBox {
             Message {}
 
-            StandardButton {
-                kind: cancel;
+            Button {
+                text: Fluent.get-message("button-cancel");
+
                 clicked => {
                     Installations.cancel-configure-ffnx();
                     Installations.current-page = 0;
                 }
             }
-            StandardButton {
-                kind: ok;
+            Button {
+                text: Fluent.get-message("button-ok");
+                primary: true;
 
                 clicked => {
                     Installations.configure-ffnx();

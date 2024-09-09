@@ -10,7 +10,7 @@ default-run = "mumba"
 
 [dependencies]
 log = "0.4"
-mumba_core = { path = "../core", features = ["network", "steam", "zip", "config", "pe"] }
+mumba_core = { path = "../core", features = ["network", "steam", "zip", "config", "pe", "i18n"] }
 slint = { version = "1.7", default-features = false, features = [
     "std",
     "backend-default",
@@ -24,7 +24,6 @@ rfd = "0.14"
 
 [target.'cfg(windows)'.dependencies]
 raw-window-handle = "0.6"
-windows = {version = "0", features = ["Win32_UI_WindowsAndMessaging"]}
 
 [build-dependencies]
 slint-build = "1.7"
@@ -35,5 +34,7 @@ built = { version = "0.7", features = ["git2"] }
 assets = [
     ["target/release/mumba", "usr/bin/", "755"],
     ["../target/x86_64-pc-windows-gnu/release/ff8_launcher.exe", "var/lib/mumba/", "644"],
+    ["../lang/mumba.en.ftl", "var/lib/mumba/lang/", "644"],
+    ["../lang/mumba.fr.ftl", "var/lib/mumba/lang/", "644"],
     ["../README.md", "usr/share/doc/mumba/README", "644"],
 ]
