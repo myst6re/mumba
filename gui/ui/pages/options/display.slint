@@ -173,6 +173,15 @@ export component OptionsDisplayPage inherits VerticalLayout {
                                 Installations.set-ffnx-config-bool("enable_anisotropic", self.checked)
                             }
                         }
+
+                        Switch {
+                            text: @tr("Bilinear filtering");
+                            checked: Installations.ffnx-config.enable_bilinear;
+
+                            toggled() => {
+                                Installations.set-ffnx-config-bool("enable_bilinear", self.checked)
+                            }
+                        }
                     }
                 }
             }

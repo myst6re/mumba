@@ -11,6 +11,7 @@ export component HomePage inherits VerticalLayout {
 
             Button {
                 text: @tr("Check for updates");
+                enabled: Installations.is-ready;
                 clicked => {
                     Installations.upgrade-ffnx()
                 }

@@ -179,6 +179,7 @@ fn set_ffnx_config(
         enable_vsync: ffnx_config.get_bool(ffnx_config::CFG_ENABLE_VSYNC, true),
         enable_antialiasing: ffnx_config.get_int(ffnx_config::CFG_ENABLE_ANTIALIASING, 0),
         enable_anisotropic: ffnx_config.get_bool(ffnx_config::CFG_ENABLE_ANISOTROPIC, true),
+        enable_bilinear: ffnx_config.get_bool(ffnx_config::CFG_ENABLE_BILINEAR, false),
         ff8_use_gamepad_icons: ffnx_config.get_bool(ffnx_config::CFG_FF8_USE_GAMEPAD_ICONS, true),
         current_resolution: current_resolution as i32,
         current_refresh_rate: {

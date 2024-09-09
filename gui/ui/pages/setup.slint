@@ -55,6 +55,13 @@ export component SetupPage inherits VerticalLayout {
             Message {}
 
             StandardButton {
+                kind: cancel;
+                clicked => {
+                    Installations.current-page = 0;
+                }
+            }
+
+            StandardButton {
                 kind: ok;
                 clicked => {
                     Installations.setup(game-exe-path.text, update-channel.current-index);
