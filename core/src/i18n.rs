@@ -1,6 +1,7 @@
 use fluent_bundle::{FluentBundle, FluentResource};
 use std::path::PathBuf;
 use unic_langid::{langid, LanguageIdentifier};
+use sys_locale::get_locale;
 
 pub struct I18n {
     bundle: FluentBundle<FluentResource>,
@@ -8,33 +9,34 @@ pub struct I18n {
 
 impl I18n {
     pub fn new() -> I18n {
-        let mut lang = Self::detect_system_lang();
-        let mut path = Self::find_path("mumba", &lang);
-        let fallback_land = langid!("en");
-        let fallback = Self::find_path("mumba", &fallback_land);
-        if !path.exists() {
-            lang = fallback_land;
-            path = fallback.clone()
-        }
+        let lang = Self::detect_system_lang();
+        let path = Self::find_path(&lang);
 
-        Self::from_file(&path, lang, &fallback)
+        Self::from_file(&path, lang)
     }
 
-    pub fn from_file(path: &PathBuf, lang: LanguageIdentifier, fallback: &PathBuf) -> I18n {
+    pub fn from_file(path: &PathBuf, lang: LanguageIdentifier) -> I18n {
+        let fallback_lang = langid!("en-US");
+        let fallback = Self::find_path(&fallback_lang);
+
+        info!("Fluent file path: {}", path.to_string_lossy());
+
         let resource = Self::open_resource(path);
-        let resource_fallback = Self::open_resource(fallback);
+        let resource_fallback = Self::open_resource(&fallback);
         let mut bundle = FluentBundle::new(vec![lang, langid!("en")]);
 
-        bundle.add_resource_overriding(resource_fallback);
-        bundle.add_resource_overriding(resource);
+        if let Some(resource_fallback) = resource_fallback {
+            bundle.add_resource_overriding(resource_fallback)
+        }
+        if let Some(resource) = resource {
+            bundle.add_resource_overriding(resource)
+        }
 
         I18n { bundle }
     }
 
-    fn open_resource(path: &PathBuf) -> FluentResource {
-        let content = std::fs::read_to_string(path)
-            .expect(format!("Cannot read fluent file {}", path.to_string_lossy()).as_str());
-        FluentResource::try_new(content).expect("Failed to parse an FTL string.")
+    fn open_resource(path: &PathBuf) -> Option<FluentResource> {
+        std::fs::read_to_string(path).ok().and_then(|content| FluentResource::try_new(content).ok())
     }
 
     pub fn tr(&self, id: &str) -> String {
@@ -54,12 +56,19 @@ impl I18n {
         String::from(self.bundle.format_pattern(&pattern, None, &mut errors))
     }
 
-    pub fn find_path(name: &str, lang: &LanguageIdentifier) -> PathBuf {
-        let file_name = format!("{}.{}.ftl", name, lang);
-        PathBuf::from("lang").join(file_name)
+    pub fn find_path(lang: &LanguageIdentifier) -> PathBuf {
+        let file_name = format!("mumba.{}.ftl", lang.language);
+        let path = PathBuf::from("lang").join(&file_name);
+        if path.exists() {
+            path
+        } else {
+            PathBuf::from("/var/lib/mumba/lang").join(file_name)
+        }
     }
 
     pub fn detect_system_lang() -> LanguageIdentifier {
-        langid!("fr")
+        get_locale()
+            .and_then(|locale| LanguageIdentifier::from_bytes(locale.as_bytes()).ok())
+            .unwrap_or_else(|| langid!("en-US"))
     }
 }
