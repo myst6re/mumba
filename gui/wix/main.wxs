@@ -107,53 +107,49 @@
             -->
             <Component Id='License' Guid='*'>
                 <File Id='LicenseFile'
-                    DiskId='1'
                     Source='$(var.CargoTargetBinDir)\..\..\gui\wix\License.rtf'
                     KeyPath='yes'/>
             </Component>
-
-            <Component Id='binary0' Guid='{1095AF31-8E19-4EB0-80BB-9A10BBB104BD}'>
+            <Component Id='GuiBinary' Guid='*'>
                 <File
                     Id='exe0'
-                    Name='mumba.exe'
-                    DiskId='1'
+                    Name='Mumba.exe'
                     Source='$(var.CargoTargetBinDir)\mumba.exe'
-                    KeyPath='yes'/>
+                    KeyPath='yes' Checksum='yes'/>
+            </Component>
+            <Component Id='CliBinary' Guid='*'>
                 <File
                     Id='exe1'
-                    Name='mmb.exe'
-                    DiskId='1'
                     Source='$(var.CargoTargetBinDir)\mmb.exe'
-                    KeyPath='no'/>
+                    KeyPath='yes' Checksum='yes'/>
+            </Component>
+            <Component Id='LauncherBinary' Guid='*'>
                 <File
                     Id='exe2'
                     Name='FF8_Launcher.exe'
-                    DiskId='1'
                     Source='$(var.CargoTargetBinDir)\ff8_launcher.exe'
-                    KeyPath='no'/>
+                    KeyPath='yes' Checksum='yes'/>
+            </Component>
+            <Component Id='EaxDll' Guid='*'>
                 <File
                     Id='dll1'
-                    Name='eax.dll'
-                    DiskId='1'
                     Source='$(var.CargoTargetBinDir)\..\..\vendor\creative\eax.dll'
-                    KeyPath='no'/>
+                    KeyPath='yes' Checksum='yes'/>
             </Component>
         </DirectoryRef>
 
         <DirectoryRef Id="LangFolder">
-            <Component Id="Localization" Guid="{1095AF31-8E19-4EB0-80BB-9A10BBB104BE}">
+            <Component Id="LocalizationEn" Guid="*">
                 <File
                     Id='langen'
-                    Name='mumba.en.ftl'
-                    DiskId='1'
                     Source='$(var.CargoTargetBinDir)\..\..\lang\mumba.en.ftl'
-                    KeyPath='no'/>
+                    KeyPath='yes'/>
+            </Component>
+            <Component Id="LocalizationFr" Guid="*">
                 <File
                     Id='langfr'
-                    Name='mumba.fr.ftl'
-                    DiskId='1'
                     Source='$(var.CargoTargetBinDir)\..\..\lang\mumba.fr.ftl'
-                    KeyPath='no'/>
+                    KeyPath='yes'/>
             </Component>
         </DirectoryRef>
 
@@ -172,23 +168,24 @@
         <Feature
             Id='Binaries'
             Title='Application'
-            Description='Installs all binaries and the license.'
             Level='1'
             ConfigurableDirectory='APPLICATIONFOLDER'
-            AllowAdvertise='no'
-            Display='expand'
-            Absent='disallow'>
+            AllowAdvertise='no'>
             <!--
               Comment out or remove the following `ComponentRef` tag to remove
               the license sidecar file from the installer.
             -->
             <ComponentRef Id='License'/>
 
-            <ComponentRef Id='binary0'/>
+            <ComponentRef Id='GuiBinary'/>
+            <ComponentRef Id='CliBinary'/>
+            <ComponentRef Id='LauncherBinary'/>
+            <ComponentRef Id='EaxDll'/>
 
-            <ComponentRef Id="Localization" />
+            <ComponentRef Id="LocalizationEn"/>
+            <ComponentRef Id="LocalizationFr"/>
 
-            <ComponentRef Id="ApplicationShortcut" />
+            <ComponentRef Id="ApplicationShortcut"/>
         </Feature>
 
         <SetProperty Id='ARPINSTALLLOCATION' Value='[APPLICATIONFOLDER]' After='CostFinalize'/>

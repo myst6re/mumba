@@ -55,17 +55,21 @@ impl I18n {
         let mut errors = vec![];
         let message = self.bundle.get_message(id);
         let message = if cfg!(debug_assertions) {
-            message.expect(format!("Fluent: No message found for {}", id).as_str())
+            message.unwrap_or_else(|| panic!("Fluent: No message found for {}", id))
+        } else if let Some(message) = message {
+            message
         } else {
             return String::from(id);
         };
         let pattern = message.value();
         let pattern = if cfg!(debug_assertions) {
-            pattern.expect(format!("Fluent: Message has no value for {}", id).as_str())
+            pattern.unwrap_or_else(|| panic!("Fluent: Message has no value for {}", id))
+        } else if let Some(pattern) = pattern {
+            pattern
         } else {
             return String::from(id);
         };
-        String::from(self.bundle.format_pattern(&pattern, None, &mut errors))
+        String::from(self.bundle.format_pattern(pattern, None, &mut errors))
     }
 
     pub fn find_path(lang: &LanguageIdentifier) -> PathBuf {

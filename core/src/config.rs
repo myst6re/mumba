@@ -51,7 +51,7 @@ impl Config {
             return Ok(None);
         }
         Installation::from_exe_path(&PathBuf::from(exe_path))
-            .map(|i| Some(i))
+            .map(Some)
             .map_err(|_| toml::Error::DoesNotExist(String::from(key)))
     }
 
