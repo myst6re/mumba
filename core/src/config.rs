@@ -6,6 +6,7 @@ use toml_edit::DocumentMut;
 
 const CFG_EXE_PATH: &str = "exe_path";
 const CFG_UPDATE_CHANNEL: &str = "update_channel";
+const CFG_LANGUAGE: &str = "language";
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -43,81 +44,44 @@ impl Config {
         toml::save_to_file(&self.inner, path)
     }
 
-    pub fn installation(&self) -> Result<Option<Installation>, Error> {
-        match self.inner.get("game") {
-            Some(toml_edit::Item::Table(t)) => Ok(Some(Self::installation_from_table(t)?)),
-            Some(_) => Err(Error::WrongTypeError(
-                String::from("game"),
-                String::from("Table"),
-            )),
-            None => Ok(None),
+    pub fn installation(&self) -> Result<Option<Installation>, toml::Error> {
+        let key = CFG_EXE_PATH;
+        let exe_path = toml::get_string(self.root(), key, "")?;
+        if exe_path.is_empty() {
+            return Ok(None)
         }
+        Installation::from_exe_path(&PathBuf::from(exe_path)).map(|i| Some(i)).map_err(|_| toml::Error::DoesNotExist(String::from(key)))
     }
 
     pub fn set_installation(&mut self, installation: &Installation) {
-        self.inner["game"] = toml_edit::Item::Table(
-            Self::set_installation_to_table(installation).unwrap_or_default(),
-        )
+        if let Some(exe_path) = installation.exe_path().to_str() {
+            self.inner[CFG_EXE_PATH] = toml_edit::Item::Value(exe_path.into())
+        }
     }
 
-    pub fn update_channel(&mut self) -> Result<UpdateChannel, Error> {
-        match self.inner.get("ffnx") {
-            Some(toml_edit::Item::Table(t)) => Ok(Self::ffnx_from_table(t)?),
-            Some(_) => Err(Error::WrongTypeError(
-                String::from("game"),
-                String::from("Table"),
-            )),
-            None => Ok(UpdateChannel::Stable),
-        }
+    pub fn update_channel(&self) -> Result<UpdateChannel, toml::Error> {
+        Ok(match toml::get_integer(self.root(), CFG_UPDATE_CHANNEL, 0)? {
+            0 => UpdateChannel::Stable,
+            1 => UpdateChannel::Beta,
+            2 => UpdateChannel::Alpha,
+            _ => UpdateChannel::Stable,
+        })
     }
 
     pub fn set_update_channel(&mut self, update_channel: UpdateChannel) {
-        self.inner["ffnx"] =
-            toml_edit::Item::Table(Self::set_ffnx_to_table(update_channel).unwrap_or_default())
+        self.inner[CFG_UPDATE_CHANNEL] = toml_edit::Item::Value((update_channel as i64).into())
     }
 
-    fn installation_from_table(table: &toml_edit::Table) -> Result<Installation, Error> {
-        let key = CFG_EXE_PATH;
-        let exe_path = PathBuf::from(match table.get(key) {
-            Some(toml_edit::Item::Value(toml_edit::Value::String(exe_path))) => exe_path.value(),
-            _ => {
-                return Err(Error::WrongTypeError(
-                    String::from(key),
-                    String::from("String"),
-                ))
-            }
-        });
-        Installation::from_exe_path(&exe_path).map_err(|_| Error::DoesNotExist(String::from(key)))
+    pub fn language(&self) -> Result<String, toml::Error> {
+        Ok(String::from(toml::get_string(self.root(), CFG_LANGUAGE, "")?))
     }
 
-    fn set_installation_to_table(installation: &Installation) -> Option<toml_edit::Table> {
-        let mut ret = toml_edit::Table::new();
-        ret[CFG_EXE_PATH] = toml_edit::Item::Value(installation.exe_path().to_str()?.into());
-        Some(ret)
+    pub fn set_language(&mut self, lang: &String) {
+        self.inner[CFG_LANGUAGE] = toml_edit::Item::Value(lang.into())
     }
 
-    fn ffnx_from_table(table: &toml_edit::Table) -> Result<UpdateChannel, Error> {
-        let key = CFG_UPDATE_CHANNEL;
-        match table.get(key) {
-            Some(toml_edit::Item::Value(toml_edit::Value::Integer(update_channel))) => {
-                Ok(match update_channel.value() {
-                    0 => UpdateChannel::Stable,
-                    1 => UpdateChannel::Beta,
-                    2 => UpdateChannel::Alpha,
-                    _ => UpdateChannel::Stable,
-                })
-            }
-            _ => Err(Error::WrongTypeError(
-                String::from(key),
-                String::from("String"),
-            )),
-        }
-    }
-
-    fn set_ffnx_to_table(update_channel: UpdateChannel) -> Option<toml_edit::Table> {
-        let mut ret = toml_edit::Table::new();
-        ret[CFG_UPDATE_CHANNEL] = toml_edit::Item::Value((update_channel as i64).into());
-        Some(ret)
+    fn root(&self) -> &toml_edit::Table {
+        self.inner.as_table()
     }
 }
 

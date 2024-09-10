@@ -11,12 +11,15 @@ button-ok = Ok
 button-cancel = Cancel
 button-browse = Browse…
 
-setup-page-title = Initial Setup
+setup-page-title = Setup
 config-group-ff8-exe-path = FF8 EXE path
 config-group-update-channel = Update Channel
 update-channel-stable = Stable
 update-channel-beta = Beta
 update-channel-alpha = Alpha
+config-group-language = Language
+language-english = English
+language-french = French
 options-page-gamepad-title = Gamepad Options
 config-group-inputs = Inputs
 show-ps1-gamepad-icons = Show PS1 gamepad icons

@@ -8,8 +8,8 @@ pub struct I18n {
 }
 
 impl I18n {
-    pub fn new() -> I18n {
-        let lang = Self::detect_system_lang();
+    pub fn new(lang: Option<String>) -> I18n {
+        let lang = lang.and_then(|l| LanguageIdentifier::from_bytes(l.as_bytes()).ok()).unwrap_or_else(Self::detect_system_lang);
         let path = Self::find_path(&lang);
 
         Self::from_file(&path, lang)

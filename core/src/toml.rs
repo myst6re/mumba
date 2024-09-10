@@ -17,6 +17,8 @@ pub enum Error {
     WrongTypeError(String, String),
     #[error("The key {0} is not a value")]
     NotAValueError(String),
+    #[error("The key {0} is absent")]
+    DoesNotExist(String),
 }
 
 pub fn parse_from_file<P: AsRef<Path>>(path: P) -> Result<toml_edit::DocumentMut, FileError> {

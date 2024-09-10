@@ -3,7 +3,7 @@
 use std::path::Path;
 slint::include_modules!();
 use log::error;
-use mumba_core::config::UpdateChannel;
+use mumba_core::config::{Config, UpdateChannel};
 use mumba_core::game::env::Env;
 use mumba_core::i18n::I18n;
 
@@ -15,7 +15,8 @@ use worker::Worker;
 fn main() -> Result<(), slint::PlatformError> {
     let env = Env::new().unwrap();
     mumba_core::mumba_log::init(&env, "mumba.log");
-    let i18n = I18n::new();
+    let config = Config::from_file(&env.config_path).unwrap_or_else(|_| Config::new());
+    let i18n = I18n::new(config.language().ok());
 
     let ui = AppWindow::new()?;
 
@@ -26,14 +27,17 @@ fn main() -> Result<(), slint::PlatformError> {
 
     ui.global::<Installations>().on_setup({
         let tx = worker.tx.clone();
-        move |path, update_channel| {
+        move |path, update_channel, language| {
             let update_channel = match update_channel {
-                0 => UpdateChannel::Stable,
                 1 => UpdateChannel::Beta,
                 2 => UpdateChannel::Alpha,
                 _ => UpdateChannel::Stable,
             };
-            if let Err(e) = tx.send(worker::Message::Setup(path, update_channel)) {
+            let language = match language {
+                1 => "fr-FR",
+                _ => "en-US",
+            };
+            if let Err(e) = tx.send(worker::Message::Setup(path, update_channel, String::from(language))) {
                 error!("Error: {}", e)
             }
         }

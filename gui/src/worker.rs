@@ -28,7 +28,7 @@ const DETACHED_PROCESS: u32 = 0x8;
 
 #[derive(Debug)]
 pub enum Message {
-    Setup(slint::SharedString, UpdateChannel),
+    Setup(slint::SharedString, UpdateChannel, String),
     LaunchGame,
     ConfigureFfnx,
     CancelConfigureFfnx,
@@ -422,12 +422,14 @@ fn setup(
     mumba_config_path: &PathBuf,
     exe_path: &slint::SharedString,
     update_channel: UpdateChannel,
+    language: String,
 ) -> Option<installation::Installation> {
     info!("Setup with EXE path {}", exe_path);
     match installation::Installation::from_exe_path(&PathBuf::from(exe_path.as_str())) {
         Ok(installation) => {
             mumba_config.set_installation(&installation);
             mumba_config.set_update_channel(update_channel.clone());
+            mumba_config.set_language(&language);
             set_game_exe_path(
                 handle.clone(),
                 installation.exe_path().to_string_lossy().to_string(),
@@ -468,13 +470,14 @@ fn go_to_setup_page(
     loop {
         set_current_page(handle.clone(), 1);
         match rx.recv() {
-            Ok(Message::Setup(exe_path, update_channel)) => {
+            Ok(Message::Setup(exe_path, update_channel, language)) => {
                 match setup(
                     handle.clone(),
                     mumba_config,
                     mumba_config_path,
                     &exe_path,
                     update_channel,
+                    language,
                 ) {
                     Some(installation) => return Some(installation),
                     None => continue,
@@ -631,7 +634,7 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
 
     for received in &rx {
         match received {
-            Message::Setup(exe_path, update_channel) => {
+            Message::Setup(exe_path, update_channel, language) => {
                 set_game_ready(handle.clone(), false);
                 installation = match setup(
                     handle.clone(),
@@ -639,6 +642,7 @@ fn worker_loop(rx: Receiver<Message>, handle: slint::Weak<AppWindow>) {
                     &env.config_path,
                     &exe_path,
                     update_channel,
+                    language,
                 ) {
                     Some(inst) => inst,
                     None => break,

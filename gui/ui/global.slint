@@ -22,6 +22,7 @@ export global Installations {
     in property <string> game-path;
     in property <string> game-exe-path;
     in property <int> update-channel : 0;
+    in property <int> language : 0;
     in-out property <int> current-page : 0;
     in property <string> task-text;
     in property <TextLevel> task-text-type : info;
@@ -29,7 +30,7 @@ export global Installations {
     in property <[string]> resolutions : [Fluent.get-message("auto")];
     in property <[string]> refresh-rates : [Fluent.get-message("auto")];
 
-    pure callback setup(string, int);
+    pure callback setup(string, int, int);
     pure callback launch-game();
     pure callback browse-game(string) -> string;
     pure callback configure-ffnx();

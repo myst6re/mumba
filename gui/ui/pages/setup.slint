@@ -47,6 +47,23 @@ export component SetupPage inherits VerticalLayout {
                     }
                 }
             }
+            GroupBox {
+                title: Fluent.get-message("config-group-language");
+                vertical-stretch: 0;
+
+                HorizontalBox {
+                    padding: 0px;
+                    max-width: 664px;
+
+                    language := ComboBox {
+                        model: [
+                            Fluent.get-message("language-english"),
+                            Fluent.get-message("language-french")
+                        ];
+                        current-index: Installations.language;
+                    }
+                }
+            }
         }
     }
     Rectangle {
@@ -71,7 +88,7 @@ export component SetupPage inherits VerticalLayout {
                 primary: true;
 
                 clicked => {
-                    Installations.setup(game-exe-path.text, update-channel.current-index);
+                    Installations.setup(game-exe-path.text, update-channel.current-index, language.current-index);
                     Installations.current-page = 0;
                 }
             }
