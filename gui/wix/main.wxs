@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='windows-1252'?>
+<?xml version='1.0' encoding='utf-8'?>
 <!--
   Copyright (C) 2017 Christopher R. Field.
 
@@ -251,7 +251,7 @@
 
           The banner BMP dimensions are 493 x 58 pixels.
         -->
-        <!--<WixVariable Id='WixUIBannerBmp' Value='wix\Banner.bmp'/>-->
+        <WixVariable Id='WixUIBannerBmp' Value='$(var.CargoTargetBinDir)\..\..\gui\wix\installer2.bmp'/>
 
 
         <!--
@@ -262,7 +262,7 @@
 
           The dialog BMP dimensions are 493 x 312 pixels.
         -->
-        <!--<WixVariable Id='WixUIDialogBmp' Value='wix\Dialog.bmp'/>-->
+        <WixVariable Id='WixUIDialogBmp' Value='$(var.CargoTargetBinDir)\..\..\gui\wix\installer1.bmp'/>
 
     </Product>
 

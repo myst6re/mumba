@@ -67,7 +67,11 @@ jobs:
 
     - name: Build installer
       if: runner.os == 'Windows'
-      run: cargo wix --no-build -p mumba --nocapture --bin-path ${{ github.workspace }}/wix
+      shell: bash
+      run: |
+        version=$(cargo pkgid -p mumba | cut -d "@" -f2)
+        cargo wix --no-build -p mumba --nocapture -o "target/wix/mumba-${version}-setup-win64-english.msi" --bin-path '${{ github.workspace }}/wix'
+        cargo wix --no-build -p mumba --nocapture -o "target/wix/mumba-${version}-setup-win64-francais.msi" --bin-path '${{ github.workspace }}/wix' --culture fr-fr
 
     - name: Build installer
       if: runner.os == 'Linux'
