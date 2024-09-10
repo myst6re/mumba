@@ -23,13 +23,17 @@ impl I18n {
 
         let resource = Self::open_resource(path);
         let resource_fallback = Self::open_resource(&fallback);
-        let mut bundle = FluentBundle::new(vec![lang, langid!("en")]);
+        let mut bundle = FluentBundle::new(vec![lang.clone(), langid!("en-US")]);
 
         if let Some(resource_fallback) = resource_fallback {
             bundle.add_resource_overriding(resource_fallback)
+        } else {
+            error!("Cannot load lang: {}", &fallback_lang);
         }
         if let Some(resource) = resource {
             bundle.add_resource_overriding(resource)
+        } else {
+            error!("Cannot load lang: {}", &lang);
         }
 
         I18n { bundle }
