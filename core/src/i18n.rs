@@ -1,7 +1,7 @@
 use fluent_bundle::{FluentBundle, FluentResource};
 use std::path::PathBuf;
-use unic_langid::{langid, LanguageIdentifier};
 use sys_locale::get_locale;
+use unic_langid::{langid, LanguageIdentifier};
 
 pub struct I18n {
     bundle: FluentBundle<FluentResource>,
@@ -9,7 +9,9 @@ pub struct I18n {
 
 impl I18n {
     pub fn new(lang: Option<String>) -> I18n {
-        let lang = lang.and_then(|l| LanguageIdentifier::from_bytes(l.as_bytes()).ok()).unwrap_or_else(Self::detect_system_lang);
+        let lang = lang
+            .and_then(|l| LanguageIdentifier::from_bytes(l.as_bytes()).ok())
+            .unwrap_or_else(Self::detect_system_lang);
         let path = Self::find_path(&lang);
 
         Self::from_file(&path, lang)
@@ -39,8 +41,14 @@ impl I18n {
         I18n { bundle }
     }
 
+    pub fn lang(&self) -> Option<&LanguageIdentifier> {
+        self.bundle.locales.first()
+    }
+
     fn open_resource(path: &PathBuf) -> Option<FluentResource> {
-        std::fs::read_to_string(path).ok().and_then(|content| FluentResource::try_new(content).ok())
+        std::fs::read_to_string(path)
+            .ok()
+            .and_then(|content| FluentResource::try_new(content).ok())
     }
 
     pub fn tr(&self, id: &str) -> String {

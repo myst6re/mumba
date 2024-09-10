@@ -48,9 +48,11 @@ impl Config {
         let key = CFG_EXE_PATH;
         let exe_path = toml::get_string(self.root(), key, "")?;
         if exe_path.is_empty() {
-            return Ok(None)
+            return Ok(None);
         }
-        Installation::from_exe_path(&PathBuf::from(exe_path)).map(|i| Some(i)).map_err(|_| toml::Error::DoesNotExist(String::from(key)))
+        Installation::from_exe_path(&PathBuf::from(exe_path))
+            .map(|i| Some(i))
+            .map_err(|_| toml::Error::DoesNotExist(String::from(key)))
     }
 
     pub fn set_installation(&mut self, installation: &Installation) {
@@ -60,12 +62,14 @@ impl Config {
     }
 
     pub fn update_channel(&self) -> Result<UpdateChannel, toml::Error> {
-        Ok(match toml::get_integer(self.root(), CFG_UPDATE_CHANNEL, 0)? {
-            0 => UpdateChannel::Stable,
-            1 => UpdateChannel::Beta,
-            2 => UpdateChannel::Alpha,
-            _ => UpdateChannel::Stable,
-        })
+        Ok(
+            match toml::get_integer(self.root(), CFG_UPDATE_CHANNEL, 0)? {
+                0 => UpdateChannel::Stable,
+                1 => UpdateChannel::Beta,
+                2 => UpdateChannel::Alpha,
+                _ => UpdateChannel::Stable,
+            },
+        )
     }
 
     pub fn set_update_channel(&mut self, update_channel: UpdateChannel) {
@@ -73,7 +77,11 @@ impl Config {
     }
 
     pub fn language(&self) -> Result<String, toml::Error> {
-        Ok(String::from(toml::get_string(self.root(), CFG_LANGUAGE, "")?))
+        Ok(String::from(toml::get_string(
+            self.root(),
+            CFG_LANGUAGE,
+            "",
+        )?))
     }
 
     pub fn set_language(&mut self, lang: &String) {

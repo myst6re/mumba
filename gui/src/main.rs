@@ -22,6 +22,11 @@ fn main() -> Result<(), slint::PlatformError> {
 
     let worker = Worker::new(&ui);
 
+    ui.global::<Installations>()
+        .set_language(match i18n.lang() {
+            Some(id) if id.language == "fr" => 1,
+            _ => 0,
+        });
     ui.global::<Fluent>()
         .on_get_message(move |id| slint::SharedString::from(i18n.tr(id.as_str())));
 
@@ -37,7 +42,11 @@ fn main() -> Result<(), slint::PlatformError> {
                 1 => "fr-FR",
                 _ => "en-US",
             };
-            if let Err(e) = tx.send(worker::Message::Setup(path, update_channel, String::from(language))) {
+            if let Err(e) = tx.send(worker::Message::Setup(
+                path,
+                update_channel,
+                String::from(language),
+            )) {
                 error!("Error: {}", e)
             }
         }

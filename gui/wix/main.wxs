@@ -87,7 +87,9 @@
 
         <Directory Id='TARGETDIR' Name='SourceDir'>
             <Directory Id='$(var.PlatformProgramFilesFolder)' Name='PFiles'>
-                <Directory Id='APPLICATIONFOLDER' Name='mumba'/>
+                <Directory Id='APPLICATIONFOLDER' Name='mumba'>
+                    <Directory Id="LangFolder" Name="lang"/>
+                </Directory>
             </Directory>
 
             <Directory Id="ProgramMenuFolder">
@@ -135,15 +137,20 @@
                     DiskId='1'
                     Source='$(var.CargoTargetBinDir)\..\..\vendor\creative\eax.dll'
                     KeyPath='no'/>
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="LangFolder">
+            <Component Id="Localization" Guid="{1095AF31-8E19-4EB0-80BB-9A10BBB104BE}">
                 <File
                     Id='langen'
-                    Name='lang\mumba.en.ftl'
+                    Name='mumba.en.ftl'
                     DiskId='1'
                     Source='$(var.CargoTargetBinDir)\..\..\lang\mumba.en.ftl'
                     KeyPath='no'/>
                 <File
                     Id='langfr'
-                    Name='lang\mumba.fr.ftl'
+                    Name='mumba.fr.ftl'
                     DiskId='1'
                     Source='$(var.CargoTargetBinDir)\..\..\lang\mumba.fr.ftl'
                     KeyPath='no'/>
@@ -178,6 +185,8 @@
             <ComponentRef Id='License'/>
 
             <ComponentRef Id='binary0'/>
+
+            <ComponentRef Id="Localization" />
 
             <ComponentRef Id="ApplicationShortcut" />
         </Feature>
