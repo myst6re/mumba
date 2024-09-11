@@ -10,7 +10,7 @@ export component OptionsPage inherits VerticalLayout {
         vertical-stretch: 1;
 
         side-bar := SideBar {
-            model: [@tr("Menu" => "Display"), @tr("Menu" => "Gamepad")];
+            model: [Fluent.get-message("options-menu-display"), Fluent.get-message("options-menu-gamepad")];
         }
 
         if(side-bar.current-item == 0) : OptionsDisplayPage {}
