@@ -418,11 +418,11 @@ impl Installation {
     pub fn replace_launcher_from_app_path(&self, env: &Env) -> std::io::Result<()> {
         let launcher_path = self.get_launcher_path();
         let resource_launcher_path = Self::get_resource_launcher_path(env);
-        let (launcher_product_name, file_description) =
+        let (launcher_product_name, legal_copyright) =
             match pe_format::pe_version_info(&launcher_path) {
                 Ok(infos) => (
                     infos.product_name.unwrap_or_default(),
-                    infos.file_description.unwrap_or_default(),
+                    infos.legal_copyright.unwrap_or_default(),
                 ),
                 Err(_) => (String::new(), String::new()),
             };
@@ -442,9 +442,9 @@ impl Installation {
         if !backup_path.exists() || launcher_product_name == "FINAL FANTASY VIII for PC" {
             provision::copy_file(&launcher_path, &backup_path)?
         }
-        if file_description
+        if legal_copyright
             != pe_format::pe_version_info(&resource_launcher_path)
-                .map(|infos| infos.file_description.unwrap_or_default())
+                .map(|infos| infos.legal_copyright.unwrap_or_default())
                 .unwrap_or_default()
         {
             provision::copy_file(&resource_launcher_path, &launcher_path)?

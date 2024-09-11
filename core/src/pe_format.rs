@@ -20,7 +20,7 @@ pub struct VersionInfo {
     pub product_version: pelite::image::VS_VERSION,
     pub product_name: Option<String>,
     pub original_filename: Option<String>,
-    pub file_description: Option<String>,
+    pub legal_copyright: Option<String>,
 }
 
 struct QueryStringsMultiLang<F> {
@@ -54,7 +54,7 @@ pub fn pe_version_info<P: AsRef<Path> + ?Sized>(path: &P) -> Result<VersionInfo,
     let version_info = resources.version_info()?;
     let mut product_name = None;
     let mut original_filename = None;
-    let mut file_description = None;
+    let mut legal_copyright = None;
 
     version_info.visit(&mut QueryStringsMultiLang {
         f: |name: &str, str: &str| {
@@ -62,8 +62,8 @@ pub fn pe_version_info<P: AsRef<Path> + ?Sized>(path: &P) -> Result<VersionInfo,
                 product_name = Some(String::from(str))
             } else if name == "OriginalFilename" && !str.is_empty() && original_filename.is_none() {
                 original_filename = Some(String::from(str))
-            } else if name == "FileDescription" && !str.is_empty() && file_description.is_none() {
-                file_description = Some(String::from(str))
+            } else if name == "LegalCopyright" && !str.is_empty() && legal_copyright.is_none() {
+                legal_copyright = Some(String::from(str))
             }
         },
     });
@@ -73,7 +73,7 @@ pub fn pe_version_info<P: AsRef<Path> + ?Sized>(path: &P) -> Result<VersionInfo,
             product_version: info.dwProductVersion,
             product_name,
             original_filename,
-            file_description,
+            legal_copyright,
         }),
         None => Err(Error::NoVersion),
     }

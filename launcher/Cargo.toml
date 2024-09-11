@@ -1,5 +1,6 @@
 [package]
 name = "ff8_launcher"
+description = "Moomba FF8 Launcher"
 version = "0.1.0"
 edition = "2021"
 authors = ["myst6re <myst6re@gmail.com>"]

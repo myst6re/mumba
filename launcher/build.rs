@@ -17,11 +17,7 @@ fn main() {
         let mut res = winresource::WindowsResource::new();
         res.set_icon("../gui/data/icon.ico");
         res.set("CompanyName", "The Yellow Mumba Community");
-        let tag = get_repo_tag();
-        if tag.contains("continuous") {
-            res.set_version_info(winresource::VersionInfo::PRODUCTVERSION, 0);
-            res.set("FileDescription", &tag);
-        }
+        res.set("LegalCopyright", &get_repo_tag());
         res.compile().unwrap();
     };
 
