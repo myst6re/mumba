@@ -70,20 +70,42 @@ jobs:
       shell: bash
       run: |
         version=$(cargo pkgid -p mumba | cut -d "@" -f2)
-        cargo wix --no-build -p mumba --nocapture -o "target/wix/mumba-${version}-setup-win64-english.msi" --bin-path '${{ github.workspace }}/wix'
-        cargo wix --no-build -p mumba --nocapture -o "target/wix/mumba-${version}-setup-win64-francais.msi" --bin-path '${{ github.workspace }}/wix' --culture fr-fr
+        cargo wix --no-build -p mumba --nocapture -o "target/wix/mumba-${version}-setup-${{ matrix.name }}-english.msi" --bin-path '${{ github.workspace }}/wix'
+        cargo wix --no-build -p mumba --nocapture -o "target/wix/mumba-${version}-setup-${{ matrix.name }}-francais.msi" --bin-path '${{ github.workspace }}/wix' --culture fr-fr
 
     - name: Build installer
       if: runner.os == 'Linux'
       run: |
         version=$(cargo pkgid -p mumba | cut -d "@" -f2)
-        cargo deb --no-build -p mumba -o "target/debian/mumba-${version}-linux64.deb"
+        cargo deb --no-build -p mumba -o "target/debian/mumba-${version}-${{ matrix.name }}.deb"
+
+    - name: Create zip
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        version=$(cargo pkgid -p mumba | cut -d "@" -f2)
+        dir='${{ github.workspace }}'"/mumba-${version}-${{ matrix.name }}"
+        mkdir -p "$dir"
+        cp target/release/mumba "$dir"
+        cp target/release/ff8_launcher.exe "$dir/FF8_Launcher.exe"
+        cp target/release/mmb "$dir"
+        cp -r lang "$dir"
+        cp gui/wix/License.rtf "$dir"
+        cp vendor/creative/eax.dll "$dir"
+        7z a '${{ github.workspace }}'"/mumba-${version}-${{ matrix.name }}.zip" "$dir"/*
 
     - name: Upload installer
       uses: actions/upload-artifact@v4
       with:
         name: artifact-${{ matrix.name }}
         path: ${{ github.workspace }}/${{ matrix.pattern }}
+
+    - name: Upload zip
+      if: runner.os == 'Windows'
+      uses: actions/upload-artifact@v4
+      with:
+        name: artifact-${{ matrix.name }}-zip
+        path: ${{ github.workspace }}/mumba-*-${{ matrix.name }}.zip
 
   release_assets:
     name: Release
