@@ -18,6 +18,7 @@ update-channel-stable = Stable
 update-channel-beta = Beta
 update-channel-alpha = Alpha
 config-group-language = Language
+config-language-must-restart = You must restart the application to apply the change
 language-english = English
 language-french = French
 options-page-gamepad-title = Gamepad Options

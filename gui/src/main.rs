@@ -12,6 +12,13 @@ pub mod worker;
 
 use worker::Worker;
 
+fn pos_to_language(language: i32) -> String {
+    match language {
+        1 => String::from("fr-FR"),
+        _ => String::from("en-US"),
+    }
+}
+
 fn main() -> Result<(), slint::PlatformError> {
     let env = Env::new().unwrap();
     mumba_core::mumba_log::init(&env, "mumba.log");
@@ -29,6 +36,14 @@ fn main() -> Result<(), slint::PlatformError> {
         });
     ui.global::<Fluent>()
         .on_get_message(move |id| slint::SharedString::from(i18n.tr(id.as_str())));
+    ui.global::<Installations>()
+        .on_set_current_lang({
+            move |language| {
+                let mut config = Config::from_file(&env.config_path).unwrap_or_else(|_| Config::new());
+                config.set_language(&pos_to_language(language));
+                config.save(&env.config_path);
+            }
+        });
 
     ui.global::<Installations>().on_setup({
         let tx = worker.tx.clone();
@@ -38,10 +53,7 @@ fn main() -> Result<(), slint::PlatformError> {
                 2 => UpdateChannel::Alpha,
                 _ => UpdateChannel::Stable,
             };
-            let language = match language {
-                1 => "fr-FR",
-                _ => "en-US",
-            };
+            let language = pos_to_language(language);
             if let Err(e) = tx.send(worker::Message::Setup(
                 path,
                 update_channel,

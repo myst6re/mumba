@@ -51,16 +51,30 @@ export component SetupPage inherits VerticalLayout {
                 title: Fluent.get-message("config-group-language");
                 vertical-stretch: 0;
 
-                HorizontalBox {
-                    padding: 0px;
-                    max-width: 664px;
+                VerticalLayout {
+                    HorizontalBox {
+                        padding: 0px;
+                        max-width: 664px;
 
-                    language := ComboBox {
-                        model: [
-                            Fluent.get-message("language-english"),
-                            Fluent.get-message("language-french")
-                        ];
-                        current-index: Installations.language;
+                        language := ComboBox {
+                            model: [
+                                Fluent.get-message("language-english"),
+                                Fluent.get-message("language-french")
+                            ];
+                            current-index: Installations.language;
+
+                            selected() => {
+                                must-restart-text.visible = true;
+                                must-restart-text.height = must-restart-text-hidden.height;
+                                Installations.set-current-lang(self.current-index);
+                            }
+                        }
+                    }
+
+                    must-restart-text := Text {
+                        text: Fluent.get-message("config-language-must-restart");
+                        height: 0;
+                        visible: false;
                     }
                 }
             }
@@ -68,6 +82,11 @@ export component SetupPage inherits VerticalLayout {
     }
     Rectangle {
         vertical-stretch: 1;
+
+        must-restart-text-hidden := Text {
+            text: Fluent.get-message("config-language-must-restart");
+            visible: false;
+        }
     }
     Rectangle {
         background: Palette.background.darker(0.2);

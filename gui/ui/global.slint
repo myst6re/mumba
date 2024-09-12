@@ -31,6 +31,7 @@ export global Installations {
     in property <[string]> refresh-rates : [Fluent.get-message("auto")];
 
     pure callback setup(string, int, int);
+    pure callback set-current-lang(int);
     pure callback launch-game();
     pure callback browse-game(string) -> string;
     pure callback configure-ffnx();
