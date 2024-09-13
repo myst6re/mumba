@@ -23,11 +23,12 @@ fn main() -> Result<(), slint::PlatformError> {
     let env = Env::new().unwrap();
     mumba_core::mumba_log::init(&env, "mumba.log");
     let config = Config::from_file(&env.config_path).unwrap_or_else(|_| Config::new());
-    let i18n = I18n::new(config.language().ok());
+    let language = config.language().ok();
+    let i18n = I18n::new(language.clone());
 
     let ui = AppWindow::new()?;
 
-    let worker = Worker::new(&ui);
+    let worker = Worker::new(&ui, language);
 
     ui.global::<Installations>()
         .set_language(match i18n.lang() {
@@ -36,14 +37,13 @@ fn main() -> Result<(), slint::PlatformError> {
         });
     ui.global::<Fluent>()
         .on_get_message(move |id| slint::SharedString::from(i18n.tr(id.as_str())));
-    ui.global::<Installations>()
-        .on_set_current_lang({
-            move |language| {
-                let mut config = Config::from_file(&env.config_path).unwrap_or_else(|_| Config::new());
-                config.set_language(&pos_to_language(language));
-                config.save(&env.config_path);
-            }
-        });
+    ui.global::<Installations>().on_set_current_lang({
+        move |language| {
+            let mut config = Config::from_file(&env.config_path).unwrap_or_else(|_| Config::new());
+            config.set_language(&pos_to_language(language));
+            config.save(&env.config_path);
+        }
+    });
 
     ui.global::<Installations>().on_setup({
         let tx = worker.tx.clone();

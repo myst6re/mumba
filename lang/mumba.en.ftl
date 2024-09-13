@@ -41,3 +41,12 @@ config-enable-anisotropic = Anisotropic
 config-enable-bilinear = Bilinear filtering
 config-group-graphics = Graphics
 config-renderer-backend = Renderer backend
+
+# Messages
+message-error-cannot-install-ffnx = Cannot install FFNx
+message-info-check-ffnx-update = Check for FFNx update…
+message-info-upgrade-in-progress-ffnx = Upgrading FFNx…
+message-info-install-in-progress-ffnx = Installing FFNx…
+message-error-cannot-save-mumba-config = Cannot save configuration to mumba.toml
+message-error-file-not-found = File not found. See logs for more details.
+message-fatal-unknown-action = Fatal error: Unknown message received. See logs for more details.
