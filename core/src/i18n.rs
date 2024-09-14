@@ -17,11 +17,11 @@ impl I18n {
         Self::from_file(&path, lang)
     }
 
-    pub fn from_file(path: &PathBuf, lang: LanguageIdentifier) -> I18n {
+    pub fn from_file<P: AsRef<std::path::Path>>(path: P, lang: LanguageIdentifier) -> I18n {
         let fallback_lang = langid!("en-US");
         let fallback = Self::find_path(&fallback_lang);
 
-        info!("Fluent file path: {}", path.to_string_lossy());
+        info!("Fluent file path: {}", path.as_ref().to_string_lossy());
 
         let resource = Self::open_resource(path);
         let resource_fallback = Self::open_resource(&fallback);
@@ -45,7 +45,7 @@ impl I18n {
         self.bundle.locales.first()
     }
 
-    fn open_resource(path: &PathBuf) -> Option<FluentResource> {
+    fn open_resource<P: AsRef<std::path::Path>>(path: P) -> Option<FluentResource> {
         std::fs::read_to_string(path)
             .ok()
             .and_then(|content| FluentResource::try_new(content).ok())

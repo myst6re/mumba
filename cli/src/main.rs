@@ -1,7 +1,6 @@
 use clap::{arg, Command};
 use mumba_core::game::env::Env;
 use mumba_core::game::installation::{Edition, Installation};
-use std::path::PathBuf;
 
 include!(concat!(env!("OUT_DIR"), "/built.rs"));
 
@@ -29,7 +28,7 @@ fn main() -> std::io::Result<()> {
     match matches.subcommand() {
         Some(("replace_launcher", sub_matches)) => {
             let app_path = sub_matches.get_one::<String>("APP_PATH").expect("required");
-            match Installation::from_directory(PathBuf::from(app_path), Edition::Steam) {
+            match Installation::from_directory(app_path, Edition::Steam) {
                 Some(installation) => installation.replace_launcher_from_app_path(&env),
                 None => Err(std::io::Error::new(
                     std::io::ErrorKind::NotFound,

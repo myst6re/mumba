@@ -56,7 +56,8 @@ pub enum FromExeError {
 }
 
 impl Installation {
-    pub fn from_exe_path(exe_path: &Path) -> Result<Self, FromExeError> {
+    pub fn from_exe_path<P: AsRef<Path>>(exe_path: P) -> Result<Self, FromExeError> {
+        let exe_path = exe_path.as_ref();
         if !exe_path.exists() {
             return Err(FromExeError::NotFound);
         };
@@ -106,16 +107,16 @@ impl Installation {
         })
     }
 
-    pub fn from_directory(app_path: PathBuf, edition: Edition) -> Option<Self> {
+    pub fn from_directory<P: AsRef<Path>>(app_path: P, edition: Edition) -> Option<Self> {
+        let app_path = app_path.as_ref();
         // Detect exe name and lang
         let (exe_name, language) = match edition {
             Edition::Standard => (
                 String::from_str("FF8.exe").unwrap(),
-                Self::get_standard_edition_lang(&app_path).unwrap_or(String::from("eng")),
+                Self::get_standard_edition_lang(app_path).unwrap_or(String::from("eng")),
             ),
             Edition::Steam => {
-                let language =
-                    Self::get_steam_edition_lang(&app_path).unwrap_or(String::from("en"));
+                let language = Self::get_steam_edition_lang(app_path).unwrap_or(String::from("en"));
                 let mut exe_name = String::new();
                 exe_name.push_str("FF8_");
                 exe_name.push_str(&language);
@@ -129,14 +130,14 @@ impl Installation {
         };
         // Detect version
         let version = Self::get_version_from_exe(&app_path.join(&exe_name)).unwrap_or(None);
-        let config_path = Self::get_config_path(&edition, &app_path);
+        let config_path = Self::get_config_path(&edition, app_path);
 
         if !app_path.join(&exe_name).exists() {
             return None;
         }
 
         Some(Self {
-            app_path,
+            app_path: PathBuf::from(app_path),
             exe_name,
             edition,
             version,
@@ -312,9 +313,7 @@ impl Installation {
                 r"SOFTWARE\\Square Soft, Inc\\Final Fantasy VIII\\1.00",
                 r"AppPath",
             ) {
-                Ok(app_path) => {
-                    return Self::from_directory(PathBuf::from(app_path), Edition::Standard)
-                }
+                Ok(app_path) => return Self::from_directory(app_path, Edition::Standard),
                 Err(_) => continue,
             }
         }

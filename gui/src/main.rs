@@ -9,6 +9,7 @@ use mumba_core::i18n::I18n;
 
 pub mod lazy_ffnx_config;
 pub mod worker;
+pub mod worker_loop;
 
 use worker::Worker;
 
@@ -54,11 +55,7 @@ fn main() -> Result<(), slint::PlatformError> {
                 _ => UpdateChannel::Stable,
             };
             let language = pos_to_language(language);
-            if let Err(e) = tx.send(worker::Message::Setup(
-                path,
-                update_channel,
-                String::from(language),
-            )) {
+            if let Err(e) = tx.send(worker::Message::Setup(path, update_channel, language)) {
                 error!("Error: {}", e)
             }
         }

@@ -136,3 +136,6 @@ pub fn run_as(program: &String, parameters: &String) -> Result<u32, std::io::Err
         )),
     }
 }
+
+#[cfg(windows)]
+pub const DETACHED_PROCESS: u32 = 0x8;

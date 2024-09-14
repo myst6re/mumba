@@ -6,12 +6,17 @@ use crate::game::env::Env;
 use crate::game::installation::{Edition, Installation};
 #[cfg(feature = "network")]
 use crate::github::GitHubReleaseAsset;
+#[cfg(windows)]
+use crate::os::windows::DETACHED_PROCESS;
 #[cfg(feature = "pe")]
 use crate::pe_format;
 #[cfg(any(feature = "network", feature = "zip"))]
 use crate::provision;
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 use std::path::Path;
 use std::path::PathBuf;
+use std::process::{Child, Command, Stdio};
 
 pub struct FfnxInstallation {
     pub version: String,
@@ -119,5 +124,57 @@ impl FfnxInstallation {
 
     pub fn config_path(&self) -> PathBuf {
         self.path.join("FFNx.toml")
+    }
+
+    fn run_detached(command: &mut Command) -> &mut Command {
+        if cfg!(windows) {
+            #[cfg(windows)]
+            return command.creation_flags(DETACHED_PROCESS);
+        }
+
+        command
+    }
+
+    fn launch_game_via_steam(
+        &self,
+        app_id: u64,
+        steam_exe: &Path,
+    ) -> Result<Child, std::io::Error> {
+        let ffnx_dir = &self.path;
+        let ff8_path = self.exe_path();
+        info!(
+            "Launch \"{:?} -applaunch {}\" in dir \"{:?}\"...",
+            steam_exe, app_id, ffnx_dir
+        );
+        Self::run_detached(&mut Command::new(steam_exe))
+            .args(["-applaunch", app_id.to_string().as_str()])
+            .arg(ff8_path.as_os_str())
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .current_dir(ffnx_dir)
+            .spawn()
+    }
+
+    fn launch_game_directly(&self, ff8_path: &PathBuf) -> Result<Child, std::io::Error> {
+        let ffnx_dir = &self.path;
+        info!("Launch \"{:?}\" in dir \"{:?}\"...", ff8_path, ffnx_dir);
+        Self::run_detached(&mut Command::new(ff8_path))
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .current_dir(ffnx_dir)
+            .spawn()
+    }
+
+    pub fn launch_game(&self, game_installation: &Installation, steam_exe: &Path) {
+        if let Err(e) = match game_installation.edition {
+            Edition::Standard => self.launch_game_directly(&self.exe_path()),
+            Edition::Steam | Edition::Remastered => self
+                .launch_game_via_steam(game_installation.get_app_id(), steam_exe)
+                .or_else(|_| self.launch_game_directly(&game_installation.get_launcher_path())),
+        } {
+            error!("Unable to launch game: {:?}", e)
+        }
     }
 }

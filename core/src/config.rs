@@ -1,6 +1,6 @@
 use crate::game::installation::Installation;
 use crate::toml;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use thiserror::Error;
 use toml_edit::DocumentMut;
 
@@ -50,7 +50,7 @@ impl Config {
         if exe_path.is_empty() {
             return Ok(None);
         }
-        Installation::from_exe_path(&PathBuf::from(exe_path))
+        Installation::from_exe_path(exe_path)
             .map(Some)
             .map_err(|_| toml::Error::DoesNotExist(String::from(key)))
     }
