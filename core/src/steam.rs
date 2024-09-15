@@ -87,7 +87,7 @@ impl Steam {
             .to_path_buf()
             .join("config")
             .join("libraryfolders.vdf");
-        info!("list_library_folders {:?}", asset_path);
+        info!("list_library_folders \"{}\"", asset_path.to_string_lossy());
         let vdf_text = fs::read_to_string(asset_path)?;
         let mut vdf = Vdf::parse(&vdf_text)?;
         let obj = vdf.value.get_mut_obj().unwrap();

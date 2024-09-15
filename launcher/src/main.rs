@@ -88,7 +88,7 @@ fn main() -> ExitCode {
     match run() {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
-            error!("Error: {:?}", e);
+            error!("Error: {}", e);
             ExitCode::FAILURE
         }
     }

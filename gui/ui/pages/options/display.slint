@@ -25,7 +25,7 @@ export component OptionsDisplayPage inherits VerticalLayout {
                     HorizontalBox {
                         alignment: start;
 
-                        Switch {
+                        fullscreen := Switch {
                             text: Fluent.get-message("config-fullscreen");
                             checked: Installations.ffnx-config.fullscreen;
 
@@ -40,6 +40,44 @@ export component OptionsDisplayPage inherits VerticalLayout {
 
                             toggled() => {
                                 Installations.set-ffnx-config-bool("borderless", self.checked)
+                            }
+                        }
+                    }
+
+                    HorizontalBox {
+                        alignment: start;
+
+                        Text {
+                            text: Fluent.get-message("config-window-size");
+                            vertical-alignment: TextVerticalAlignment.center;
+                        }
+
+                        window-size-x := SpinBox {
+                            minimum: 320;
+                            maximum: 9999;
+                            value: Installations.ffnx-config.window_size_x;
+
+                            edited(value) => {
+                                Installations.set-ffnx-config-int("window_size_x", value);
+                                window-size-y.value = value * 3 / 4;
+                                Installations.set-ffnx-config-int("window_size_y", window-size-y.value);
+                            }
+                        }
+
+                        Text {
+                            text: "x";
+                            vertical-alignment: TextVerticalAlignment.center;
+                        }
+
+                        window-size-y := SpinBox {
+                            minimum: 240;
+                            maximum: 9999;
+                            value: Installations.ffnx-config.window_size_y;
+
+                            edited(value) => {
+                                Installations.set-ffnx-config-int("window_size_y", value);
+                                window-size-x.value = value * 4 / 3;
+                                Installations.set-ffnx-config-int("window_size_x", window-size-x.value);
                             }
                         }
                     }
@@ -67,6 +105,25 @@ export component OptionsDisplayPage inherits VerticalLayout {
                         alignment: start;
 
                         Text {
+                            text: Fluent.get-message("config-screen-refresh-rate");
+                            vertical-alignment: TextVerticalAlignment.center;
+                        }
+
+                        ComboBox {
+                            model: Installations.refresh-rates;
+                            enabled: self.model.length > 1;
+                            current-index: Installations.ffnx-config.current-refresh-rate;
+
+                            selected() => {
+                                Installations.set-ffnx-config-current-refresh-rate(resolution.current-index, self.current-index)
+                            }
+                        }
+                    }
+
+                    HorizontalBox {
+                        alignment: start;
+
+                        Text {
                             text: Fluent.get-message("config-internal-resolution-scale");
                             vertical-alignment: TextVerticalAlignment.center;
                         }
@@ -79,25 +136,6 @@ export component OptionsDisplayPage inherits VerticalLayout {
 
                             selected() => {
                                 Installations.set-ffnx-config-int("internal_resolution_scale", self.values[self.current-index])
-                            }
-                        }
-                    }
-
-                    HorizontalBox {
-                        alignment: start;
-
-                        Text {
-                            text: Fluent.get-message("config-screen-refresh-rate");
-                            vertical-alignment: TextVerticalAlignment.center;
-                        }
-
-                        ComboBox {
-                            model: Installations.refresh-rates;
-                            enabled: self.model.length > 1;
-                            current-index: Installations.ffnx-config.current-refresh-rate;
-
-                            selected() => {
-                                Installations.set-ffnx-config-current-refresh-rate(resolution.current-index, self.current-index)
                             }
                         }
                     }

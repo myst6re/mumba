@@ -2,11 +2,9 @@ import { GroupBox, Palette, Button, StandardButton, HorizontalBox, LineEdit, Ver
 import { Installations, Fluent } from "../global.slint";
 import { Message } from "../components/message.slint";
 
-global SetupPageGlobal {
-    in property <bool> show-restart-message : false;
-}
-
 export component SetupPage inherits VerticalLayout {
+    in-out property <bool> show-restart-message : false;
+
     Rectangle {
         VerticalBox {
             Text {
@@ -68,13 +66,13 @@ export component SetupPage inherits VerticalLayout {
                             current-index: Installations.language;
 
                             selected() => {
-                                SetupPageGlobal.show-restart-message = true;
+                                root.show-restart-message = true;
                                 Installations.set-current-lang(self.current-index);
                             }
                         }
                     }
 
-                    if SetupPageGlobal.show-restart-message : Text {
+                    if root.show-restart-message : Text {
                         text: Fluent.get-message("config-language-must-restart");
                     }
                 }

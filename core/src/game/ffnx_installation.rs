@@ -59,7 +59,7 @@ impl FfnxInstallation {
             }),
             Err(pe_format::Error::IoError(e)) if e.kind() == std::io::ErrorKind::NotFound => None,
             Err(e) => {
-                warn!("Cannot obtain {} infos: {:?}", dll_name, e);
+                warn!("Cannot obtain {} infos: {}", dll_name, e);
                 None
             }
         }
@@ -143,8 +143,10 @@ impl FfnxInstallation {
         let ffnx_dir = &self.path;
         let ff8_path = self.exe_path();
         info!(
-            "Launch \"{:?} -applaunch {}\" in dir \"{:?}\"...",
-            steam_exe, app_id, ffnx_dir
+            "Launch \"{} -applaunch {}\" in dir \"{}\"...",
+            steam_exe.to_string_lossy(),
+            app_id,
+            ffnx_dir.to_string_lossy()
         );
         Self::run_detached(&mut Command::new(steam_exe))
             .args(["-applaunch", app_id.to_string().as_str()])
@@ -158,7 +160,11 @@ impl FfnxInstallation {
 
     fn launch_game_directly(&self, ff8_path: &PathBuf) -> Result<Child, std::io::Error> {
         let ffnx_dir = &self.path;
-        info!("Launch \"{:?}\" in dir \"{:?}\"...", ff8_path, ffnx_dir);
+        info!(
+            "Launch \"{}\" in dir \"{}\"...",
+            ff8_path.to_string_lossy(),
+            ffnx_dir.to_string_lossy()
+        );
         Self::run_detached(&mut Command::new(ff8_path))
             .stdin(Stdio::null())
             .stdout(Stdio::null())
@@ -174,7 +180,7 @@ impl FfnxInstallation {
                 .launch_game_via_steam(game_installation.get_app_id(), steam_exe)
                 .or_else(|_| self.launch_game_directly(&game_installation.get_launcher_path())),
         } {
-            error!("Unable to launch game: {:?}", e)
+            error!("Unable to launch game: {}", e)
         }
     }
 }

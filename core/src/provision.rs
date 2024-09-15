@@ -93,17 +93,29 @@ pub fn extract_zip(
     source_file: &PathBuf,
     target_dir: &PathBuf,
 ) -> Result<(), zip::result::ZipError> {
-    info!("Extract zip from {:?} to {:?}...", source_file, target_dir);
+    info!(
+        "Extract zip from \"{}\" to \"{}\"...",
+        source_file.to_string_lossy(),
+        target_dir.to_string_lossy()
+    );
     zip_extract(source_file, target_dir)
 }
 
 pub fn copy_file(source_file: &PathBuf, target_file: &PathBuf) -> Result<(), std::io::Error> {
-    info!("Copy {:?} to {:?}...", source_file, target_file);
+    info!(
+        "Copy \"{}\" to \"{}\"...",
+        source_file.to_string_lossy(),
+        target_file.to_string_lossy()
+    );
     std::fs::copy(source_file, target_file).and(Ok(()))
 }
 
 pub fn rename_file(source_file: &PathBuf, target_file: &PathBuf) -> Result<(), std::io::Error> {
-    info!("Rename {:?} to {:?}...", source_file, target_file);
+    info!(
+        "Rename \"{}\" to \"{}\"...",
+        source_file.to_string_lossy(),
+        target_file.to_string_lossy()
+    );
     std::fs::rename(source_file, target_file).and(Ok(()))
 }
 
@@ -114,7 +126,7 @@ fn from_reader<R: Read + ?Sized>(
     target_dir: &PathBuf,
 ) -> Result<(), ErrorBox> {
     let mut file = File::create(archive_path)?;
-    info!("Create file: {}", &archive_path.to_string_lossy());
+    info!("Create file: \"{}\"", archive_path.to_string_lossy());
     std::io::copy(reader, &mut file)?;
     Ok(zip_extract(archive_path, target_dir)?)
 }

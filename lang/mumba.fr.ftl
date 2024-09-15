@@ -33,6 +33,7 @@ disabled = Désactivé
 config-fullscreen = Plein écran
 config-borderless = Sans bordures
 config-fullscreen-resolution = Résolution en plein écran
+config-window-size = Taille de la fenêtre
 config-internal-resolution-scale = Échelle de résolution interne
 config-screen-refresh-rate = Fréquence de rafraichissement de l'écran
 config-enable-antialiasing = Anticrénelage

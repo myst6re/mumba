@@ -13,6 +13,12 @@ pub const CFG_ENABLE_BILINEAR: &str = "enable_bilinear";
 pub const CFG_FF8_USE_GAMEPAD_ICONS: &str = "ff8_use_gamepad_icons";
 pub const CFG_REFRESH_RATE: &str = "refresh_rate";
 pub const CFG_INTERNAL_RESOLUTION_SCALE: &str = "internal_resolution_scale";
+pub const CFG_WINDOW_SIZE_X: &str = "window_size_x";
+pub const CFG_WINDOW_SIZE_Y: &str = "window_size_y";
+pub const CFG_WINDOW_SIZE_X_FULLSCREEN: &str = "window_size_x_fullscreen";
+pub const CFG_WINDOW_SIZE_Y_FULLSCREEN: &str = "window_size_y_fullscreen";
+pub const CFG_WINDOW_SIZE_X_WINDOW: &str = "window_size_x_window";
+pub const CFG_WINDOW_SIZE_Y_WINDOW: &str = "window_size_y_window";
 
 pub struct FfnxConfig {
     inner: DocumentMut,

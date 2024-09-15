@@ -159,7 +159,7 @@ impl Installation {
         let steam_library_folders = match steam::Steam::from_config() {
             Ok(lib_folders) => Some(lib_folders),
             Err(e) => {
-                warn!("Cannot find Steam Client installation: {:?}", e);
+                warn!("Cannot find Steam Client installation: {}", e);
                 None
             }
         };

@@ -33,6 +33,7 @@ disabled = Disabled
 config-fullscreen = Fullscreen
 config-borderless = Borderless
 config-fullscreen-resolution = Fullscreen resolution
+config-window-size = Window size
 config-internal-resolution-scale = Internal resolution scale
 config-screen-refresh-rate = Screen refresh rate
 config-enable-antialiasing = Antialiasing

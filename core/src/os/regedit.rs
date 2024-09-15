@@ -80,13 +80,13 @@ where
             Ok(_) => Err(Error::NotAString),
             Err(registry::value::Error::NotFound(val, _)) => Err(Error::ValueNotFound(val)),
             Err(e) => {
-                warn!("Get regedit value error: {:?}", e);
+                warn!("Get regedit value error: {}", e);
                 Err(Error::OtherError)
             }
         },
         Err(registry::key::Error::NotFound(key, _)) => Err(Error::KeyNotFound(key)),
         Err(e) => {
-            warn!("Get regedit key error: {:?}", e);
+            warn!("Get regedit key error: {}", e);
             Err(Error::OtherError)
         }
     }

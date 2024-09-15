@@ -7,14 +7,16 @@ export component HomePage inherits VerticalLayout {
         background: Palette.background.darker(0.2);
 
         HorizontalBox {
-            alignment: start;
-
             Button {
                 text: Fluent.get-message("check-update");
                 enabled: Installations.is-ready;
                 clicked => {
                     Installations.upgrade-ffnx()
                 }
+            }
+
+            Rectangle {
+                vertical-stretch: 1;
             }
 
             Button {

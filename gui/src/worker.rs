@@ -34,7 +34,7 @@ impl Worker {
                 let env = match mumba_core::game::env::Env::new() {
                     Ok(env) => env,
                     Err(e) => {
-                        error!("Cannot initialize environment: {:?}", e);
+                        error!("Cannot initialize environment: {}", e);
                         return;
                     }
                 };

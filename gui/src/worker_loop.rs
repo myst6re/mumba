@@ -60,8 +60,8 @@ impl WorkerLoop {
         };
 
         info!(
-            "Found Game at {:?}: {:?} {} {:?}",
-            &installation.app_path,
+            "Found Game at \"{}\": {:?} {} {:?}",
+            &installation.app_path.to_string_lossy(),
             &installation.edition,
             &installation.language,
             &installation.version
@@ -133,8 +133,16 @@ impl WorkerLoop {
                             ffnx_config.get().set_int("window_size_x", w);
                             ffnx_config.get().set_int("window_size_y", h);
                         } else {
-                            ffnx_config.get().set_int("window_size_x", 0);
-                            ffnx_config.get().set_int("window_size_y", 0);
+                            let window_x = ffnx_config
+                                .get()
+                                .get_int("window_size_x_window", 0)
+                                .unwrap_or(0);
+                            let window_y = ffnx_config
+                                .get()
+                                .get_int("window_size_y_window", 0)
+                                .unwrap_or(0);
+                            ffnx_config.get().set_int("window_size_x", window_x);
+                            ffnx_config.get().set_int("window_size_y", window_y);
                         }
                         ffnx_config.get().set_int("window_size_x_fullscreen", w);
                         ffnx_config.get().set_int("window_size_y_fullscreen", h);
@@ -142,6 +150,23 @@ impl WorkerLoop {
                             Some(e) => e.freqs.clone(),
                             None => vec![],
                         })
+                    } else if key == "window_size_x" || key == "window_size_y" {
+                        let fullscreen = ffnx_config
+                            .get()
+                            .get_bool(ffnx_config::CFG_FULLSCREEN, true)
+                            .unwrap_or(true);
+                        if fullscreen {
+                            let fullscreen_value = ffnx_config
+                                .get()
+                                .get_int(format!("{}_fullscreen", key).as_str(), 0)
+                                .unwrap_or(0);
+                            ffnx_config.get().set_int(key.as_str(), fullscreen_value);
+                        } else {
+                            ffnx_config.get().set_int(key.as_str(), value)
+                        }
+                        ffnx_config
+                            .get()
+                            .set_int(format!("{}_window", key).as_str(), value)
                     } else {
                         ffnx_config.get().set_int(key.as_str(), value)
                     }
@@ -232,7 +257,7 @@ impl WorkerLoop {
         match FfnxInstallation::download(url.as_str(), &ffnx_installation.path, &self.env) {
             Ok(()) => (),
             Err(e) => {
-                error!("Error when installing FFNx: {:?}", e);
+                error!("Error when installing FFNx: {}", e);
             }
         };
         self.set_ui_game_ready(true);
@@ -389,7 +414,7 @@ impl WorkerLoop {
                 match mumba_config.save(&self.env.config_path) {
                     Ok(()) => Some(installation),
                     Err(e) => {
-                        error!("Cannot save configuration to mumba.toml: {:?}", e);
+                        error!("Cannot save configuration to mumba.toml: {}", e);
                         self.set_ui_task_text(
                             TextLevel::Error,
                             "message-error-cannot-save-mumba-config",
@@ -562,16 +587,25 @@ impl WorkerLoop {
         ffnx_config: &mut LazyFfnxConfig,
         screen_resolutions: &Screen,
     ) -> crate::FfnxConfig {
+        let fullscreen = ffnx_config.get_bool(ffnx_config::CFG_FULLSCREEN, true);
+        let win_size_x = ffnx_config.get_int(ffnx_config::CFG_WINDOW_SIZE_X, 0);
+        let win_size_y = ffnx_config.get_int(ffnx_config::CFG_WINDOW_SIZE_Y, 0);
         let current_resolution = {
-            let window_size_x = ffnx_config.get_int("window_size_x_fullscreen", 0) as u32;
-            let window_size_y = ffnx_config.get_int("window_size_y_fullscreen", 0) as u32;
+            let window_size_x = ffnx_config.get_int(
+                ffnx_config::CFG_WINDOW_SIZE_X_FULLSCREEN,
+                if fullscreen { win_size_x } else { 0 },
+            ) as u32;
+            let window_size_y = ffnx_config.get_int(
+                ffnx_config::CFG_WINDOW_SIZE_Y_FULLSCREEN,
+                if fullscreen { win_size_y } else { 0 },
+            ) as u32;
             screen_resolutions
                 .position(window_size_x, window_size_y)
                 .unwrap_or(screen_resolutions.resolutions.len().saturating_sub(1))
         };
         let config = crate::FfnxConfig {
             renderer_backend: ffnx_config.get_int(ffnx_config::CFG_RENDERER_BACKEND, 0),
-            fullscreen: ffnx_config.get_bool(ffnx_config::CFG_FULLSCREEN, true),
+            fullscreen,
             borderless: ffnx_config.get_bool(ffnx_config::CFG_BORDERLESS, false),
             enable_vsync: ffnx_config.get_bool(ffnx_config::CFG_ENABLE_VSYNC, true),
             enable_antialiasing: ffnx_config.get_int(ffnx_config::CFG_ENABLE_ANTIALIASING, 0),
@@ -588,6 +622,14 @@ impl WorkerLoop {
             },
             internal_resolution_scale: ffnx_config
                 .get_int(ffnx_config::CFG_INTERNAL_RESOLUTION_SCALE, 0),
+            window_size_x: ffnx_config.get_int(
+                ffnx_config::CFG_WINDOW_SIZE_X_WINDOW,
+                if fullscreen { 0 } else { win_size_x },
+            ),
+            window_size_y: ffnx_config.get_int(
+                ffnx_config::CFG_WINDOW_SIZE_Y_WINDOW,
+                if fullscreen { 0 } else { win_size_y },
+            ),
         };
         let config2 = config.clone();
         self.handle
