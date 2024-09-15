@@ -36,15 +36,25 @@ fn main() -> Result<(), slint::PlatformError> {
             Some(id) if id.language == "fr" => 1,
             _ => 0,
         });
-    ui.global::<Fluent>()
-        .on_get_message(move |id| slint::SharedString::from(i18n.tr(id.as_str())));
     ui.global::<Installations>().on_set_current_lang({
+        let ui = ui.as_weak();
+        let error_message = i18n.tr("message-error-cannot-save-mumba-config").clone();
         move |language| {
             let mut config = Config::from_file(&env.config_path).unwrap_or_else(|_| Config::new());
             config.set_language(&pos_to_language(language));
-            config.save(&env.config_path);
+            if let Err(error) = config.save(&env.config_path) {
+                error!("Cannot save configuration: {}", error);
+                ui.unwrap()
+                    .global::<Installations>()
+                    .set_task_text(slint::SharedString::from(&error_message));
+                ui.unwrap()
+                    .global::<Installations>()
+                    .set_task_text_type(TextLevel::Error);
+            }
         }
     });
+    ui.global::<Fluent>()
+        .on_get_message(move |id| slint::SharedString::from(i18n.tr(id.as_str())));
 
     ui.global::<Installations>().on_setup({
         let tx = worker.tx.clone();

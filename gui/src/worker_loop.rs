@@ -84,7 +84,10 @@ impl WorkerLoop {
         });
         let screen_resolutions = Screen::list_screens_resolutions();
         let ui_ffnx_config = self.set_ui_ffnx_config(&mut ffnx_config, &screen_resolutions);
-        ffnx_config.save();
+        if let Err(error) = ffnx_config.save() {
+            error!("Cannot save FFNx configuration: {}", error);
+            self.set_ui_task_text(TextLevel::Error, "message-error-cannot-save-ffnx-config")
+        }
         let steam_exe = get_steam_exe().unwrap_or_default();
 
         self.set_ui_resolutions(&screen_resolutions, ui_ffnx_config.current_resolution);
@@ -162,7 +165,13 @@ impl WorkerLoop {
                 }
                 Message::ConfigureFfnx => {
                     self.set_ui_ffnx_config(&mut ffnx_config, &screen_resolutions);
-                    ffnx_config.save();
+                    if let Err(error) = ffnx_config.save() {
+                        error!("Cannot save FFNx configuration: {}", error);
+                        self.set_ui_task_text(
+                            TextLevel::Error,
+                            "message-error-cannot-save-ffnx-config",
+                        )
+                    }
                 }
                 Message::CancelConfigureFfnx => ffnx_config.clear(),
                 Message::Quit => break,
