@@ -1,5 +1,5 @@
-use super::{AppWindow, Installations};
 use crate::lazy_ffnx_config::LazyFfnxConfig;
+use crate::ui_helper::UiHelper;
 use crate::worker::Message;
 use crate::TextLevel;
 use log::{error, info, warn};
@@ -10,8 +10,7 @@ use mumba_core::game::ffnx_installation::FfnxInstallation;
 use mumba_core::game::installation;
 use mumba_core::screen::Screen;
 use mumba_core::steam::get_steam_exe;
-use mumba_core::{i18n, pe_format, provision, toml};
-use slint::ComponentHandle;
+use mumba_core::{pe_format, provision, toml};
 use std::sync::mpsc::Receiver;
 use thiserror::Error;
 
@@ -29,24 +28,13 @@ pub enum InstallError {
 
 pub struct WorkerLoop {
     rx: Receiver<Message>,
-    handle: slint::Weak<AppWindow>,
     env: Env,
-    i18n: i18n::I18n,
+    ui: UiHelper,
 }
 
 impl WorkerLoop {
-    pub fn new(
-        rx: Receiver<Message>,
-        handle: slint::Weak<AppWindow>,
-        env: Env,
-        i18n: i18n::I18n,
-    ) -> Self {
-        Self {
-            rx,
-            handle,
-            env,
-            i18n,
-        }
+    pub fn new(rx: Receiver<Message>, env: Env, ui: UiHelper) -> Self {
+        Self { rx, env, ui }
     }
 
     fn open_mumba_config(&self) -> Config {
@@ -73,8 +61,8 @@ impl WorkerLoop {
                 None => return, // Exit
             };
 
-        self.clear_ui_task_text();
-        self.set_ui_game_ready(true);
+        self.ui.clear_task_text();
+        self.ui.set_game_ready(true);
 
         let mut ffnx_config = LazyFfnxConfig::new(&ffnx_installation);
         ffnx_config.get().set_app_path(if cfg!(unix) {
@@ -83,19 +71,23 @@ impl WorkerLoop {
             installation.app_path.to_string_lossy().to_string()
         });
         let screen_resolutions = Screen::list_screens_resolutions();
-        let ui_ffnx_config = self.set_ui_ffnx_config(&mut ffnx_config, &screen_resolutions);
+        let ui_ffnx_config = self
+            .ui
+            .set_ffnx_config(&mut ffnx_config, &screen_resolutions);
         if let Err(error) = ffnx_config.save() {
             error!("Cannot save FFNx configuration: {}", error);
-            self.set_ui_task_text(TextLevel::Error, "message-error-cannot-save-ffnx-config")
+            self.ui
+                .set_task_text(TextLevel::Error, "message-error-cannot-save-ffnx-config")
         }
         let steam_exe = get_steam_exe().unwrap_or_default();
 
-        self.set_ui_resolutions(&screen_resolutions, ui_ffnx_config.current_resolution);
+        self.ui
+            .set_resolutions(&screen_resolutions, ui_ffnx_config.current_resolution);
 
         for received in &self.rx {
             match received {
                 Message::Setup(exe_path, update_chan, language) => {
-                    self.set_ui_game_ready(false);
+                    self.ui.set_game_ready(false);
                     update_channel = update_chan.clone();
                     installation = match self.setup(&exe_path, update_chan, language) {
                         Some(inst) => inst,
@@ -107,7 +99,7 @@ impl WorkerLoop {
                         Some(ffnx_inst) => ffnx_inst,
                         None => return, // Exit
                     };
-                    self.set_ui_game_ready(true);
+                    self.ui.set_game_ready(true);
                 }
                 Message::UpdateGame => self.upgrade_ffnx(
                     &ffnx_installation,
@@ -146,7 +138,7 @@ impl WorkerLoop {
                         }
                         ffnx_config.get().set_int("window_size_x_fullscreen", w);
                         ffnx_config.get().set_int("window_size_y_fullscreen", h);
-                        self.set_ui_refresh_rates(match resolutions {
+                        self.ui.set_refresh_rates(match resolutions {
                             Some(e) => e.freqs.clone(),
                             None => vec![],
                         })
@@ -189,10 +181,11 @@ impl WorkerLoop {
                     )
                 }
                 Message::ConfigureFfnx => {
-                    self.set_ui_ffnx_config(&mut ffnx_config, &screen_resolutions);
+                    self.ui
+                        .set_ffnx_config(&mut ffnx_config, &screen_resolutions);
                     if let Err(error) = ffnx_config.save() {
                         error!("Cannot save FFNx configuration: {}", error);
-                        self.set_ui_task_text(
+                        self.ui.set_task_text(
                             TextLevel::Error,
                             "message-error-cannot-save-ffnx-config",
                         )
@@ -201,7 +194,7 @@ impl WorkerLoop {
                 Message::CancelConfigureFfnx => ffnx_config.clear(),
                 Message::Quit => break,
             };
-            self.clear_ui_task_text();
+            self.ui.clear_task_text();
         }
     }
 
@@ -210,11 +203,12 @@ impl WorkerLoop {
         let update_channel = mumba_config
             .update_channel()
             .unwrap_or(UpdateChannel::Stable);
-        self.set_ui_update_channel(update_channel.clone());
+        self.ui.set_update_channel(update_channel.clone());
 
         match mumba_config.installation() {
             Ok(Some(installation)) => {
-                self.set_ui_game_exe_path(installation.exe_path().to_string_lossy().to_string());
+                self.ui
+                    .set_game_exe_path(installation.exe_path().to_string_lossy().to_string());
                 Some((installation, update_channel))
             }
             Ok(None) | Err(_) => {
@@ -222,9 +216,8 @@ impl WorkerLoop {
                 for inst in installations {
                     match inst.edition {
                         installation::Edition::Standard | installation::Edition::Steam => {
-                            self.set_ui_game_exe_path(
-                                inst.exe_path().to_string_lossy().to_string(),
-                            );
+                            self.ui
+                                .set_game_exe_path(inst.exe_path().to_string_lossy().to_string());
                         }
                         installation::Edition::Remastered => {
                             warn!(
@@ -246,22 +239,24 @@ impl WorkerLoop {
         edition: &installation::Edition,
         update_channel: UpdateChannel,
     ) {
-        self.set_ui_task_text(TextLevel::Info, "message-info-check-ffnx-update");
+        self.ui
+            .set_task_text(TextLevel::Info, "message-info-check-ffnx-update");
         let url = FfnxInstallation::find_version_on_github(
             "julianxhokaxhiu/FFNx",
             edition,
             update_channel,
         );
-        self.set_ui_task_text(TextLevel::Info, "message-info-upgrade-in-progress-ffnx");
-        self.set_ui_game_ready(false);
+        self.ui
+            .set_task_text(TextLevel::Info, "message-info-upgrade-in-progress-ffnx");
+        self.ui.set_game_ready(false);
         match FfnxInstallation::download(url.as_str(), &ffnx_installation.path, &self.env) {
             Ok(()) => (),
             Err(e) => {
                 error!("Error when installing FFNx: {}", e);
             }
         };
-        self.set_ui_game_ready(true);
-        self.clear_ui_task_text()
+        self.ui.set_game_ready(true);
+        self.ui.clear_task_text()
     }
 
     fn install_game_and_ffnx(
@@ -281,7 +276,8 @@ impl WorkerLoop {
                 ffnx_installation
             }
             None => {
-                self.set_ui_task_text(TextLevel::Info, "message-info-install-in-progress-ffnx");
+                self.ui
+                    .set_task_text(TextLevel::Info, "message-info-install-in-progress-ffnx");
                 let url = FfnxInstallation::find_version_on_github(
                     "julianxhokaxhiu/FFNx",
                     &installation.edition,
@@ -409,13 +405,14 @@ impl WorkerLoop {
                 mumba_config.set_installation(&installation);
                 mumba_config.set_update_channel(update_channel.clone());
                 mumba_config.set_language(&language);
-                self.set_ui_game_exe_path(installation.exe_path().to_string_lossy().to_string());
-                self.set_ui_update_channel(update_channel);
+                self.ui
+                    .set_game_exe_path(installation.exe_path().to_string_lossy().to_string());
+                self.ui.set_update_channel(update_channel);
                 match mumba_config.save(&self.env.config_path) {
                     Ok(()) => Some(installation),
                     Err(e) => {
                         error!("Cannot save configuration to mumba.toml: {}", e);
-                        self.set_ui_task_text(
+                        self.ui.set_task_text(
                             TextLevel::Error,
                             "message-error-cannot-save-mumba-config",
                         );
@@ -425,12 +422,14 @@ impl WorkerLoop {
             }
             Err(installation::FromExeError::NotFound) => {
                 error!("This file does not exist: {}", exe_path);
-                self.set_ui_task_text(TextLevel::Error, "message-error-file-not-found");
+                self.ui
+                    .set_task_text(TextLevel::Error, "message-error-file-not-found");
                 None
             }
             Err(installation::FromExeError::LauncherSelected) => {
                 error!("Select the game exe, not the launcher: {}", exe_path);
-                self.set_ui_task_text(TextLevel::Error, "message-error-file-not-found");
+                self.ui
+                    .set_task_text(TextLevel::Error, "message-error-file-not-found");
                 None
             }
         }
@@ -438,7 +437,7 @@ impl WorkerLoop {
 
     fn go_to_setup_page(&self) -> Option<(installation::Installation, UpdateChannel)> {
         loop {
-            self.set_ui_current_page(1);
+            self.ui.set_current_page(1);
             match self.rx.recv() {
                 Ok(Message::Setup(exe_path, update_channel, language)) => {
                     match self.setup(&exe_path, update_channel.clone(), language) {
@@ -449,7 +448,8 @@ impl WorkerLoop {
                 Ok(Message::Quit) => return None,
                 msg => {
                     error!("Received unknown message: {:?}", msg);
-                    self.set_ui_task_text(TextLevel::Error, "message-fatal-unknown-action");
+                    self.ui
+                        .set_task_text(TextLevel::Error, "message-fatal-unknown-action");
                     continue;
                 }
             }
@@ -466,7 +466,8 @@ impl WorkerLoop {
                 Ok(ffnx_installation) => return Some(ffnx_installation),
                 Err(e) => {
                     error!("Installation error: {}", e);
-                    self.set_ui_task_text(TextLevel::Error, "message-error-cannot-install-ffnx");
+                    self.ui
+                        .set_task_text(TextLevel::Error, "message-error-cannot-install-ffnx");
 
                     match self.go_to_setup_page() {
                         Some((inst, update_chan)) => {
@@ -478,164 +479,5 @@ impl WorkerLoop {
                 }
             };
         }
-    }
-
-    fn clear_ui_task_text(&self) {
-        self.handle
-            .clone()
-            .upgrade_in_event_loop(move |h| {
-                let installations = h.global::<Installations>();
-                installations.set_task_text(slint::SharedString::from(""));
-                installations.set_task_text_type(TextLevel::Info)
-            })
-            .unwrap_or_default()
-    }
-
-    fn set_ui_task_text(&self, text_level: TextLevel, id: &'static str) {
-        let text = self.i18n.tr(id);
-        self.handle
-            .clone()
-            .upgrade_in_event_loop(move |h| {
-                let installations = h.global::<Installations>();
-                installations.set_task_text(slint::SharedString::from(text));
-                installations.set_task_text_type(text_level)
-            })
-            .unwrap_or_default()
-    }
-
-    fn set_ui_game_ready(&self, ready: bool) {
-        self.handle
-            .clone()
-            .upgrade_in_event_loop(move |h| h.global::<Installations>().set_is_ready(ready))
-            .unwrap_or_default()
-    }
-
-    fn set_ui_game_exe_path(&self, text: String) {
-        self.handle
-            .clone()
-            .upgrade_in_event_loop(move |h| {
-                h.global::<Installations>()
-                    .set_game_exe_path(slint::SharedString::from(text))
-            })
-            .unwrap_or_default()
-    }
-
-    fn set_ui_update_channel(&self, update_channel: UpdateChannel) {
-        self.handle
-            .clone()
-            .upgrade_in_event_loop(move |h| {
-                h.global::<Installations>()
-                    .set_update_channel(update_channel as i32)
-            })
-            .unwrap_or_default()
-    }
-
-    fn set_ui_current_page(&self, page_id: i32) {
-        self.handle
-            .clone()
-            .upgrade_in_event_loop(move |h| h.global::<Installations>().set_current_page(page_id))
-            .unwrap_or_default()
-    }
-
-    fn set_ui_resolutions(&self, screen_resolutions: &Screen, current_resolution: i32) {
-        let resolutions: Vec<slint::SharedString> = screen_resolutions
-            .resolutions
-            .iter()
-            .map(|screen| slint::SharedString::from(format!("{}x{}", screen.w, screen.h)))
-            .collect();
-        let refresh_rates: Vec<slint::SharedString> = screen_resolutions
-            .resolutions
-            .get(current_resolution as usize)
-            .map(|sr| sr.freqs.clone())
-            .unwrap_or_default()
-            .iter()
-            .map(|freq| slint::SharedString::from(format!("{} Hz", freq)))
-            .collect();
-
-        self.handle
-            .clone()
-            .upgrade_in_event_loop(move |h| {
-                let installations = h.global::<Installations>();
-                installations.set_resolutions(slint::ModelRc::<slint::SharedString>::from(
-                    resolutions.as_slice(),
-                ));
-                installations.set_refresh_rates(slint::ModelRc::<slint::SharedString>::from(
-                    refresh_rates.as_slice(),
-                ));
-            })
-            .unwrap_or_default()
-    }
-
-    fn set_ui_refresh_rates(&self, refresh_rates: Vec<u32>) {
-        let refresh_rates: Vec<slint::SharedString> = refresh_rates
-            .iter()
-            .map(|freq| slint::SharedString::from(format!("{} Hz", freq)))
-            .collect();
-
-        self.handle
-            .clone()
-            .upgrade_in_event_loop(move |h| {
-                h.global::<Installations>().set_refresh_rates(
-                    slint::ModelRc::<slint::SharedString>::from(refresh_rates.as_slice()),
-                );
-            })
-            .unwrap_or_default()
-    }
-
-    fn set_ui_ffnx_config(
-        &self,
-        ffnx_config: &mut LazyFfnxConfig,
-        screen_resolutions: &Screen,
-    ) -> crate::FfnxConfig {
-        let fullscreen = ffnx_config.get_bool(ffnx_config::CFG_FULLSCREEN, true);
-        let win_size_x = ffnx_config.get_int(ffnx_config::CFG_WINDOW_SIZE_X, 0);
-        let win_size_y = ffnx_config.get_int(ffnx_config::CFG_WINDOW_SIZE_Y, 0);
-        let current_resolution = {
-            let window_size_x = ffnx_config.get_int(
-                ffnx_config::CFG_WINDOW_SIZE_X_FULLSCREEN,
-                if fullscreen { win_size_x } else { 0 },
-            ) as u32;
-            let window_size_y = ffnx_config.get_int(
-                ffnx_config::CFG_WINDOW_SIZE_Y_FULLSCREEN,
-                if fullscreen { win_size_y } else { 0 },
-            ) as u32;
-            screen_resolutions
-                .position(window_size_x, window_size_y)
-                .unwrap_or(screen_resolutions.resolutions.len().saturating_sub(1))
-        };
-        let config = crate::FfnxConfig {
-            renderer_backend: ffnx_config.get_int(ffnx_config::CFG_RENDERER_BACKEND, 0),
-            fullscreen,
-            borderless: ffnx_config.get_bool(ffnx_config::CFG_BORDERLESS, false),
-            enable_vsync: ffnx_config.get_bool(ffnx_config::CFG_ENABLE_VSYNC, true),
-            enable_antialiasing: ffnx_config.get_int(ffnx_config::CFG_ENABLE_ANTIALIASING, 0),
-            enable_anisotropic: ffnx_config.get_bool(ffnx_config::CFG_ENABLE_ANISOTROPIC, true),
-            enable_bilinear: ffnx_config.get_bool(ffnx_config::CFG_ENABLE_BILINEAR, false),
-            ff8_use_gamepad_icons: ffnx_config
-                .get_bool(ffnx_config::CFG_FF8_USE_GAMEPAD_ICONS, true),
-            current_resolution: current_resolution as i32,
-            current_refresh_rate: {
-                let refresh_rate = ffnx_config.get_int(ffnx_config::CFG_REFRESH_RATE, 0) as u32;
-                screen_resolutions
-                    .refresh_rate_position(current_resolution, refresh_rate)
-                    .unwrap_or(0) as i32
-            },
-            internal_resolution_scale: ffnx_config
-                .get_int(ffnx_config::CFG_INTERNAL_RESOLUTION_SCALE, 0),
-            window_size_x: ffnx_config.get_int(
-                ffnx_config::CFG_WINDOW_SIZE_X_WINDOW,
-                if fullscreen { 0 } else { win_size_x },
-            ),
-            window_size_y: ffnx_config.get_int(
-                ffnx_config::CFG_WINDOW_SIZE_Y_WINDOW,
-                if fullscreen { 0 } else { win_size_y },
-            ),
-        };
-        let config2 = config.clone();
-        self.handle
-            .clone()
-            .upgrade_in_event_loop(move |h| h.global::<Installations>().set_ffnx_config(config))
-            .unwrap_or_default();
-        config2
     }
 }

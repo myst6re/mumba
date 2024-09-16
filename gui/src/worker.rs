@@ -1,4 +1,5 @@
 use super::AppWindow;
+use crate::ui_helper::UiHelper;
 use crate::worker_loop::WorkerLoop;
 use log::error;
 use mumba_core::config::UpdateChannel;
@@ -40,7 +41,7 @@ impl Worker {
                 };
                 let i18n = i18n::I18n::new(language);
 
-                WorkerLoop::new(rx, handle_weak, env, i18n).run()
+                WorkerLoop::new(rx, env, UiHelper::new(handle_weak, i18n)).run()
             }
         });
         Self { tx, thread }

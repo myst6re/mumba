@@ -8,6 +8,7 @@ use mumba_core::game::env::Env;
 use mumba_core::i18n::I18n;
 
 pub mod lazy_ffnx_config;
+pub mod ui_helper;
 pub mod worker;
 pub mod worker_loop;
 
