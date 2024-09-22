@@ -51,6 +51,15 @@ export component HomePage inherits VerticalLayout {
             Message {}
 
             Button {
+                text: "Chocobo World";
+                enabled: Installations.is-ready;
+
+                clicked => {
+                    Installations.launch-cw();
+                }
+            }
+
+            Button {
                 text: Fluent.get-message("launch-game");
                 enabled: Installations.is-ready;
                 primary: true;
