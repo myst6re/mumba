@@ -77,6 +77,11 @@ fn main() -> Result<(), slint::PlatformError> {
         move || tx.send(worker::Message::LaunchGame).unwrap()
     });
 
+    ui.global::<Installations>().on_launch_cw({
+        let tx = worker.tx.clone();
+        move || tx.send(worker::Message::LaunchCW).unwrap()
+    });
+
     ui.global::<Installations>().on_browse_game({
         let ui = ui.as_weak();
         move |old_path| {

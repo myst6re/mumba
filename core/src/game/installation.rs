@@ -1,6 +1,7 @@
 use crate::game::env::Env;
 #[cfg(windows)]
 use crate::os::regedit;
+use crate::os::run_helper;
 #[cfg(feature = "pe")]
 use crate::pe_format;
 use crate::provision;
@@ -8,6 +9,7 @@ use crate::steam;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
+use std::process::{Child, Command, Stdio};
 use std::str::FromStr;
 use thiserror::Error;
 
@@ -416,7 +418,7 @@ impl Installation {
     #[cfg(feature = "pe")]
     pub fn replace_launcher_from_app_path(&self, env: &Env) -> std::io::Result<()> {
         let launcher_path = self.get_launcher_path();
-        let resource_launcher_path = Self::get_resource_launcher_path(env);
+        let resource_launcher_path = env.get_resource_launcher_path();
         let (launcher_product_name, legal_copyright) =
             match pe_format::pe_version_info(&launcher_path) {
                 Ok(infos) => (
@@ -452,12 +454,68 @@ impl Installation {
         Ok(())
     }
 
-    fn get_resource_launcher_path(env: &Env) -> PathBuf {
-        let resource_launcher_path = env.mumba_dir.join("ff8_launcher.exe");
-        if resource_launcher_path.exists() {
-            resource_launcher_path
+    pub fn launch_game_via_steam(
+        &self,
+        ff8_path: &Path,
+        steam_exe: &Path,
+        current_dir: &Path,
+    ) -> Result<Child, std::io::Error> {
+        let app_id = self.get_app_id();
+        info!(
+            "Launch \"{} -applaunch {} '{}'\" in dir \"{}\"...",
+            steam_exe.to_string_lossy(),
+            app_id,
+            ff8_path.to_string_lossy(),
+            current_dir.to_string_lossy()
+        );
+        run_helper(&mut Command::new(steam_exe))
+            .args(["-applaunch", app_id.to_string().as_str()])
+            .arg(ff8_path.as_os_str())
+            .arg("--debug")
+            .current_dir(current_dir)
+            .spawn()
+    }
+
+    pub fn launch_game_directly(
+        ff8_path: &PathBuf,
+        current_dir: &Path,
+    ) -> Result<Child, std::io::Error> {
+        info!(
+            "Launch \"{}\" in dir \"{}\"...",
+            ff8_path.to_string_lossy(),
+            current_dir.to_string_lossy()
+        );
+        run_helper(&mut Command::new(ff8_path))
+            .current_dir(current_dir)
+            .spawn()
+    }
+
+    fn get_cw_path(&self) -> PathBuf {
+        let path = self.app_path.join("Chocobo.exe");
+        let path_lang = self.app_path.join(format!("Chocobo_{}.exe", self.language));
+
+        if path.exists() {
+            path
+        } else if path_lang.exists() {
+            path_lang
         } else {
-            PathBuf::from("/var/lib/mumba/ff8_launcher.exe")
+            self.app_path.join("Chocobo_FR_IT_DE_ES.exe")
+        }
+    }
+
+    pub fn launch_cw(&self, steam_exe: &Path) -> std::io::Result<()> {
+        let cw_path = self.get_cw_path();
+
+        if let Err(e) = match self.edition {
+            Edition::Standard => Self::launch_game_directly(&cw_path, &self.app_path),
+            Edition::Steam | Edition::Remastered => self
+                .launch_game_via_steam(&cw_path, steam_exe, &self.app_path)
+                .or_else(|_| Self::launch_game_directly(&cw_path, &self.app_path)),
+        } {
+            error!("Unable to launch game: {}", e);
+            Err(e)
+        } else {
+            Ok(())
         }
     }
 }

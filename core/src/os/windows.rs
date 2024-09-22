@@ -38,12 +38,12 @@ pub fn my_documents_path() -> PathBuf {
         )
         .unwrap_or_default()
     };
-    let path = OsString::from_wide(&path);
-    if path.is_empty() {
+    let len = path.iter().position(|e| *e == 0).unwrap_or(0);
+    if len == 0 {
         let dirs = directories::UserDirs::new();
         dirs.map_or_else(PathBuf::new, |d| d.document_dir().unwrap().to_path_buf())
     } else {
-        PathBuf::from(path)
+        PathBuf::from(OsString::from_wide(&path[0..len]))
     }
 }
 

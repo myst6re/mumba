@@ -60,4 +60,13 @@ impl Env {
     fn add_app_dir(path: &Path) -> PathBuf {
         path.to_path_buf().join("mumba")
     }
+
+    pub fn get_resource_launcher_path(&self) -> PathBuf {
+        let resource_launcher_path = self.mumba_dir.join("ff8_launcher.exe");
+        if resource_launcher_path.exists() {
+            resource_launcher_path
+        } else {
+            PathBuf::from("/var/lib/mumba/ff8_launcher.exe")
+        }
+    }
 }

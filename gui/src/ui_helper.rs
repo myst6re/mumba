@@ -125,19 +125,21 @@ impl UiHelper {
         screen_resolutions: &Screen,
     ) -> crate::FfnxConfig {
         let fullscreen = ffnx_config.get_bool(ffnx_config::CFG_FULLSCREEN, true);
-        let win_size_x = ffnx_config.get_int(ffnx_config::CFG_WINDOW_SIZE_X, 0);
-        let win_size_y = ffnx_config.get_int(ffnx_config::CFG_WINDOW_SIZE_Y, 0);
+        let win_or_full_size_x = ffnx_config.get_int(ffnx_config::CFG_WINDOW_SIZE_X, 0);
+        let win_or_full_size_y = ffnx_config.get_int(ffnx_config::CFG_WINDOW_SIZE_Y, 0);
+        let window_size_x = if fullscreen { 0 } else { win_or_full_size_x };
+        let window_size_y = if fullscreen { 0 } else { win_or_full_size_x };
         let current_resolution = {
-            let window_size_x = ffnx_config.get_int(
+            let fullscreen_size_x = ffnx_config.get_int(
                 ffnx_config::CFG_WINDOW_SIZE_X_FULLSCREEN,
-                if fullscreen { win_size_x } else { 0 },
+                if fullscreen { win_or_full_size_x } else { 0 },
             ) as u32;
-            let window_size_y = ffnx_config.get_int(
+            let fullscreen_size_y = ffnx_config.get_int(
                 ffnx_config::CFG_WINDOW_SIZE_Y_FULLSCREEN,
-                if fullscreen { win_size_y } else { 0 },
+                if fullscreen { win_or_full_size_y } else { 0 },
             ) as u32;
             screen_resolutions
-                .position(window_size_x, window_size_y)
+                .position(fullscreen_size_x, fullscreen_size_y)
                 .unwrap_or(screen_resolutions.resolutions.len().saturating_sub(1))
         };
         let config = crate::FfnxConfig {
@@ -161,11 +163,19 @@ impl UiHelper {
                 .get_int(ffnx_config::CFG_INTERNAL_RESOLUTION_SCALE, 0),
             window_size_x: ffnx_config.get_int(
                 ffnx_config::CFG_WINDOW_SIZE_X_WINDOW,
-                if fullscreen { 0 } else { win_size_x },
+                if window_size_x == 0 {
+                    640
+                } else {
+                    window_size_x
+                },
             ),
             window_size_y: ffnx_config.get_int(
                 ffnx_config::CFG_WINDOW_SIZE_Y_WINDOW,
-                if fullscreen { 0 } else { win_size_y },
+                if window_size_y == 0 {
+                    480
+                } else {
+                    window_size_y
+                },
             ),
         };
         let config2 = config.clone();

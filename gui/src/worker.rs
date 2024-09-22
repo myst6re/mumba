@@ -11,6 +11,7 @@ use std::sync::mpsc::{self, Sender};
 pub enum Message {
     Setup(slint::SharedString, UpdateChannel, String),
     LaunchGame,
+    LaunchCW,
     ConfigureFfnx,
     CancelConfigureFfnx,
     SetFfnxConfigBool(slint::SharedString, bool),

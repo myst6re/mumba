@@ -52,3 +52,5 @@ message-error-cannot-save-mumba-config = Impossible de sauvegarder la configurat
 message-error-cannot-save-ffnx-config = Impossible de sauvegarder la configuration FFNx.toml
 message-error-file-not-found = Fichier introuvable. Voir les logs pour plus de détails.
 message-fatal-unknown-action = Erreur fatale: message inconnu reçu. Voir les logs pour plus de détails.
+message-error-game-lang-not-detected = Impossible de détecter la langue du jeu
+message-error-cannot-launch-game = Impossible de lancer le jeu

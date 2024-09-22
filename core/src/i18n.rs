@@ -54,17 +54,13 @@ impl I18n {
     pub fn tr(&self, id: &str) -> String {
         let mut errors = vec![];
         let message = self.bundle.get_message(id);
-        let message = if cfg!(debug_assertions) {
-            message.unwrap_or_else(|| panic!("Fluent: No message found for {}", id))
-        } else if let Some(message) = message {
+        let message = if let Some(message) = message {
             message
         } else {
             return String::from(id);
         };
         let pattern = message.value();
-        let pattern = if cfg!(debug_assertions) {
-            pattern.unwrap_or_else(|| panic!("Fluent: Message has no value for {}", id))
-        } else if let Some(pattern) = pattern {
+        let pattern = if let Some(pattern) = pattern {
             pattern
         } else {
             return String::from(id);

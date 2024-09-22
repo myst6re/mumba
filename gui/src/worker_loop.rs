@@ -63,22 +63,12 @@ impl WorkerLoop {
 
         self.ui.clear_task_text();
         self.ui.set_game_ready(true);
+        let screen_resolutions = Screen::list_screens_resolutions();
 
         let mut ffnx_config = LazyFfnxConfig::new(&ffnx_installation);
-        ffnx_config.get().set_app_path(if cfg!(unix) {
-            String::from("..")
-        } else {
-            installation.app_path.to_string_lossy().to_string()
-        });
-        let screen_resolutions = Screen::list_screens_resolutions();
         let ui_ffnx_config = self
             .ui
             .set_ffnx_config(&mut ffnx_config, &screen_resolutions);
-        if let Err(error) = ffnx_config.save() {
-            error!("Cannot save FFNx configuration: {}", error);
-            self.ui
-                .set_task_text(TextLevel::Error, "message-error-cannot-save-ffnx-config")
-        }
         let steam_exe = get_steam_exe().unwrap_or_default();
 
         self.ui
@@ -101,12 +91,45 @@ impl WorkerLoop {
                     };
                     self.ui.set_game_ready(true);
                 }
-                Message::UpdateGame => self.upgrade_ffnx(
-                    &ffnx_installation,
-                    &installation.edition,
-                    update_channel.clone(),
-                ),
-                Message::LaunchGame => ffnx_installation.launch_game(&installation, &steam_exe),
+                Message::UpdateGame => {
+                    let _ = ffnx_config.get();
+                    self.upgrade_ffnx(
+                        &ffnx_installation,
+                        &installation.edition,
+                        update_channel.clone(),
+                    );
+                    if let Err(error) = ffnx_config.save() {
+                        error!("Cannot save FFNx configuration: {}", error);
+                        self.ui.set_task_text(
+                            TextLevel::Error,
+                            "message-error-cannot-save-ffnx-config",
+                        )
+                    }
+                }
+                Message::LaunchGame => {
+                    ffnx_config.get().set_app_path(if cfg!(unix) {
+                        String::from("..")
+                    } else {
+                        installation.app_path.to_string_lossy().to_string()
+                    });
+                    if let Err(error) = ffnx_config.save() {
+                        error!("Cannot save FFNx configuration: {}", error);
+                        self.ui.set_task_text(
+                            TextLevel::Error,
+                            "message-error-cannot-save-ffnx-config",
+                        )
+                    }
+                    if let Err(_) = ffnx_installation.launch_game(&installation, &steam_exe) {
+                        self.ui
+                            .set_task_text(TextLevel::Error, "message-error-cannot-launch-game")
+                    }
+                }
+                Message::LaunchCW => {
+                    if let Err(_) = installation.launch_cw(&steam_exe) {
+                        self.ui
+                            .set_task_text(TextLevel::Error, "message-error-cannot-launch-game")
+                    }
+                }
                 Message::SetFfnxConfigBool(key, value) => {
                     ffnx_config.get().set_bool(key.as_str(), value)
                 }
@@ -272,7 +295,14 @@ impl WorkerLoop {
         };
         let ffnx_installation = match FfnxInstallation::from_directory(&ffnx_dir, installation) {
             Some(ffnx_installation) => {
-                info!("Found FFNx version {}", ffnx_installation.version);
+                info!(
+                    "Found FFNx version {}",
+                    if ffnx_installation.version == "0.0.0" {
+                        "dev"
+                    } else {
+                        ffnx_installation.version.as_str()
+                    }
+                );
                 ffnx_installation
             }
             None => {
@@ -334,16 +364,23 @@ impl WorkerLoop {
                 match file_name {
                     Some(file_name) => {
                         let url = format!("https://www.ff8.fr/download/programs/{}.zip", file_name);
-                        provision::download_zip(
+                        match provision::download_zip(
                             url.as_str(),
                             "FF8Patch1.02.zip",
                             &ffnx_installation.path,
                             &self.env,
-                        )?;
-                        provision::rename_file(&ffnx_installation.path.join("FF8.exe"), &exe_path)?;
+                        ) {
+                            Ok(()) => provision::rename_file(
+                                &ffnx_installation.path.join("FF8.exe"),
+                                &exe_path,
+                            )?,
+                            Err(e) => {
+                                error!("Cannot download 1.02 patch: {}", e)
+                            }
+                        }
                     }
                     None => {
-                        error!("Cannot detect the language of your game!");
+                        error!("Cannot detect the language of your game")
                     }
                 }
             } else {
@@ -357,9 +394,9 @@ impl WorkerLoop {
                     || pe_format::pe_version_info(&eax_dll_path)?
                         .product_name
                         .unwrap_or_default()
-                        != "FFNx"
+                        == "FFNx"
                 {
-                    provision::copy_file(&installation.app_path.join("eax.dll"), &eax_dll_path)?
+                    provision::copy_file(&self.env.mumba_dir.join("eax.dll"), &eax_dll_path)?
                 }
             }
             installation::Edition::Standard | installation::Edition::Remastered => {
