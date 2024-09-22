@@ -28,7 +28,7 @@ impl Env {
                 config_path,
                 mumba_dir: exe_path.clone(),
                 ffnx_dir: exe_path,
-            })
+            });
         }
 
         let base_dirs = directories::BaseDirs::new();

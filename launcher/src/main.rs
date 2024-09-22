@@ -7,6 +7,12 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode, Stdio};
 
+#[cfg(windows)]
+mod shared_memory;
+
+#[cfg(windows)]
+use shared_memory::SharedMemory;
+
 fn path_fallback(exe_path: &Path) -> PathBuf {
     exe_path.join("FF8_Launcher_Original.exe")
 }
@@ -46,12 +52,15 @@ fn run() -> std::io::Result<()> {
         }
     };
 
+    let mut original_launcher = false;
+
     if !path.exists() {
         error!(
             "Path {} does not exist, fallback to the original launcher",
             path.to_string_lossy()
         );
-        path = path_fallback(&exe_path)
+        path = path_fallback(&exe_path);
+        original_launcher = true;
     }
 
     let dir = match path.parent() {
@@ -71,13 +80,28 @@ fn run() -> std::io::Result<()> {
             "Target exe is the current exe itself",
         ))
     } else {
-        let mut child = Command::new(&path)
-            .stdin(Stdio::inherit())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .current_dir(dir)
-            .spawn()?;
+        #[cfg(windows)]
+        let is_cw = path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_ascii_lowercase()
+            .contains("choco");
+        #[cfg(windows)]
+        let shared_memory = SharedMemory::new(is_cw);
+        let mut command = Command::new(&path);
+        command
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .current_dir(dir);
+        if original_launcher && std::env::args().len() > 1 {
+            command.args(std::env::args());
+        }
+        let mut child = command.spawn()?;
         info!("Wait for child process...");
+        #[cfg(windows)]
+        shared_memory.map(|sm| sm.wait(&mut child));
         let exit_status = child.wait()?;
         info!("Child process exited with status {}", exit_status);
         Ok(())
