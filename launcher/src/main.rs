@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use log::{error, info, debug};
+use log::{error, info};
 use same_file::is_same_file;
 use simplelog::{CombinedLogger, LevelFilter, SimpleLogger, WriteLogger};
 use std::fs::File;
@@ -9,6 +9,9 @@ use std::process::{Command, ExitCode, Stdio};
 
 #[cfg(windows)]
 mod shared_memory;
+
+#[cfg(windows)]
+use shared_memory::SharedMemory;
 
 fn path_fallback(exe_path: &Path) -> PathBuf {
     exe_path.join("FF8_Launcher_Original.exe")
@@ -51,9 +54,6 @@ fn run() -> std::io::Result<()> {
 
     let mut original_launcher = false;
 
-    #[cfg(windows)]
-    let save_path = shared_memory::save_path_2013();
-
     if !path.exists() {
         error!(
             "Path {} does not exist, fallback to the original launcher",
@@ -83,7 +83,7 @@ fn run() -> std::io::Result<()> {
         #[cfg(windows)]
         let is_cw = path.file_name().unwrap_or_default().to_string_lossy().to_ascii_lowercase().contains("choco");
         #[cfg(windows)]
-        let semaphores = shared_memory::create_shared_memory(is_cw);
+        let shared_memory = SharedMemory::new(is_cw);
         let mut command = Command::new(&path);
         command.stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
@@ -95,7 +95,7 @@ fn run() -> std::io::Result<()> {
         let mut child = command.spawn()?;
         info!("Wait for child process...");
         #[cfg(windows)]
-        shared_memory::wait_shared_memory(save_path, semaphores);
+        shared_memory.wait();
         let exit_status = child.wait()?;
         info!("Child process exited with status {}", exit_status);
         Ok(())

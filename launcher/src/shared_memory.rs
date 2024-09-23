@@ -91,37 +91,15 @@ impl SharedMemory {
         )
     }
 
-    pub fn wait_shared_memory(&self) {
-        /* if let Some(launcher_can) = launcher_can {
-            unsafe {
-                let _ = WaitForSingleObject(launcher_can, 5000);
-            }
-        }
-
-        info!("launcher_can awaited");
-
-        if let Some(shared_memory) = shared_memory {
-            unsafe {
-                let data = shared_memory.Value as *const u32;
-                let command = *data;
-                info!("Received command: {}", command)
-            }
-        }
-
-        if let Some(launcher_did) = launcher_did {
-            unsafe {
-                let _ = ReleaseSemaphore(launcher_did, 1, None);
-            }
-        }
-
-        info!("launcher_did released"); */
-
+    pub fn wait(&self) {
         unsafe {
             /*
             let _ = WaitForSingleObject(launcher_can, 5000);
             let data = shared_memory.Value as *const u32;
             let command = *data;
-            info!("Received command: {}", command)
+            info!("Received command: {}", command);
+            let _ = ReleaseSemaphore(launcher_did, 1, None);
+            info!("launcher_did released");
              */
             let data = self.map_view.Value.byte_add(0x10000) as *mut u32;
             *data = 9;
@@ -168,7 +146,26 @@ fn my_documents_path() -> PathBuf {
 pub fn save_path_2013() -> Option<PathBuf> {
     let steam_path_2013 = my_documents_path().join("Square Enix\\FINAL FANTASY VIII Steam");
 
-    steam_path_2013.read_dir();
+    find_user_id(steam_path_2013)
+}
 
-    my_documents.join("Square Enix\\FINAL FANTASY VIII Steam\\user_199178")
+fn find_user_id(steam_path_2013: PathBuf) -> Option<PathBuf> {
+    match steam_path_2013.read_dir() {
+        Ok(it) => {
+            for entry in it {
+                match entry {
+                    Ok(entry) => {
+                        let path = entry.path();
+                        if path.is_dir() && path.file_name().starts_with("user_") {
+                            return Some(path)
+                        }
+
+                    },
+                    _ => break
+                }
+            }
+            None
+        },
+        Err(_) => None
+    }
 }
