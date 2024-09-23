@@ -85,9 +85,9 @@ fn run() -> std::io::Result<()> {
         #[cfg(windows)]
         let shared_memory = SharedMemory::new(is_cw);
         let mut command = Command::new(&path);
-        command.stdin(Stdio::inherit())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
+        command.stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
             .current_dir(dir);
         if original_launcher && std::env::args().len() > 1 {
             command.args(std::env::args());
@@ -95,7 +95,7 @@ fn run() -> std::io::Result<()> {
         let mut child = command.spawn()?;
         info!("Wait for child process...");
         #[cfg(windows)]
-        shared_memory.wait();
+        shared_memory.map(|sm| sm.wait(&mut child));
         let exit_status = child.wait()?;
         info!("Child process exited with status {}", exit_status);
         Ok(())

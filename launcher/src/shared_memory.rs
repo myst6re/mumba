@@ -1,15 +1,21 @@
-use log::{error, info};
+use log::{error, warn, info, debug};
 use windows::Win32::System::Memory::{CreateFileMappingA, MapViewOfFile, PAGE_READWRITE, FILE_MAP_ALL_ACCESS, MEMORY_MAPPED_VIEW_ADDRESS};
-use windows::Win32::System::Threading::{CreateSemaphoreA, WaitForSingleObject, ReleaseSemaphore};
+use windows::Win32::System::Threading::{CreateSemaphoreA, WaitForSingleObject, ReleaseSemaphore, INFINITE};
 use windows::Win32::Foundation::{HANDLE, INVALID_HANDLE_VALUE};
 use windows::core::PCSTR;
-use std::ffi::OsString;
+use std::ffi::{OsString, OsStr};
 use std::os::windows::prelude::*;
 use std::path::PathBuf;
-use windows::Win32::Foundation::{HWND, MAX_PATH};
+use windows::Win32::Foundation::{HWND, MAX_PATH, WAIT_OBJECT_0, WAIT_TIMEOUT, WAIT_FAILED, GetLastError};
 use windows::Win32::UI::Shell;
+use std::process::Child;
 
-struct SharedMemory {
+pub const GAME_METRICS: u32 = 3;
+pub const GAME_READY: u32 = 4;
+pub const USER_SAVE_DIR: u32 = 9;
+pub const END_USER_INFO: u32 = 24;
+
+pub struct SharedMemory {
     map_view: MEMORY_MAPPED_VIEW_ADDRESS,
     game_can: HANDLE,
     game_did: HANDLE,
@@ -20,6 +26,9 @@ struct SharedMemory {
 
 impl SharedMemory {
     pub fn new(is_cw: bool) -> Option<Self> {
+        if !is_cw {
+            return None // For now we only try to communicate with the game if it's the CW
+        }
         let save_dir = save_path_2013();
 
         if save_dir.is_none() {
@@ -91,37 +100,69 @@ impl SharedMemory {
         )
     }
 
-    pub fn wait(&self) {
+    fn read_command_from_game(&self, duration_ms: u32) -> Option<u32> {
         unsafe {
-            /*
-            let _ = WaitForSingleObject(launcher_can, 5000);
-            let data = shared_memory.Value as *const u32;
+            match WaitForSingleObject(self.launcher_can, duration_ms) {
+                WAIT_OBJECT_0 => (),
+                WAIT_TIMEOUT => return None,
+                WAIT_FAILED => {
+                    error!("Error when waiting for launcher can semaphore: #{}", GetLastError().0);
+                    return None
+                },
+                e => {
+                    error!("Error when waiting for launcher can semaphore: Unknown {}", e.0);
+                    return None
+                }
+            }
+            let data = self.map_view.Value as *const u32;
             let command = *data;
             info!("Received command: {}", command);
-            let _ = ReleaseSemaphore(launcher_did, 1, None);
-            info!("launcher_did released");
-             */
+            let _ = ReleaseSemaphore(self.launcher_did, 1, None);
+            debug!("launcher_did released");
+
+            Some(command)
+        }
+    }
+
+    fn send_command_to_game(&self, command: u32, param: Option<&OsStr>) {
+        unsafe {
             let data = self.map_view.Value.byte_add(0x10000) as *mut u32;
-            *data = 9;
-            let param = data.byte_add(4);
-            let dir = self.save_dir.clone();
-            let len = dir.to_string_lossy().len();
-            info!("Dir={} size={}", dir.to_string_lossy(), len);
-            let dir: Vec<u16> = dir.as_os_str().encode_wide().collect();
-            info!("len={}", dir.len());
-            *param = dir.len() as u32;
-            let src_ptr = dir.as_ptr();
-            std::ptr::copy_nonoverlapping(src_ptr, param.byte_add(4) as *mut u16, dir.len());
+            let data_param = data.byte_add(4);
+
+            *data = command;
+
+            match param {
+                Some(str) => {
+                    let param: Vec<u16> = str.encode_wide().collect();
+                    *data = param.len() as u32;
+                    std::ptr::copy_nonoverlapping(param.as_ptr(), data_param as *mut u16, param.len());
+                    info!("Send command {} with param {}", command, str.to_string_lossy())
+                },
+                None => info!("Send command {}", command)
+            }
+
             let _ = ReleaseSemaphore(self.game_can, 1, None);
-            info!("game_can released");
-            let _ = WaitForSingleObject(self.game_did, 5000);
-            info!("game_did awaited");
-            let data = self.map_view.Value.byte_add(0x10000) as *mut u32;
-            *data = 24;
-            let _ = ReleaseSemaphore(self.game_can, 1, None);
-            info!("game_can released");
-            let _ = WaitForSingleObject(self.game_did, 5000);
-            info!("game_did awaited");
+            debug!("game_can released");
+            let _ = WaitForSingleObject(self.game_did, INFINITE);
+            debug!("game_did awaited");
+        }
+    }
+
+    pub fn wait(&self, child: &mut Child) {
+        if self.read_command_from_game(5000) != Some(GAME_READY) {
+            warn!("The game did not send the GAME_READY command on time");
+            return
+        }
+
+        let dir = self.save_dir.clone();
+        self.send_command_to_game(USER_SAVE_DIR, Some(&dir.as_os_str()));
+        self.send_command_to_game(END_USER_INFO, None);
+
+        loop {
+            if !matches!(child.try_wait(), Ok(None)) {
+                return
+            }
+            self.read_command_from_game(700);
         }
     }
 }
@@ -156,7 +197,7 @@ fn find_user_id(steam_path_2013: PathBuf) -> Option<PathBuf> {
                 match entry {
                     Ok(entry) => {
                         let path = entry.path();
-                        if path.is_dir() && path.file_name().starts_with("user_") {
+                        if path.is_dir() && path.file_name().unwrap().to_string_lossy().starts_with("user_") {
                             return Some(path)
                         }
 
