@@ -90,6 +90,7 @@ export component SetupPage inherits VerticalLayout {
 
             Button {
                 text: Fluent.get-message("button-cancel");
+                visible: Installations.is-initialized;
 
                 clicked => {
                     Installations.current-page = 0;

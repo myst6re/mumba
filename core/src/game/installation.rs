@@ -9,7 +9,7 @@ use crate::steam;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
+use std::process::{Child, Command};
 use std::str::FromStr;
 use thiserror::Error;
 

@@ -5,14 +5,13 @@ use crate::game::env::Env;
 use crate::game::installation::{Edition, Installation};
 #[cfg(feature = "network")]
 use crate::github::GitHubReleaseAsset;
-use crate::os::run_helper;
 #[cfg(feature = "pe")]
 use crate::pe_format;
 #[cfg(any(feature = "network", feature = "zip"))]
 use crate::provision;
 use std::path::Path;
 use std::path::PathBuf;
-use std::process::{Child, Command};
+use std::process::Child;
 
 pub struct FfnxInstallation {
     pub version: String,

@@ -47,6 +47,15 @@ impl UiHelper {
             .unwrap_or_default()
     }
 
+    pub fn set_mumba_initialized(&self, initialized: bool) {
+        self.handle
+            .clone()
+            .upgrade_in_event_loop(move |h| {
+                h.global::<Installations>().set_is_initialized(initialized)
+            })
+            .unwrap_or_default()
+    }
+
     pub fn set_game_exe_path(&self, text: String) {
         self.handle
             .clone()

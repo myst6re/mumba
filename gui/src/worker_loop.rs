@@ -62,6 +62,7 @@ impl WorkerLoop {
             };
 
         self.ui.clear_task_text();
+        self.ui.set_mumba_initialized(true);
         self.ui.set_game_ready(true);
         let screen_resolutions = Screen::list_screens_resolutions();
 
