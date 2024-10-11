@@ -12,10 +12,26 @@ pub struct Env {
 
 impl Env {
     pub fn new() -> Result<Self, std::io::Error> {
+        let mut exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("./"));
+        exe_path.pop(); // Remove exe filename
+
+        let cache_fallback = exe_path.clone();
+        let data_fallback = exe_path.clone();
+        let config_fallback = exe_path.clone();
+
+        let config_path = config_fallback.join("mumba.toml");
+        if config_path.exists() {
+            // Local installation
+            return Ok(Self {
+                cache_dir: cache_fallback,
+                data_dir: data_fallback,
+                config_path,
+                mumba_dir: exe_path.clone(),
+                ffnx_dir: exe_path,
+            })
+        }
+
         let base_dirs = directories::BaseDirs::new();
-        let cache_fallback = PathBuf::from_str("./cache").unwrap();
-        let data_fallback = PathBuf::from_str("./data").unwrap();
-        let config_fallback = PathBuf::from_str("./config").unwrap();
         let (cache_dir, data_dir, config_dir) = match base_dirs {
             Some(d) => (
                 Self::add_app_dir(d.cache_dir()),
@@ -37,9 +53,8 @@ impl Env {
         let config_dir = Self::create_dir(&config_dir)
             .and(Ok(config_dir))
             .or_else(|_| Self::create_dir(&config_fallback).and(Ok(config_fallback)))?;
-        let mut exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("./"));
-        exe_path.pop(); // Remove exe filename
         let ffnx_dir = data_dir.join("game");
+
         Ok(Self {
             cache_dir,
             data_dir,
