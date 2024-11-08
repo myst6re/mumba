@@ -19,7 +19,7 @@ slint = { version = "1.8", default-features = false, features = [
     "compat-1-2",
     "raw-window-handle-06"
 ] }
-thiserror = "1"
+thiserror = "2"
 rfd = "0"
 
 [target.'cfg(windows)'.dependencies]

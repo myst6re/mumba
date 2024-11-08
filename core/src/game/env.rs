@@ -1,6 +1,5 @@
 use std::io;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 
 pub struct Env {
     pub cache_dir: PathBuf,

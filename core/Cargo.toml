@@ -17,7 +17,7 @@ i18n = ["dep:fluent-bundle", "dep:unic-langid"]
 log = "0.4"
 simplelog = {version = "^0.12.2", default-features = false}
 directories = "5.0"
-thiserror = "1"
+thiserror = "2"
 toml_edit = {version = "0.22", optional = true}
 ureq = {version = "2.10", features = ["brotli", "json"], optional = true}
 serde = {version = "1", features = ["derive"], optional = true}
