@@ -33,7 +33,7 @@ built = { version = "0.7", features = ["git2"] }
 [package.metadata.deb]
 assets = [
     ["target/release/mumba", "usr/bin/", "755"],
-    ["../target/x86_64-pc-windows-gnu/release/ff8_launcher.exe", "var/lib/mumba/", "644"],
+    ["target/release/ff8_launcher.exe", "var/lib/mumba/", "644"],
     ["../lang/mumba.en.ftl", "var/lib/mumba/lang/", "644"],
     ["../lang/mumba.fr.ftl", "var/lib/mumba/lang/", "644"],
     ["../README.md", "usr/share/doc/mumba/README", "644"],

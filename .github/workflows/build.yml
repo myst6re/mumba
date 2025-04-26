@@ -61,6 +61,7 @@ jobs:
       run: |
         rustup target add x86_64-pc-windows-gnu
         cargo build --release --bin ff8_launcher --target x86_64-pc-windows-gnu
+        cp target/x86_64-pc-windows-gnu/release/ff8_launcher.exe target/release/ff8_launcher.exe
 
     - name: Install cargo-${{ matrix.installer }}
       run: cargo install cargo-${{ matrix.installer }}
