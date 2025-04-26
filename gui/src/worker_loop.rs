@@ -120,13 +120,16 @@ impl WorkerLoop {
                             "message-error-cannot-save-ffnx-config",
                         )
                     }
-                    if let Err(_) = ffnx_installation.launch_game(&installation, &steam_exe) {
+                    if ffnx_installation
+                        .launch_game(&installation, &steam_exe)
+                        .is_err()
+                    {
                         self.ui
                             .set_task_text(TextLevel::Error, "message-error-cannot-launch-game")
                     }
                 }
                 Message::LaunchCW => {
-                    if let Err(_) = installation.launch_cw(&steam_exe) {
+                    if installation.launch_cw(&steam_exe).is_err() {
                         self.ui
                             .set_task_text(TextLevel::Error, "message-error-cannot-launch-game")
                     }

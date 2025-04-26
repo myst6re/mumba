@@ -75,8 +75,10 @@ impl Screen {
                 }
             }
 
-            if (display_device.StateFlags & DISPLAY_DEVICE_ACTIVE) != 0
-                && (display_device.StateFlags & DISPLAY_DEVICE_PRIMARY_DEVICE) != 0
+            if display_device.StateFlags.contains(DISPLAY_DEVICE_ACTIVE)
+                && display_device
+                    .StateFlags
+                    .contains(DISPLAY_DEVICE_PRIMARY_DEVICE)
             {
                 let mut dev_mode = DEVMODEW {
                     dmSize: std::mem::size_of::<DEVMODEW>() as u16,

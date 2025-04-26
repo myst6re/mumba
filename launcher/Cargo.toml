@@ -9,6 +9,8 @@ authors = ["myst6re <myst6re@gmail.com>"]
 same-file = "1"
 log = "0.4"
 simplelog = { version = "^0.12.2", default-features = false }
+quick-xml = { version = "0", default-features = false }
+md-5 = { version = "0", default-features = false }
 
 [target.'cfg(windows)'.dependencies]
 windows = {version = "0", features = ["Win32_UI_Shell", "Win32_System_Memory", "Win32_Security", "Win32_System_Threading"]}
@@ -16,4 +18,4 @@ windows = {version = "0", features = ["Win32_UI_Shell", "Win32_System_Memory", "
 [build-dependencies]
 winresource = "0.1"
 built = { version = "0.7", features = ["git2"] }
-git2 = "0.19"
+git2 = "0.20"

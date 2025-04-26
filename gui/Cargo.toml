@@ -11,7 +11,7 @@ default-run = "mumba"
 [dependencies]
 log = "0.4"
 mumba_core = { path = "../core", features = ["network", "steam", "zip", "config", "pe", "i18n"] }
-slint = { version = "1.8", default-features = false, features = [
+slint = { version = "1.11", default-features = false, features = [
     "std",
     "backend-default",
     "renderer-software",
@@ -26,7 +26,7 @@ rfd = "0"
 raw-window-handle = "0.6"
 
 [build-dependencies]
-slint-build = "1.8"
+slint-build = "1.11"
 winresource = "0.1"
 built = { version = "0.7", features = ["git2"] }
 

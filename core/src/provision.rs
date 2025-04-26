@@ -63,7 +63,7 @@ pub enum ToJsonError {
 
 #[cfg(feature = "network")]
 pub fn get_json<T: DeserializeOwned>(url: &str) -> Result<T, ToJsonErrorBox> {
-    Ok(ureq::get(url).call()?.into_json()?)
+    Ok(ureq::get(url).call()?.body_mut().read_json::<T>()?)
 }
 
 #[cfg(all(feature = "network", feature = "zip"))]
@@ -75,7 +75,8 @@ pub fn download_zip(
 ) -> Result<(), ErrorBox> {
     let temp_dir = env.cache_dir.as_path();
     let archive_path = temp_dir.join(local_zip_name);
-    let mut reader = ureq::get(url).call()?.into_reader().take(250_000_000);
+    let mut response = ureq::get(url).call()?;
+    let mut reader = response.body_mut().as_reader().take(250_000_000);
     let ret = from_reader(&mut reader, &archive_path, target_dir);
     match std::fs::remove_file(&archive_path) {
         Ok(ok) => ok,

@@ -1,3 +1,4 @@
+use crate::metadata::update_metadata;
 use log::{debug, error, info, warn};
 use std::ffi::{OsStr, OsString};
 use std::os::windows::prelude::*;
@@ -5,7 +6,7 @@ use std::path::PathBuf;
 use std::process::Child;
 use windows::core::PCSTR;
 use windows::Win32::Foundation::{
-    GetLastError, HWND, MAX_PATH, WAIT_FAILED, WAIT_OBJECT_0, WAIT_TIMEOUT,
+    GetLastError, MAX_PATH, WAIT_FAILED, WAIT_OBJECT_0, WAIT_TIMEOUT,
 };
 use windows::Win32::Foundation::{HANDLE, INVALID_HANDLE_VALUE};
 use windows::Win32::System::Memory::{
@@ -29,6 +30,7 @@ pub struct SharedMemory {
     launcher_can: HANDLE,
     launcher_did: HANDLE,
     save_dir: PathBuf,
+    is_cw: bool,
 }
 
 impl SharedMemory {
@@ -56,6 +58,7 @@ impl SharedMemory {
                 launcher_can,
                 launcher_did,
                 save_dir: save_dir.unwrap(),
+                is_cw,
             }),
             (_, _, _, _, _) => None,
         }
@@ -188,7 +191,10 @@ impl SharedMemory {
             if !matches!(child.try_wait(), Ok(None)) {
                 return;
             }
-            self.read_command_from_game(700);
+            if self.is_cw && self.read_command_from_game(700) == Some(GAME_METRICS) {
+                info!("Received GAME_METRICS, updating metadata");
+                update_metadata(&self.save_dir, 3, 0);
+            }
         }
     }
 }
@@ -198,9 +204,9 @@ fn my_documents_path() -> PathBuf {
     unsafe {
         // Steam 2013 version uses this obsolete implementation instead of SHGetKnownFolderPath
         Shell::SHGetFolderPathW(
-            HWND::default(),
+            None,
             (Shell::CSIDL_MYDOCUMENTS | Shell::CSIDL_FLAG_CREATE) as i32,
-            HANDLE::default(),
+            None,
             0,
             &mut path,
         )

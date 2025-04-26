@@ -7,6 +7,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode, Stdio};
 
+mod metadata;
 #[cfg(windows)]
 mod shared_memory;
 

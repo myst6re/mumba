@@ -1,9 +1,11 @@
+#[cfg(any(feature = "pe", feature = "zip"))]
 use crate::game::env::Env;
 #[cfg(windows)]
 use crate::os::regedit;
 use crate::os::run_helper;
 #[cfg(feature = "pe")]
 use crate::pe_format;
+#[cfg(any(feature = "pe", feature = "zip"))]
 use crate::provision;
 use crate::steam;
 use std::fs::File;

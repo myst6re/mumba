@@ -3,18 +3,14 @@ use std::os::windows::ffi::OsStrExt;
 use std::os::windows::prelude::*;
 use std::path::PathBuf;
 use windows::core::PCWSTR;
-use windows::Win32::Foundation::{self, HANDLE, HWND, MAX_PATH, WIN32_ERROR};
+use windows::Win32::Foundation::{self, MAX_PATH, WIN32_ERROR};
 use windows::Win32::UI::Shell;
 
 pub fn saved_games_path() -> PathBuf {
     let path = unsafe {
         // Rematered version uses this call
-        Shell::SHGetKnownFolderPath(
-            &Shell::FOLDERID_SavedGames,
-            Shell::KF_FLAG_DEFAULT,
-            HANDLE::default(),
-        )
-        .map_or_else(|_| String::new(), |e| e.to_string().unwrap_or_default())
+        Shell::SHGetKnownFolderPath(&Shell::FOLDERID_SavedGames, Shell::KF_FLAG_DEFAULT, None)
+            .map_or_else(|_| String::new(), |e| e.to_string().unwrap_or_default())
     };
     if path.is_empty() {
         let dirs = directories::UserDirs::new();
@@ -30,9 +26,9 @@ pub fn my_documents_path() -> PathBuf {
     unsafe {
         // Steam 2013 version uses this obsolete implementation instead of SHGetKnownFolderPath
         Shell::SHGetFolderPathW(
-            HWND::default(),
+            None,
             (Shell::CSIDL_MYDOCUMENTS | Shell::CSIDL_FLAG_CREATE) as i32,
-            HANDLE::default(),
+            None,
             0,
             &mut path,
         )
@@ -49,9 +45,8 @@ pub fn my_documents_path() -> PathBuf {
 
 pub fn run_as(program: &String, parameters: &String) -> Result<u32, std::io::Error> {
     let hinstance = unsafe {
-        let hwnd: HWND = std::mem::zeroed();
         windows::Win32::UI::Shell::ShellExecuteW(
-            hwnd,
+            None,
             PCWSTR::from_raw(
                 OsStr::new("runas\0")
                     .encode_wide()
