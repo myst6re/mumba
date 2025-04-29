@@ -38,11 +38,7 @@ impl SharedMemory {
         if !is_cw {
             return None; // For now we only try to communicate with the game if it's the CW
         }
-        let save_dir = save_path_2013();
-
-        if save_dir.is_none() {
-            return None;
-        }
+        let save_dir = save_path_2013()?;
 
         match Self::create_shared_memory(is_cw) {
             (
@@ -57,14 +53,24 @@ impl SharedMemory {
                 game_did,
                 launcher_can,
                 launcher_did,
-                save_dir: save_dir.unwrap(),
+                save_dir,
                 is_cw,
             }),
             (_, _, _, _, _) => None,
         }
     }
 
+    pub fn end(&self) {
+        if self.is_cw {
+            info!("Updating metadata");
+            if let Err(e) = update_metadata(&self.save_dir, 3, 0) {
+                error!("Unable to save metadata: {}", e)
+            }
+        }
+    }
+
     fn create_semaphore(key: String) -> Option<HANDLE> {
+        debug!("Create semaphore {}", key);
         unsafe {
             match CreateSemaphoreA(None, 0, 1, PCSTR::from_raw(key.as_ptr())) {
                 Ok(handle) => Some(handle),
@@ -116,6 +122,7 @@ impl SharedMemory {
     }
 
     fn read_command_from_game(&self, duration_ms: u32) -> Option<u32> {
+        debug!("Wait for command from game...");
         unsafe {
             match WaitForSingleObject(self.launcher_can, duration_ms) {
                 WAIT_OBJECT_0 => (),
@@ -146,6 +153,7 @@ impl SharedMemory {
     }
 
     fn send_command_to_game(&self, command: u32, param: Option<&OsStr>) {
+        debug!("Send command to game...");
         unsafe {
             let data = self.map_view.Value.byte_add(0x10000) as *mut u32;
             let data_param = data.byte_add(4);
@@ -155,10 +163,10 @@ impl SharedMemory {
             match param {
                 Some(str) => {
                     let param: Vec<u16> = str.encode_wide().collect();
-                    *data = param.len() as u32;
+                    *data_param = param.len() as u32;
                     std::ptr::copy_nonoverlapping(
                         param.as_ptr(),
-                        data_param as *mut u16,
+                        data.byte_add(8) as *mut u16,
                         param.len(),
                     );
                     info!(
@@ -184,7 +192,7 @@ impl SharedMemory {
         }
 
         let dir = self.save_dir.clone();
-        self.send_command_to_game(USER_SAVE_DIR, Some(&dir.as_os_str()));
+        self.send_command_to_game(USER_SAVE_DIR, Some(dir.as_os_str()));
         self.send_command_to_game(END_USER_INFO, None);
 
         loop {
@@ -193,7 +201,9 @@ impl SharedMemory {
             }
             if self.is_cw && self.read_command_from_game(700) == Some(GAME_METRICS) {
                 info!("Received GAME_METRICS, updating metadata");
-                update_metadata(&self.save_dir, 3, 0);
+                if let Err(e) = update_metadata(&self.save_dir, 3, 0) {
+                    error!("Unable to save metadata: {}", e)
+                }
             }
         }
     }

@@ -1,15 +1,14 @@
 use log::info;
-use md5::{Digest, Md5};
 use quick_xml::events::{BytesText, Event};
 use quick_xml::reader::Reader;
 use quick_xml::writer::Writer;
 use std::fs::File;
 use std::io::{Cursor, Read, Write};
-use std::path::PathBuf;
+use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub fn update_metadata<'a>(
-    save_dir: &PathBuf,
+pub fn update_metadata(
+    save_dir: &Path,
     slot: u8,
     num: u8,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -32,11 +31,12 @@ pub fn update_metadata<'a>(
         .duration_since(UNIX_EPOCH)?
         .as_millis()
         .to_string();
-    let mut hasher = Md5::new();
     let save_data = get_save_data(save_dir, slot, num)?;
-    hasher.update([save_data.as_slice(), user_id.as_bytes()].concat());
-    let result = hasher.finalize();
-    let signature = String::from_utf8(result[..].to_vec()).unwrap();
+    let signature = format!(
+        "{:x}",
+        md5::compute([save_data.as_slice(), user_id.as_bytes()].concat())
+    );
+    let signature = signature.as_str();
 
     loop {
         match reader.read_event_into(&mut buf) {
@@ -99,7 +99,7 @@ pub fn update_metadata<'a>(
                             .is_ok())
                     } else if is_signature_element {
                         assert!(writer
-                            .write_event(Event::Text(BytesText::new(&signature)))
+                            .write_event(Event::Text(BytesText::new(signature)))
                             .is_ok())
                     } else {
                         assert!(writer.write_event(Event::Text(e.borrow())).is_ok())
@@ -115,11 +115,11 @@ pub fn update_metadata<'a>(
     }
     info!("Updating {}", metadata_path.to_string_lossy());
     let mut file = File::create(&metadata_path)?;
-    file.write(writer.into_inner().into_inner().as_slice())?;
+    file.write_all(writer.into_inner().into_inner().as_slice())?;
     Ok(())
 }
 
-fn get_save_data(save_dir: &PathBuf, slot: u8, num: u8) -> std::io::Result<Vec<u8>> {
+fn get_save_data(save_dir: &Path, slot: u8, num: u8) -> std::io::Result<Vec<u8>> {
     let file_name = if slot > 2 {
         String::from("chocorpg.ff8")
     } else {
@@ -131,7 +131,7 @@ fn get_save_data(save_dir: &PathBuf, slot: u8, num: u8) -> std::io::Result<Vec<u
     Ok(data)
 }
 
-fn create_metadata(metadata_path: &PathBuf) -> std::io::Result<()> {
+fn create_metadata(metadata_path: &Path) -> std::io::Result<()> {
     let contents = r#"
 <?xml version="1.0" encoding="UTF-8"?>
 <gamestatus>
