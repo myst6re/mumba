@@ -1,5 +1,6 @@
 # UI
 window-title = The Yellow Mumba
+click-for-logs = " (click here for more informations)"
 
 ## Home
 check-update = Check for updates

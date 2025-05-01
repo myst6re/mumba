@@ -22,8 +22,8 @@ fn pos_to_language(language: i32) -> String {
 }
 
 fn main() -> Result<(), slint::PlatformError> {
-    let env = Env::new().unwrap();
-    mumba_core::mumba_log::init(&env, "mumba.log");
+    let env = Env::new("mumba").unwrap();
+    mumba_core::mumba_log::init(&env.log_path);
     let config = Config::from_file(&env.config_path).unwrap_or_else(|_| Config::new());
     let language = config.language().ok();
     let i18n = I18n::new(language.clone());
@@ -157,6 +157,11 @@ fn main() -> Result<(), slint::PlatformError> {
                 .unwrap()
             }
         });
+
+    ui.global::<Installations>().on_open_logs({
+        let tx = worker.tx.clone();
+        move || tx.send(worker::Message::OpenLogs).unwrap()
+    });
 
     ui.run()?;
 

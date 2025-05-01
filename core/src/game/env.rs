@@ -7,11 +7,12 @@ pub struct Env {
     pub config_path: PathBuf,
     pub mumba_dir: PathBuf,
     pub ffnx_dir: PathBuf,
+    pub log_path: PathBuf,
 }
 
 impl Env {
-    pub fn new() -> Result<Self, std::io::Error> {
-        let mut exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("./"));
+    pub fn new(program_name: &str) -> Result<Self, std::io::Error> {
+        let mut exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("./mumba"));
         exe_path.pop(); // Remove exe filename
 
         let cache_fallback = exe_path.clone();
@@ -20,6 +21,7 @@ impl Env {
 
         let config_path = config_fallback.join("mumba.toml");
         if config_path.exists() {
+            let log_path = data_fallback.join(format!("{}.log", program_name));
             // Local installation
             return Ok(Self {
                 cache_dir: cache_fallback,
@@ -27,6 +29,7 @@ impl Env {
                 config_path,
                 mumba_dir: exe_path.clone(),
                 ffnx_dir: exe_path,
+                log_path,
             });
         }
 
@@ -49,6 +52,7 @@ impl Env {
         let data_dir = Self::create_dir(&data_dir)
             .and(Ok(data_dir))
             .or_else(|_| Self::create_dir(&data_fallback).and(Ok(data_fallback)))?;
+        let log_path = data_dir.join(format!("{}.log", program_name));
         let config_dir = Self::create_dir(&config_dir)
             .and(Ok(config_dir))
             .or_else(|_| Self::create_dir(&config_fallback).and(Ok(config_fallback)))?;
@@ -60,6 +64,7 @@ impl Env {
             config_path: config_dir.join("mumba.toml"),
             mumba_dir: exe_path,
             ffnx_dir,
+            log_path,
         })
     }
 

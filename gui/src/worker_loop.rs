@@ -78,17 +78,17 @@ impl WorkerLoop {
         for received in &self.rx {
             match received {
                 Message::Setup(exe_path, update_chan, language) => {
-                    self.ui.set_game_ready(false);
                     update_channel = update_chan.clone();
                     installation = match self.setup(&exe_path, update_chan, language) {
                         Some(inst) => inst,
-                        None => break,
+                        None => continue,
                     };
+                    self.ui.set_game_ready(false);
                     ffnx_installation = match self
                         .retrieve_ffnx_installation(&mut installation, &mut update_channel)
                     {
                         Some(ffnx_inst) => ffnx_inst,
-                        None => return, // Exit
+                        None => continue,
                     };
                     self.ui.set_game_ready(true);
                 }
@@ -218,8 +218,13 @@ impl WorkerLoop {
                         )
                     }
                 }
+                Message::OpenLogs => {
+                    if let Err(e) = opener::open(self.env.log_path.clone()) {
+                        error!("Cannot open {}: {}", self.env.log_path.to_string_lossy(), e)
+                    }
+                }
                 Message::CancelConfigureFfnx => ffnx_config.clear(),
-                Message::Quit => break,
+                Message::Quit => return,
             };
             self.ui.clear_task_text();
         }

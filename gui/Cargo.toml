@@ -21,6 +21,7 @@ slint = { version = "1.11", default-features = false, features = [
 ] }
 thiserror = "2"
 rfd = "0"
+opener = "=0.7.2"
 
 [target.'cfg(windows)'.dependencies]
 raw-window-handle = "0.6"

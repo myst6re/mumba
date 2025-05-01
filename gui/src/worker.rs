@@ -18,6 +18,7 @@ pub enum Message {
     SetFfnxConfigInt(slint::SharedString, i64),
     SetFfnxConfigString(slint::SharedString, slint::SharedString),
     SetFfnxConfigCurrentRefreshRate(i32, i32),
+    OpenLogs,
     UpdateGame,
     Quit,
 }
@@ -33,7 +34,7 @@ impl Worker {
         let thread = std::thread::spawn({
             let handle_weak = ui.as_weak();
             move || {
-                let env = match mumba_core::game::env::Env::new() {
+                let env = match mumba_core::game::env::Env::new("mumba") {
                     Ok(env) => env,
                     Err(e) => {
                         error!("Cannot initialize environment: {}", e);

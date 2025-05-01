@@ -20,8 +20,8 @@ fn cli() -> Command {
 }
 
 fn main() -> std::io::Result<()> {
-    let env = Env::new()?;
-    mumba_core::mumba_log::init(&env, "mmb.log");
+    let env = Env::new("mmb")?;
+    mumba_core::mumba_log::init(&env.log_path);
 
     let matches = cli().get_matches();
 
