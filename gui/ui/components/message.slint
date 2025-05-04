@@ -9,7 +9,7 @@ export component Message inherits Rectangle {
     TouchArea {
         HorizontalBox {
             rect2 := Text {
-                text: Installations.task-text + (Installations.task-text.is-empty ? "" : Fluent.get-message("click-for-logs"));
+                text: Installations.task-text + (Installations.task-text.is-empty || Installations.task-text-type == TextLevel.info ? "" : " " + Fluent.get-message("click-for-logs"));
                 horizontal-alignment: left;
                 font-weight: 700;
                 font-size: 1.1rem;

@@ -1,6 +1,6 @@
 # UI
 window-title = Le Mumba jaune
-click-for-logs = " (cliquez ici pour en savoir plus)"
+click-for-logs = (cliquez ici pour en savoir plus)
 
 ## Home
 check-update = Rechercher une mise à jour
