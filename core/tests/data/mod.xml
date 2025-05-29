@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ModInfo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <ID>foobar-id</ID>
+  <Name>Fake mod</Name>
+  <Category>Media</Category>
+  <Author>myst6re</Author>
+  <Version>1.00</Version>
+  <Description>My super mod</Description>
+  <ContainsMusic>false</ContainsMusic>
+  <ReleaseDate>2020-10-19T22:12:35.8393223+02:00</ReleaseDate>
+  <Link>https://www.example.org</Link>
+  <PreviewFile>preview.jpg</PreviewFile>
+  <FFNxConfig>
+    <use_external_music>true</use_external_music>
+    <external_music_ext><ext>minipsf</ext><ext>wav</ext></external_music_ext>
+  </FFNxConfig>
+  <ModFolder Folder="data/foo/bar" ActiveWhen="1" />
+  <UnknownTag />
+  <Conditional Folder="sewer">
+    <RuntimeVar Var="Short:0xCC15D0:2" Values="0xD5,0x160" />
+    <Not ApplyTo="apply"><Or><RuntimeVar Var="Test" Values="Value" /></Or></Not>
+  </Conditional>
+  <Conditional Folder="foobar">
+  </Conditional>
+  <ConfigOption>
+    <Type>Bool</Type>
+    <Default>0</Default>
+    <ID>outfits</ID>
+    <Name>Mod name</Name>
+    <Description>Description</Description>
+    <Option Value="0" Name="" PreviewFile="preview\hollyoff.jpg" />
+  </ConfigOption>
+  <ModFolder Folder="MyModSubFolder1">
+    <ActiveWhen>
+      <Not>
+        <And>
+          <Option>MySetting = 1</Option>
+        </And>
+      </Not>
+    </ActiveWhen>
+  </ModFolder>
+  <ModFolder Folder="MyModSubFolder2">
+    <ActiveWhen>
+      <Or>
+        <Option>MySetting = 2</Option>
+      </Or>
+    </ActiveWhen>
+  </ModFolder>
+  <Compatibility>
+    <Require ModID="0000-000">Name of Other Mod</Require>
+    <Setting>
+      <MyID>MySettingVariable</MyID>
+      <MyValue>1</MyValue>
+      <ModID>0000-003</ModID>
+      <TheirID>Their id</TheirID>
+      <Require>0</Require>
+    </Setting>
+  </Compatibility>
+  <OrderConstraints>
+    <After>0000-001</After>
+    <Before>0000-002</Before>
+    <Before>0000-003</Before>
+  </OrderConstraints>
+</ModInfo>

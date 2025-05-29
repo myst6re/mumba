@@ -7,6 +7,9 @@ on:
     branches: [ master ]
   create: null
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   main_build:
     name: ${{ matrix.name }}
@@ -38,8 +41,8 @@ jobs:
     - name: Install linux dependencies
       if: runner.os == 'Linux'
       run: |
-        sudo apt-get update -qqq
-        sudo apt-get install -y -qqq mingw-w64 liblzma-dev dpkg-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libfontconfig-dev libssl-dev clang libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev libasound2-dev pkg-config qtbase5-dev libqt5svg5-dev
+        sudo apt-get update -qqq || true
+        sudo apt-get install -y -qqq -m mingw-w64 liblzma-dev dpkg-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libfontconfig-dev libssl-dev clang libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev libasound2-dev pkg-config qtbase5-dev libqt5svg5-dev || true
 
     - run: rustup toolchain install stable --profile minimal
 

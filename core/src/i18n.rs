@@ -21,7 +21,11 @@ impl I18n {
         let fallback_lang = langid!("en-US");
         let fallback = Self::find_path(&fallback_lang);
 
-        info!("Fluent file path: {}", path.as_ref().to_string_lossy());
+        info!(
+            "Fluent file path: {} (fallback: {})",
+            path.as_ref().to_string_lossy(),
+            fallback.to_string_lossy()
+        );
 
         let resource = Self::open_resource(path);
         let resource_fallback = Self::open_resource(&fallback);

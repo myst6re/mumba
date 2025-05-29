@@ -76,7 +76,7 @@ fn it_creates_a_valid_cfg() {
 fn it_parses_a_valid_cfg() {
     assert_eq!(
         InputConfig::from_file(
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/config/input.cfg")
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/input.cfg")
         )
         .unwrap()
         .to_string(),

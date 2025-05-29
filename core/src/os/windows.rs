@@ -100,10 +100,7 @@ pub fn run_as(program: &String, parameters: &String) -> Result<u32, std::io::Err
             std::io::ErrorKind::WouldBlock,
             "DDE busy",
         )),
-        WIN32_ERROR(Shell::SE_ERR_DDEFAIL) => Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "DDE transaction fail",
-        )),
+        WIN32_ERROR(Shell::SE_ERR_DDEFAIL) => Err(std::io::Error::other("DDE transaction fail")),
         WIN32_ERROR(Shell::SE_ERR_DDETIMEOUT) => Err(std::io::Error::new(
             std::io::ErrorKind::TimedOut,
             "DDE timeout",
@@ -112,18 +109,12 @@ pub fn run_as(program: &String, parameters: &String) -> Result<u32, std::io::Err
             std::io::ErrorKind::PermissionDenied,
             "DLL not found",
         )),
-        WIN32_ERROR(Shell::SE_ERR_NOASSOC) => Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "No association",
-        )),
+        WIN32_ERROR(Shell::SE_ERR_NOASSOC) => Err(std::io::Error::other("No association")),
         WIN32_ERROR(Shell::SE_ERR_OOM) => Err(std::io::Error::new(
             std::io::ErrorKind::OutOfMemory,
             "Out of memory",
         )),
-        WIN32_ERROR(Shell::SE_ERR_SHARE) => Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Sharing violation",
-        )),
+        WIN32_ERROR(Shell::SE_ERR_SHARE) => Err(std::io::Error::other("Sharing violation")),
         WIN32_ERROR(num) if num > 32 => Ok(num - 32),
         WIN32_ERROR(num) => Err(std::io::Error::new(
             std::io::ErrorKind::Unsupported,

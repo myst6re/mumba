@@ -2,10 +2,11 @@
 
 use std::path::Path;
 slint::include_modules!();
-use log::error;
+use log::{error, info};
 use mumba_core::config::{Config, UpdateChannel};
 use mumba_core::game::env::Env;
 use mumba_core::i18n::I18n;
+use mumba_core::iro::archive::unpack_mod_xml;
 
 pub mod lazy_ffnx_config;
 pub mod ui_helper;
@@ -27,6 +28,15 @@ fn main() -> Result<(), slint::PlatformError> {
     let config = Config::from_file(&env.config_path).unwrap_or_else(|_| Config::new());
     let language = config.language().ok();
     let i18n = I18n::new(language.clone());
+
+    let mod_info = unpack_mod_xml(Path::new("E:\\Desktop\\FFNx\\FFNx-FF8Music-v1.05.iroj"))
+        .unwrap()
+        .unwrap();
+    info!(
+        "mod_info author {} {:?}",
+        mod_info.author,
+        mod_info.mod_folder.get(0).unwrap().active_when_compat
+    );
 
     let ui = AppWindow::new()?;
 

@@ -5,7 +5,7 @@ Modern and fast FFNx configurator
 Features:
 - Auto install and update FFNx
 - Configuration interface for FFNx
-- The game can be started without the launcher graphical interface (useful for Steam Deck)
+- The game can be started without the launcher graphical interface (useful for Big Picture mode)
 - Game installation is not modified, except the game launcher on Steam
 - Compatible with the original PC release (2000) and the Steam rerelease (2013)
 - Windows and Linux support

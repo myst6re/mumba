@@ -9,6 +9,8 @@ pub mod game;
 pub mod github;
 #[cfg(feature = "i18n")]
 pub mod i18n;
+#[cfg(feature = "iro")]
+pub mod iro;
 pub mod mumba_log;
 pub mod os;
 #[cfg(feature = "pe")]
