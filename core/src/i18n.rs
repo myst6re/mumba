@@ -22,7 +22,7 @@ impl I18n {
         let fallback = Self::find_path(&fallback_lang);
 
         info!(
-            "Fluent file path: {} (fallback: {})",
+            "Fluent file path: \"{}\" (fallback: \"{}\")",
             path.as_ref().to_string_lossy(),
             fallback.to_string_lossy()
         );

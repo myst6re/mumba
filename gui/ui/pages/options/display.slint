@@ -1,4 +1,4 @@
-import { Switch, ScrollView, SpinBox, ComboBox, GroupBox, Button, Palette, StandardButton, HorizontalBox, GridBox, LineEdit, VerticalBox } from "std-widgets.slint";
+import { Switch, ScrollView, SpinBox, ComboBox, GroupBox, Button, Palette, HorizontalBox, GridBox, LineEdit, VerticalBox } from "std-widgets.slint";
 import { Installations, Fluent } from "../../global.slint";
 
 export component OptionsDisplayPage inherits VerticalLayout {
@@ -6,6 +6,7 @@ export component OptionsDisplayPage inherits VerticalLayout {
         Text {
             text: Fluent.get-message("options-page-display-title");
             font-size: 20px;
+            wrap: word-wrap;
         }
     }
 

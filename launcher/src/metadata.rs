@@ -14,7 +14,7 @@ pub fn update_metadata(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let metadata_path = save_dir.join("metadata.xml");
     if !metadata_path.exists() {
-        info!("Creating {}", metadata_path.to_string_lossy());
+        info!("Creating \"{}\"", metadata_path.to_string_lossy());
         create_metadata(&metadata_path)?
     }
     let user_id = &save_dir.file_name().unwrap().to_string_lossy()[5..];
@@ -110,10 +110,10 @@ pub fn update_metadata(
             }
             Ok(Event::Eof) => break,
             Ok(e) => assert!(writer.write_event(e.borrow()).is_ok()),
-            Err(e) => panic!("Error at position {}: {:?}", reader.error_position(), e),
+            Err(e) => panic!("Error at position {}: {}", reader.error_position(), e),
         }
     }
-    info!("Updating {}", metadata_path.to_string_lossy());
+    info!("Updating \"{}\"", metadata_path.to_string_lossy());
     let mut file = File::create(&metadata_path)?;
     file.write_all(writer.into_inner().into_inner().as_slice())?;
     Ok(())

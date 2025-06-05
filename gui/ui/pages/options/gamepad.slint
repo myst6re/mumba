@@ -1,4 +1,4 @@
-import { Switch, ScrollView, SpinBox, ComboBox, GroupBox, Button, Palette, StandardButton, HorizontalBox, GridBox, LineEdit, VerticalBox } from "std-widgets.slint";
+import { Switch, ScrollView, SpinBox, ComboBox, GroupBox, Button, Palette, HorizontalBox, GridBox, LineEdit, VerticalBox } from "std-widgets.slint";
 import { Installations, Fluent } from "../../global.slint";
 
 export component OptionsGamepadPage inherits VerticalLayout {
@@ -6,6 +6,7 @@ export component OptionsGamepadPage inherits VerticalLayout {
         Text {
             text: Fluent.get-message("options-page-gamepad-title");
             font-size: 20px;
+            wrap: word-wrap;
         }
     }
 

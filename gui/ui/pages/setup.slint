@@ -1,4 +1,4 @@
-import { GroupBox, Palette, Button, StandardButton, HorizontalBox, LineEdit, VerticalBox, ComboBox } from "std-widgets.slint";
+import { GroupBox, Palette, Button, HorizontalBox, LineEdit, VerticalBox, ComboBox } from "std-widgets.slint";
 import { Installations, Fluent } from "../global.slint";
 import { Message } from "../components/message.slint";
 
@@ -10,6 +10,7 @@ export component SetupPage inherits VerticalLayout {
             Text {
                 text: Fluent.get-message("setup-page-title");
                 font-size: 20px;
+                wrap: word-wrap;
             }
             GroupBox {
                 title: Fluent.get-message("config-group-ff8-exe-path");
@@ -74,6 +75,7 @@ export component SetupPage inherits VerticalLayout {
 
                     if root.show-restart-message : Text {
                         text: Fluent.get-message("config-language-must-restart");
+                        wrap: word-wrap;
                     }
                 }
             }

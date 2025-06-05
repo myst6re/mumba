@@ -5,6 +5,7 @@ use thiserror::Error;
 use toml_edit::DocumentMut;
 
 const CFG_EXE_PATH: &str = "exe_path";
+const CFG_DATA_PATH: &str = "data_path";
 const CFG_UPDATE_CHANNEL: &str = "update_channel";
 const CFG_LANGUAGE: &str = "language";
 
@@ -59,6 +60,21 @@ impl Config {
         if let Some(exe_path) = installation.exe_path().to_str() {
             self.inner[CFG_EXE_PATH] = toml_edit::Item::Value(exe_path.into())
         }
+    }
+
+    pub fn data_path(&self) -> Result<Option<String>, toml::Error> {
+        let key = CFG_DATA_PATH;
+        let data_path = toml::get_string(self.root(), key, "")?;
+        if data_path.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(String::from(data_path)))
+        }
+    }
+
+    pub fn set_data_path(&mut self, data_path: &Path) {
+        self.inner[CFG_DATA_PATH] =
+            toml_edit::Item::Value(data_path.to_string_lossy().into_owned().into())
     }
 
     pub fn update_channel(&self) -> Result<UpdateChannel, toml::Error> {

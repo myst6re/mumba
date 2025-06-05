@@ -33,6 +33,14 @@ pub struct SharedMemory {
     is_cw: bool,
 }
 
+type SharedMemoryTuple = (
+    Option<MEMORY_MAPPED_VIEW_ADDRESS>,
+    Option<HANDLE>,
+    Option<HANDLE>,
+    Option<HANDLE>,
+    Option<HANDLE>,
+);
+
 impl SharedMemory {
     pub fn new(is_cw: bool) -> Option<Self> {
         if !is_cw {
@@ -82,15 +90,7 @@ impl SharedMemory {
         }
     }
 
-    fn create_shared_memory(
-        is_cw: bool,
-    ) -> (
-        Option<MEMORY_MAPPED_VIEW_ADDRESS>,
-        Option<HANDLE>,
-        Option<HANDLE>,
-        Option<HANDLE>,
-        Option<HANDLE>,
-    ) {
+    fn create_shared_memory(is_cw: bool) -> SharedMemoryTuple {
         let key = if is_cw { "choco" } else { "ff8" };
 
         info!("Create file mapping {}", key);
@@ -170,7 +170,7 @@ impl SharedMemory {
                         param.len(),
                     );
                     info!(
-                        "Send command {} with param {}",
+                        "Send command {} with param \"{}\"",
                         command,
                         str.to_string_lossy()
                     )

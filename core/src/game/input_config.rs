@@ -27,6 +27,7 @@ impl InputConfig {
         }
     }
 
+    #[allow(clippy::manual_range_contains)]
     /// Game implementation:
     ///  - search for the first non-space character and then for the first space.
     ///  - Do atoi() on the characters between and store the number 1

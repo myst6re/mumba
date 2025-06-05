@@ -2,11 +2,10 @@
 
 use std::path::Path;
 slint::include_modules!();
-use log::{error, info};
+use log::error;
 use mumba_core::config::{Config, UpdateChannel};
 use mumba_core::game::env::Env;
 use mumba_core::i18n::I18n;
-use mumba_core::iro::archive::unpack_mod_xml;
 
 pub mod lazy_ffnx_config;
 pub mod ui_helper;
@@ -28,15 +27,6 @@ fn main() -> Result<(), slint::PlatformError> {
     let config = Config::from_file(&env.config_path).unwrap_or_else(|_| Config::new());
     let language = config.language().ok();
     let i18n = I18n::new(language.clone());
-
-    let mod_info = unpack_mod_xml(Path::new("E:\\Desktop\\FFNx\\FFNx-FF8Music-v1.05.iroj"))
-        .unwrap()
-        .unwrap();
-    info!(
-        "mod_info author {} {:?}",
-        mod_info.author,
-        mod_info.mod_folder.get(0).unwrap().active_when_compat
-    );
 
     let ui = AppWindow::new()?;
 
@@ -82,6 +72,15 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
 
+    ui.global::<Installations>().on_set_ffnx_path({
+        let tx = worker.tx.clone();
+        move |path| {
+            if let Err(e) = tx.send(worker::Message::SetFfnxPath(path)) {
+                error!("Error: {}", e)
+            }
+        }
+    });
+
     ui.global::<Installations>().on_launch_game({
         let tx = worker.tx.clone();
         move || tx.send(worker::Message::LaunchGame).unwrap()
@@ -96,21 +95,39 @@ fn main() -> Result<(), slint::PlatformError> {
         let ui = ui.as_weak();
         move |old_path| {
             let mut dialog = rfd::FileDialog::new();
-            dialog = dialog.set_title("Select a directory");
+            dialog = dialog.set_title("Select a file");
             dialog = dialog.add_filter("EXE files", &["exe"]);
             dialog = dialog.set_parent(&ui.unwrap().window().window_handle());
+            let old_ppath = Path::new(old_path.as_str());
 
-            if !old_path.is_empty() {
-                dialog = dialog.set_directory(old_path.as_str());
-                dialog = dialog.set_file_name(
-                    Path::new(&old_path.as_str())
-                        .file_name()
-                        .unwrap_or_default()
-                        .to_string_lossy(),
-                );
+            if old_ppath.exists() {
+                dialog = dialog.set_directory(old_ppath);
+                dialog = dialog
+                    .set_file_name(old_ppath.file_name().unwrap_or_default().to_string_lossy());
             }
 
             match dialog.pick_file() {
+                Some(new_path) => new_path.to_string_lossy().to_string().into(),
+                None => old_path,
+            }
+        }
+    });
+
+    ui.global::<Installations>().on_browse_ffnx({
+        let ui = ui.as_weak();
+        move |old_path| {
+            let mut dialog = rfd::FileDialog::new();
+            dialog = dialog.set_title("Select a directory");
+            dialog = dialog.set_parent(&ui.unwrap().window().window_handle());
+            let old_ppath = Path::new(old_path.as_str());
+
+            if old_ppath.exists() {
+                dialog = dialog.set_directory(old_ppath);
+            } else {
+                dialog = dialog.set_directory(env.ffnx_dir.as_path());
+            }
+
+            match dialog.pick_folder() {
                 Some(new_path) => new_path.to_string_lossy().to_string().into(),
                 None => old_path,
             }

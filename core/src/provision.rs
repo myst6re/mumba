@@ -13,56 +13,39 @@ use thiserror::Error;
 use zip_extensions::*;
 
 #[derive(Error, Debug)]
-#[error(transparent)]
-pub struct ErrorBox(Box<Error>);
-
-impl<E> From<E> for ErrorBox
-where
-    Error: From<E>,
-{
-    fn from(err: E) -> Self {
-        ErrorBox(Box::new(Error::from(err)))
-    }
-}
-
-#[derive(Error, Debug)]
 pub enum Error {
     #[cfg(feature = "network")]
     #[error("HTTP Error: {0}")]
-    HttpError(#[from] ureq::Error),
+    HttpError(ureq::Error),
     #[error("I/O Error: {0}")]
     IoError(#[from] std::io::Error),
     #[cfg(feature = "zip")]
     #[error("Zip Error: {0}")]
-    ZipError(#[from] zip::result::ZipError),
+    ZipError(zip::result::ZipError),
 }
 
 #[cfg(feature = "network")]
-#[derive(Error, Debug)]
-#[error(transparent)]
-pub struct ToJsonErrorBox(Box<ToJsonError>);
+impl From<ureq::Error> for Error {
+    fn from(err: ureq::Error) -> Self {
+        match err {
+            ureq::Error::Io(io) => Error::IoError(io),
+            e => Error::HttpError(e),
+        }
+    }
+}
 
-#[cfg(feature = "network")]
-impl<E> From<E> for ToJsonErrorBox
-where
-    ToJsonError: From<E>,
-{
-    fn from(err: E) -> Self {
-        ToJsonErrorBox(Box::new(ToJsonError::from(err)))
+#[cfg(feature = "zip")]
+impl From<zip::result::ZipError> for Error {
+    fn from(err: zip::result::ZipError) -> Self {
+        match err {
+            zip::result::ZipError::Io(io) => Error::IoError(io),
+            e => Error::ZipError(e),
+        }
     }
 }
 
 #[cfg(feature = "network")]
-#[derive(Error, Debug)]
-pub enum ToJsonError {
-    #[error("HTTP Error downloading JSON format: {0}")]
-    HttpError(#[from] ureq::Error),
-    #[error("I/O Error downloading JSON format: {0}")]
-    IoError(#[from] std::io::Error),
-}
-
-#[cfg(feature = "network")]
-pub fn get_json<T: DeserializeOwned>(url: &str) -> Result<T, ToJsonErrorBox> {
+pub fn get_json<T: DeserializeOwned>(url: &str) -> Result<T, Error> {
     Ok(ureq::get(url).call()?.body_mut().read_json::<T>()?)
 }
 
@@ -72,16 +55,25 @@ pub fn download_zip(
     local_zip_name: &str,
     target_dir: &PathBuf,
     env: &Env,
-) -> Result<(), ErrorBox> {
+) -> Result<(), Error> {
     let temp_dir = env.cache_dir.as_path();
     let archive_path = temp_dir.join(local_zip_name);
+    info!(
+        "Download file from \"{}\" to \"{}\"",
+        url,
+        archive_path.to_string_lossy()
+    );
     let mut response = ureq::get(url).call()?;
     let mut reader = response.body_mut().as_reader().take(250_000_000);
     let ret = from_reader(&mut reader, &archive_path, target_dir);
+    info!(
+        "Remove temporary file \"{}\"",
+        archive_path.to_string_lossy()
+    );
     match std::fs::remove_file(&archive_path) {
         Ok(ok) => ok,
         Err(e) => warn!(
-            "Cannot remove file {}: {}",
+            "Cannot remove file \"{}\": {}",
             archive_path.to_string_lossy(),
             e
         ),
@@ -125,9 +117,13 @@ fn from_reader<R: Read + ?Sized>(
     reader: &mut R,
     archive_path: &PathBuf,
     target_dir: &PathBuf,
-) -> Result<(), ErrorBox> {
+) -> Result<(), Error> {
     let mut file = File::create(archive_path)?;
-    info!("Create file: \"{}\"", archive_path.to_string_lossy());
     std::io::copy(reader, &mut file)?;
+    info!(
+        "Extract file \"{}\" to \"{}\"",
+        archive_path.to_string_lossy(),
+        target_dir.to_string_lossy()
+    );
     Ok(zip_extract(archive_path, target_dir)?)
 }

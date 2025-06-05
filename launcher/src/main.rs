@@ -39,7 +39,7 @@ fn run() -> std::io::Result<()> {
         None => {
             let config_path = exe_path.join("mumba_path.txt");
             info!(
-                "Build ff8 path from file at {}",
+                "Build ff8 path from file at \"{}\"",
                 config_path.to_string_lossy()
             );
             let path = std::fs::read_to_string(config_path);
@@ -57,7 +57,7 @@ fn run() -> std::io::Result<()> {
 
     if !path.exists() {
         error!(
-            "Path {} does not exist, fallback to the original launcher",
+            "Path \"{}\" does not exist, fallback to the original launcher",
             path.to_string_lossy()
         );
         path = path_fallback(&exe_path);
@@ -69,7 +69,7 @@ fn run() -> std::io::Result<()> {
         None => Path::new("."),
     };
     info!(
-        "Path={} Dir={}",
+        "Path=\"{}\" Dir=\"{}\"",
         &path.to_string_lossy(),
         &dir.to_string_lossy()
     );
@@ -102,10 +102,10 @@ fn run() -> std::io::Result<()> {
         let mut child = command.spawn()?;
         info!("Wait for child process...");
         #[cfg(windows)]
-        shared_memory.map(|sm| {
+        if let Some(sm) = shared_memory {
             sm.wait(&mut child);
             sm.end()
-        });
+        }
         let exit_status = child.wait()?;
         info!("Child process exited with status {}", exit_status);
         Ok(())

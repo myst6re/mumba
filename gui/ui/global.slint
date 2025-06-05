@@ -21,7 +21,7 @@ export global Fluent {
 }
 
 export global Installations {
-    in property <string> game-path;
+    in property <string> ffnx-path;
     in property <string> game-exe-path;
     in property <int> update-channel : 0;
     in property <int> language : 0;
@@ -34,9 +34,11 @@ export global Installations {
     in property <[string]> refresh-rates : [Fluent.get-message("auto")];
 
     pure callback setup(string, int, int);
+    pure callback set-ffnx-path(string);
     pure callback set-current-lang(int);
     pure callback launch-game();
     pure callback launch-cw();
+    pure callback browse-ffnx(string) -> string;
     pure callback browse-game(string) -> string;
     pure callback configure-ffnx();
     pure callback cancel-configure-ffnx();

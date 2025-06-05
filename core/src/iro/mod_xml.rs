@@ -4,24 +4,6 @@ use std::collections::HashMap;
 
 #[derive(Deserialize, Debug, Default, PartialEq)]
 #[serde(rename_all = "PascalCase", default)]
-pub struct ModInfoPartial {
-    // Only metadata
-    #[serde(rename = "ID")]
-    pub id: String,
-    pub name: String,
-    pub category: String,
-    pub author: String,
-    #[serde(default = "mod_info_version_default")]
-    pub version: String,
-    pub description: String,
-    pub release_date: String,
-    pub link: String,
-    pub preview_file: String,
-    pub release_notes: String,
-}
-
-#[derive(Deserialize, Debug, Default, PartialEq)]
-#[serde(rename_all = "PascalCase", default)]
 pub struct ModInfo {
     #[serde(rename = "ID")]
     pub id: String,
@@ -234,12 +216,8 @@ fn mod_info_version_default() -> String {
     String::from("0.00")
 }
 
-pub fn deserialize_mod_xml_partial<R: std::io::BufRead>(
-    reader: R,
-) -> Result<ModInfoPartial, xml::DeError> {
-    xml::from_reader(reader)
-}
-
-pub fn deserialize_mod_xml<R: std::io::BufRead>(reader: R) -> Result<ModInfo, xml::DeError> {
-    xml::from_reader(reader)
+impl ModInfo {
+    pub fn from_reader<R: std::io::BufRead>(reader: R) -> Result<ModInfo, xml::DeError> {
+        xml::from_reader(reader)
+    }
 }

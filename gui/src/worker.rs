@@ -10,6 +10,7 @@ use std::sync::mpsc::{self, Sender};
 #[derive(Debug)]
 pub enum Message {
     Setup(slint::SharedString, UpdateChannel, String),
+    SetFfnxPath(slint::SharedString),
     LaunchGame,
     LaunchCW,
     ConfigureFfnx,

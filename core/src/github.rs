@@ -92,7 +92,7 @@ where
     deserializer.deserialize_seq(visitor)
 }
 
-pub fn find_last_release(repo_name: &str) -> Result<LatestRelease, provision::ToJsonErrorBox> {
+pub fn find_last_release(repo_name: &str) -> Result<LatestRelease, provision::Error> {
     let releases = provision::get_json::<GitHubReleases>(
         format!("https://api.github.com/repos/{}/releases", repo_name).as_str(),
     )?;

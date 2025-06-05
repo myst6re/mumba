@@ -12,6 +12,13 @@ pub struct UiHelper {
     i18n: I18n,
 }
 
+pub enum Page {
+    Home,
+    Setup,
+    Options,
+    SelectDir,
+}
+
 impl UiHelper {
     pub fn new(handle: slint::Weak<AppWindow>, i18n: I18n) -> Self {
         Self { handle, i18n }
@@ -66,6 +73,16 @@ impl UiHelper {
             .unwrap_or_default()
     }
 
+    pub fn set_ffnx_path(&self, text: String) {
+        self.handle
+            .clone()
+            .upgrade_in_event_loop(move |h| {
+                h.global::<Installations>()
+                    .set_ffnx_path(slint::SharedString::from(text))
+            })
+            .unwrap_or_default()
+    }
+
     pub fn set_update_channel(&self, update_channel: UpdateChannel) {
         self.handle
             .clone()
@@ -76,10 +93,12 @@ impl UiHelper {
             .unwrap_or_default()
     }
 
-    pub fn set_current_page(&self, page_id: i32) {
+    pub fn set_current_page(&self, page_id: Page) {
         self.handle
             .clone()
-            .upgrade_in_event_loop(move |h| h.global::<Installations>().set_current_page(page_id))
+            .upgrade_in_event_loop(move |h| {
+                h.global::<Installations>().set_current_page(page_id as i32)
+            })
             .unwrap_or_default()
     }
 

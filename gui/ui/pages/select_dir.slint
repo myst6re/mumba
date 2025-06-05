@@ -1,0 +1,68 @@
+import { GroupBox, Palette, Button, HorizontalBox, LineEdit, VerticalBox } from "std-widgets.slint";
+import { Installations, Fluent } from "../global.slint";
+import { Message } from "../components/message.slint";
+
+export component SelectDirPage inherits VerticalLayout {
+    Rectangle {
+        VerticalBox {
+            Text {
+                text: Fluent.get-message("select-dir-page-title");
+                wrap: word-wrap;
+                font-size: 20px;
+            }
+            Text {
+                text: Fluent.get-message("select-dir-page-description");
+                wrap: word-wrap;
+            }
+            GroupBox {
+                title: Fluent.get-message("config-group-ffnx-path");
+                vertical-stretch: 0;
+
+                HorizontalBox {
+                    padding: 0px;
+                    max-width: 664px;
+
+                    ffnx-path := LineEdit {
+                        text: Installations.ffnx-path;
+                    }
+
+                    Button {
+                        text: Fluent.get-message("button-browse");
+                        clicked => {
+                            ffnx-path.text = Installations.browse-ffnx(ffnx-path.text);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Rectangle {
+        vertical-stretch: 1;
+    }
+    Rectangle {
+        background: Palette.background.darker(0.2);
+
+        HorizontalBox {
+            Message {}
+
+            Button {
+                text: Fluent.get-message("button-cancel");
+                visible: Installations.is-initialized;
+
+                clicked => {
+                    Installations.current-page = 0;
+                }
+            }
+
+            Button {
+                text: Fluent.get-message("button-ok");
+                primary: true;
+
+                clicked => {
+                    Installations.set-ffnx-path(ffnx-path.text);
+                    Installations.current-page = 0;
+                }
+            }
+        }
+    }
+}

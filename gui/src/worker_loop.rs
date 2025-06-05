@@ -1,5 +1,5 @@
 use crate::lazy_ffnx_config::LazyFfnxConfig;
-use crate::ui_helper::UiHelper;
+use crate::ui_helper::{Page, UiHelper};
 use crate::worker::Message;
 use crate::TextLevel;
 use log::{error, info, warn};
@@ -11,13 +11,14 @@ use mumba_core::game::installation;
 use mumba_core::screen::Screen;
 use mumba_core::steam::get_steam_exe;
 use mumba_core::{pe_format, provision, toml};
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::Receiver;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum InstallError {
     #[error("Install error: {0}")]
-    ProvisionError(#[from] provision::ErrorBox),
+    ProvisionError(#[from] provision::Error),
     #[error("Install error: {0}")]
     IOError(#[from] std::io::Error),
     #[error("4GB patch Error: {0}")]
@@ -41,25 +42,40 @@ impl WorkerLoop {
         Config::from_file(&self.env.config_path).unwrap_or_else(|_| Config::new())
     }
 
+    fn save_mumba_config(&self, mumba_config: &Config) -> bool {
+        match mumba_config.save(&self.env.config_path) {
+            Ok(()) => true,
+            Err(e) => {
+                error!("Cannot save configuration to mumba.toml: {}", e);
+                self.ui
+                    .set_task_text(TextLevel::Error, "message-error-cannot-save-mumba-config");
+                false
+            }
+        }
+    }
+
     pub fn run(&mut self) {
-        let (mut installation, mut update_channel) = match self.retrieve_installation() {
+        let (ffnx_path, mut installation, mut update_channel) = match self.retrieve_installation() {
             Some(installation) => installation,
             None => return, // Exit
         };
 
         info!(
-            "Found Game at \"{}\": {:?} {} {:?}",
-            &installation.app_path.to_string_lossy(),
+            "Found Game {:?} {} {:?} at \"{}\"",
             &installation.edition,
             &installation.language,
-            &installation.version
+            &installation.version,
+            &installation.app_path.to_string_lossy()
         );
 
-        let mut ffnx_installation =
-            match self.retrieve_ffnx_installation(&mut installation, &mut update_channel) {
-                Some(ffnx_installation) => ffnx_installation,
-                None => return, // Exit
-            };
+        let mut ffnx_installation = match self.retrieve_ffnx_installation(
+            &ffnx_path,
+            &mut installation,
+            &mut update_channel,
+        ) {
+            Some(ffnx_installation) => ffnx_installation,
+            None => return, // Exit
+        };
 
         self.ui.clear_task_text();
         self.ui.set_mumba_initialized(true);
@@ -84,14 +100,17 @@ impl WorkerLoop {
                         None => continue,
                     };
                     self.ui.set_game_ready(false);
-                    ffnx_installation = match self
-                        .retrieve_ffnx_installation(&mut installation, &mut update_channel)
-                    {
+                    ffnx_installation = match self.retrieve_ffnx_installation(
+                        &ffnx_path,
+                        &mut installation,
+                        &mut update_channel,
+                    ) {
                         Some(ffnx_inst) => ffnx_inst,
                         None => continue,
                     };
                     self.ui.set_game_ready(true);
                 }
+                Message::SetFfnxPath(_ffnx_path) => (),
                 Message::UpdateGame => {
                     let _ = ffnx_config.get();
                     self.upgrade_ffnx(
@@ -218,11 +237,7 @@ impl WorkerLoop {
                         )
                     }
                 }
-                Message::OpenLogs => {
-                    if let Err(e) = opener::open(self.env.log_path.clone()) {
-                        error!("Cannot open {}: {}", self.env.log_path.to_string_lossy(), e)
-                    }
-                }
+                Message::OpenLogs => self.open_logs(),
                 Message::CancelConfigureFfnx => ffnx_config.clear(),
                 Message::Quit => return,
             };
@@ -230,14 +245,22 @@ impl WorkerLoop {
         }
     }
 
-    fn retrieve_installation(&mut self) -> Option<(installation::Installation, UpdateChannel)> {
+    fn open_logs(&self) {
+        if let Err(e) = opener::open(self.env.log_path.clone()) {
+            error!("Cannot open {}: {}", self.env.log_path.to_string_lossy(), e)
+        }
+    }
+
+    fn retrieve_installation(
+        &mut self,
+    ) -> Option<(PathBuf, installation::Installation, UpdateChannel)> {
         let mumba_config = self.open_mumba_config();
         let update_channel = mumba_config
             .update_channel()
             .unwrap_or(UpdateChannel::Stable);
         self.ui.set_update_channel(update_channel.clone());
 
-        match mumba_config.installation() {
+        let ret = match mumba_config.installation() {
             Ok(Some(installation)) => {
                 self.ui
                     .set_game_exe_path(installation.exe_path().to_string_lossy().to_string());
@@ -253,7 +276,7 @@ impl WorkerLoop {
                         }
                         installation::Edition::Remastered => {
                             warn!(
-                                "Ignore remaster at {}, as The Yellow Mumba is not compatible yet",
+                                "Ignore remaster at \"{}\", as The Yellow Mumba is not compatible yet",
                                 inst.app_path.to_string_lossy()
                             )
                         }
@@ -262,6 +285,18 @@ impl WorkerLoop {
 
                 self.go_to_setup_page()
             }
+        };
+
+        if let Some((installation, update_channel)) = ret {
+            let ffnx_path = match mumba_config.data_path() {
+                Ok(Some(ffnx_path)) => PathBuf::from(ffnx_path),
+                Ok(None) | Err(_) => installation.app_path.join("mumba"),
+            };
+            self.ui
+                .set_ffnx_path(ffnx_path.to_string_lossy().to_string());
+            Some((ffnx_path, installation, update_channel))
+        } else {
+            None
         }
     }
 
@@ -293,24 +328,20 @@ impl WorkerLoop {
 
     fn install_game_and_ffnx(
         &self,
+        ffnx_dir: &PathBuf,
         installation: &installation::Installation,
         update_channel: UpdateChannel,
     ) -> Result<FfnxInstallation, InstallError> {
-        let ffnx_dir = if cfg!(unix) {
-            // The game runs inside a fake Windows filesystem
-            installation.app_path.join("mumba")
-        } else {
-            self.env.ffnx_dir.clone()
-        };
-        let ffnx_installation = match FfnxInstallation::from_directory(&ffnx_dir, installation) {
+        let ffnx_installation = match FfnxInstallation::from_directory(ffnx_dir, installation) {
             Some(ffnx_installation) => {
                 info!(
-                    "Found FFNx version {}",
+                    "Found FFNx version {} at \"{}\"",
                     if ffnx_installation.version == "0.0.0" {
                         "dev"
                     } else {
                         ffnx_installation.version.as_str()
-                    }
+                    },
+                    ffnx_installation.path.to_string_lossy()
                 );
                 ffnx_installation
             }
@@ -322,9 +353,9 @@ impl WorkerLoop {
                     &installation.edition,
                     update_channel,
                 );
-                FfnxInstallation::download(url.as_str(), &ffnx_dir, &self.env)?;
+                FfnxInstallation::download(url.as_str(), ffnx_dir, &self.env)?;
                 if let Some(ffnx_installation) =
-                    FfnxInstallation::from_directory(&ffnx_dir, installation)
+                    FfnxInstallation::from_directory(ffnx_dir, installation)
                 {
                     ffnx_installation
                 } else {
@@ -444,7 +475,7 @@ impl WorkerLoop {
         update_channel: UpdateChannel,
         language: String,
     ) -> Option<installation::Installation> {
-        info!("Setup with EXE path {}", exe_path);
+        info!("Setup with EXE path \"{}\"", exe_path);
         match installation::Installation::from_exe_path(exe_path.as_str()) {
             Ok(installation) => {
                 let mut mumba_config = self.open_mumba_config();
@@ -454,26 +485,20 @@ impl WorkerLoop {
                 self.ui
                     .set_game_exe_path(installation.exe_path().to_string_lossy().to_string());
                 self.ui.set_update_channel(update_channel);
-                match mumba_config.save(&self.env.config_path) {
-                    Ok(()) => Some(installation),
-                    Err(e) => {
-                        error!("Cannot save configuration to mumba.toml: {}", e);
-                        self.ui.set_task_text(
-                            TextLevel::Error,
-                            "message-error-cannot-save-mumba-config",
-                        );
-                        None
-                    }
+                if self.save_mumba_config(&mumba_config) {
+                    Some(installation)
+                } else {
+                    None
                 }
             }
             Err(installation::FromExeError::NotFound) => {
-                error!("This file does not exist: {}", exe_path);
+                error!("This file does not exist: \"{}\"", exe_path);
                 self.ui
                     .set_task_text(TextLevel::Error, "message-error-file-not-found");
                 None
             }
             Err(installation::FromExeError::LauncherSelected) => {
-                error!("Select the game exe, not the launcher: {}", exe_path);
+                error!("Select the game exe, not the launcher: \"{}\"", exe_path);
                 self.ui
                     .set_task_text(TextLevel::Error, "message-error-file-not-found");
                 None
@@ -483,7 +508,7 @@ impl WorkerLoop {
 
     fn go_to_setup_page(&self) -> Option<(installation::Installation, UpdateChannel)> {
         loop {
-            self.ui.set_current_page(1);
+            self.ui.set_current_page(Page::Setup);
             match self.rx.recv() {
                 Ok(Message::Setup(exe_path, update_channel, language)) => {
                     match self.setup(&exe_path, update_channel.clone(), language) {
@@ -491,6 +516,36 @@ impl WorkerLoop {
                         None => continue,
                     }
                 }
+                Ok(Message::OpenLogs) => self.open_logs(),
+                Ok(Message::Quit) => return None,
+                msg => {
+                    error!("Received unknown message: {:?}", msg);
+                    self.ui
+                        .set_task_text(TextLevel::Error, "message-fatal-unknown-action");
+                    continue;
+                }
+            }
+        }
+    }
+
+    fn set_ffnx_path(&self, ffnx_path: &Path) -> bool {
+        let mut mumba_config = self.open_mumba_config();
+        mumba_config.set_data_path(ffnx_path);
+        self.save_mumba_config(&mumba_config)
+    }
+
+    fn go_to_select_dir_page(&self) -> Option<String> {
+        loop {
+            self.ui.set_current_page(Page::SelectDir);
+            match self.rx.recv() {
+                Ok(Message::SetFfnxPath(ffnx_path)) => {
+                    let path = PathBuf::from(String::from(ffnx_path.clone()));
+                    if self.set_ffnx_path(&path) {
+                        return Some(String::from(ffnx_path));
+                    }
+                    continue;
+                }
+                Ok(Message::OpenLogs) => self.open_logs(),
                 Ok(Message::Quit) => return None,
                 msg => {
                     error!("Received unknown message: {:?}", msg);
@@ -504,12 +559,33 @@ impl WorkerLoop {
 
     fn retrieve_ffnx_installation(
         &self,
+        ffnx_dir: &Path,
         installation: &mut installation::Installation,
         update_channel: &mut UpdateChannel,
     ) -> Option<FfnxInstallation> {
+        let mut ffnx_dir = ffnx_dir.to_path_buf();
         loop {
-            match self.install_game_and_ffnx(installation, update_channel.clone()) {
-                Ok(ffnx_installation) => return Some(ffnx_installation),
+            match self.install_game_and_ffnx(&ffnx_dir, installation, update_channel.clone()) {
+                Ok(ffnx_installation) => {
+                    let mut mumba_config = self.open_mumba_config();
+                    mumba_config.set_data_path(&ffnx_dir);
+                    self.save_mumba_config(&mumba_config);
+                    return Some(ffnx_installation);
+                }
+                Err(InstallError::ProvisionError(provision::Error::IoError(e)))
+                    if e.kind() == std::io::ErrorKind::PermissionDenied =>
+                {
+                    error!("Installation error: {}", e);
+                    // Fallback to default path
+                    self.ui
+                        .set_ffnx_path(self.env.ffnx_dir.to_string_lossy().to_string());
+
+                    if let Some(ffnx_path) = self.go_to_select_dir_page() {
+                        ffnx_dir = PathBuf::from(ffnx_path);
+                    } else {
+                        return None; // Exit
+                    }
+                }
                 Err(e) => {
                     error!("Installation error: {}", e);
                     self.ui

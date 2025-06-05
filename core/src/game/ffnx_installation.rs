@@ -21,7 +21,7 @@ pub struct FfnxInstallation {
 
 impl FfnxInstallation {
     #[cfg(all(feature = "network", feature = "zip"))]
-    pub fn download(url: &str, target_dir: &PathBuf, env: &Env) -> Result<(), provision::ErrorBox> {
+    pub fn download(url: &str, target_dir: &PathBuf, env: &Env) -> Result<(), provision::Error> {
         provision::download_zip(url, "FFNx.zip", target_dir, env)
     }
 

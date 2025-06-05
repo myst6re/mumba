@@ -382,7 +382,7 @@ impl Installation {
         url: &str,
         target_dir: &PathBuf,
         env: &Env,
-    ) -> Result<(), provision::ErrorBox> {
+    ) -> Result<(), provision::Error> {
         provision::download_zip(url, "FF8-patch.zip", target_dir, env)
     }
 
@@ -430,7 +430,7 @@ impl Installation {
                 Err(_) => (String::new(), String::new()),
             };
         info!(
-            "Launcher product name: {} (path: {})",
+            "Launcher product name: {} (path: \"{}\")",
             launcher_product_name,
             launcher_path.to_string_lossy()
         );

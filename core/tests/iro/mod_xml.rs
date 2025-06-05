@@ -1,7 +1,7 @@
 use mumba_core::iro::mod_xml::{
-    deserialize_mod_xml, ActiveWhen, ActiveWhenValue, CompatEntry, CompatSetting, Compatibility,
-    Conditional, ConditionalFolder, ConditionalValue, ConfigOption, LoadPrograms, ModFolder,
-    ModInfo, OptionValue, OrderConstraints, RuntimeVar,
+    ActiveWhen, ActiveWhenValue, CompatEntry, CompatSetting, Compatibility, Conditional,
+    ConditionalFolder, ConditionalValue, ConfigOption, LoadPrograms, ModFolder, ModInfo,
+    OptionValue, OrderConstraints, RuntimeVar,
 };
 use std::collections::HashMap;
 use std::fs::File;
@@ -16,7 +16,7 @@ fn it_parses_a_valid_mod_xml() {
     );
 
     assert_eq!(
-        deserialize_mod_xml(file).unwrap(),
+        ModInfo::from_reader(file).unwrap(),
         ModInfo {
             id: String::from("foobar-id"),
             name: String::from("Fake mod"),

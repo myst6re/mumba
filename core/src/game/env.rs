@@ -27,8 +27,8 @@ impl Env {
                 cache_dir: cache_fallback,
                 data_dir: data_fallback,
                 config_path,
-                mumba_dir: exe_path.clone(),
-                ffnx_dir: exe_path,
+                ffnx_dir: exe_path.join("game"),
+                mumba_dir: exe_path,
                 log_path,
             });
         }
