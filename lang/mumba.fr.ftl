@@ -13,8 +13,11 @@ button-cancel = Annuler
 button-browse = Parcourir…
 
 setup-page-title = Configuration
+select-dir-page-title = Sélection du dossier des mods
+select-dir-page-description = Le dossier du jeu n'est pas modifiable sans droits administrateurs, veuillez choisir un dossier où Mumba peut écrire les données des mods
 config-group-ff8-exe-path = Chemin vers l'exécutable FF8
 config-group-update-channel = Canal de mise à jour
+config-group-ffnx-path = Chemin des données des mods (doit être modifiable !)
 update-channel-stable = Stable
 update-channel-beta = Beta
 update-channel-alpha = Alpha

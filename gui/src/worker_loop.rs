@@ -127,11 +127,14 @@ impl WorkerLoop {
                     }
                 }
                 Message::LaunchGame => {
-                    ffnx_config.get().set_app_path(if cfg!(unix) {
-                        String::from("..")
-                    } else {
-                        installation.app_path.to_string_lossy().to_string()
-                    });
+                    ffnx_config.get().set_string(
+                        ffnx_config::CFG_APP_PATH,
+                        if cfg!(unix) {
+                            String::from("..")
+                        } else {
+                            installation.app_path.to_string_lossy().to_string()
+                        },
+                    );
                     if let Err(error) = ffnx_config.save() {
                         error!("Cannot save FFNx configuration: {}", error);
                         self.ui.set_task_text(

@@ -14,7 +14,7 @@ button-browse = Browse…
 
 setup-page-title = Setup
 select-dir-page-title = Select mods directory
-select-dir-page-description = The game directory is currently not writable without admin rights, please choose a directory where the application can write mods data
+select-dir-page-description = The game directory is not writable without admin rights, please choose a directory where the application can write mods data
 config-group-ff8-exe-path = FF8 EXE path
 config-group-update-channel = Update Channel
 config-group-ffnx-path = Mods path (must be writable!)

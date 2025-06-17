@@ -45,14 +45,6 @@ impl FfnxConfig {
         self.inner.as_table()
     }
 
-    pub fn app_path(&self) -> Result<&str, toml::Error> {
-        toml::get_string(self.root(), CFG_APP_PATH, "")
-    }
-
-    pub fn set_app_path<V: Into<String>>(&mut self, value: V) {
-        self.set_string(CFG_APP_PATH, value)
-    }
-
     pub fn set_bool<V: Into<bool>>(&mut self, key: &str, value: V) {
         self.inner[key] = toml_edit::value(value.into())
     }
