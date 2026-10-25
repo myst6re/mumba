@@ -4,7 +4,7 @@ use std::path::Path;
 use thiserror::Error;
 use toml_edit::DocumentMut;
 
-const CFG_EXE_PATH: &str = "exe_path";
+const CFG_GAME_APP_PATH: &str = "game_app_path";
 const CFG_DATA_PATH: &str = "data_path";
 const CFG_UPDATE_CHANNEL: &str = "update_channel";
 const CFG_LANGUAGE: &str = "language";
@@ -46,19 +46,17 @@ impl Config {
     }
 
     pub fn installation(&self) -> Result<Option<Installation>, toml::Error> {
-        let key = CFG_EXE_PATH;
-        let exe_path = toml::get_string(self.root(), key, "")?;
-        if exe_path.is_empty() {
+        let key = CFG_GAME_APP_PATH;
+        let app_path = toml::get_string(self.root(), key, "")?;
+        if app_path.is_empty() {
             return Ok(None);
         }
-        Installation::from_exe_path(exe_path)
-            .map(Some)
-            .map_err(|_| toml::Error::DoesNotExist(String::from(key)))
+        Ok(Installation::from_directory(app_path, None))
     }
 
     pub fn set_installation(&mut self, installation: &Installation) {
-        if let Some(exe_path) = installation.exe_path().to_str() {
-            self.inner[CFG_EXE_PATH] = toml_edit::Item::Value(exe_path.into())
+        if let Some(exe_path) = installation.app_path.to_str() {
+            self.inner[CFG_GAME_APP_PATH] = toml_edit::Item::Value(exe_path.into())
         }
     }
 

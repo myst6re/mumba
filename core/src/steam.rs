@@ -1,7 +1,7 @@
 #[cfg(windows)]
 use crate::os::regedit::*;
 #[cfg(feature = "steam")]
-use keyvalues_parser::Vdf;
+use keyvalues_parser;
 #[cfg(feature = "steam")]
 use keyvalues_serde::from_vdf;
 #[cfg(feature = "steam")]
@@ -89,7 +89,7 @@ impl Steam {
             .join("libraryfolders.vdf");
         info!("list_library_folders \"{}\"", asset_path.to_string_lossy());
         let vdf_text = fs::read_to_string(asset_path)?;
-        let mut vdf = Vdf::parse(&vdf_text)?;
+        let mut vdf = keyvalues_parser::parse(&vdf_text)?.into_vdf();
         let obj = vdf.value.get_mut_obj().unwrap();
 
         // Switch all the entries with keys that are an index (0, 1, ...) to `"libraries"`

@@ -14,6 +14,7 @@ export struct FfnxConfig {
     enable_bilinear: bool,
     window_size_x: int,
     window_size_y: int,
+    game_language: int,
 }
 
 export global Fluent {
@@ -22,7 +23,7 @@ export global Fluent {
 
 export global Installations {
     in property <string> ffnx-path;
-    in property <string> game-exe-path;
+    in property <string> game-app-path;
     in property <int> update-channel : 0;
     in property <int> language : 0;
     in-out property <int> current-page : 0;

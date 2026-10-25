@@ -11,12 +11,10 @@ use crate::pe_format;
 use crate::provision;
 use std::path::Path;
 use std::path::PathBuf;
-use std::process::Child;
 
 pub struct FfnxInstallation {
     pub version: String,
     pub path: PathBuf,
-    pub exe_name: String,
 }
 
 impl FfnxInstallation {
@@ -35,23 +33,28 @@ impl FfnxInstallation {
         } else {
             "eax.dll"
         };
-        let ff8_exe_name = if matches!(installation.edition, Edition::Standard) {
-            // Rename exe to prevent Windows Compatibility patches for 2000 edition
-            "FF8_Mumba.exe"
-        } else {
-            &installation.exe_name
-        };
+        if !matches!(installation.edition, Edition::Steam)
+            && target_dir.join("AF3DN.P").as_path().exists()
+        {
+            warn!("Steam FFNx installed, renaming needed");
+            provision::rename_file(&target_dir.join("AF3DN.P"), &target_dir.join(dll_name)).unwrap()
+        }
         match pe_format::pe_version_info(target_dir.join(dll_name).as_path()) {
-            Ok(infos) => Some(FfnxInstallation {
-                version: format!(
-                    "{}.{}.{}",
-                    infos.product_version.Major,
-                    infos.product_version.Minor,
-                    infos.product_version.Patch
-                ),
-                path: PathBuf::from(target_dir),
-                exe_name: String::from(ff8_exe_name),
-            }),
+            Ok(infos) => {
+                if infos.product_name.unwrap_or_default() == "FFNx" {
+                    Some(FfnxInstallation {
+                        version: format!(
+                            "{}.{}.{}",
+                            infos.product_version.Major,
+                            infos.product_version.Minor,
+                            infos.product_version.Patch,
+                        ),
+                        path: PathBuf::from(target_dir),
+                    })
+                } else {
+                    None
+                }
+            }
             Err(pe_format::Error::IoError(e)) if e.kind() == std::io::ErrorKind::NotFound => None,
             Err(e) => {
                 warn!("Cannot obtain {} infos: {}", dll_name, e);
@@ -114,28 +117,16 @@ impl FfnxInstallation {
     }
 
     pub fn exe_path(&self) -> PathBuf {
-        self.path.join(&self.exe_name)
+        // Rename exe to prevent Windows Compatibility patches for 2000 edition
+        self.path.join(String::from("FF8_Mumba.exe"))
     }
 
     pub fn config_path(&self) -> PathBuf {
         self.path.join("FFNx.toml")
     }
 
-    fn launch_game_directly(&self, ff8_path: &PathBuf) -> Result<Child, std::io::Error> {
-        Installation::launch_game_directly(ff8_path, &self.path)
-    }
-
-    pub fn launch_game(
-        &self,
-        game_installation: &Installation,
-        steam_exe: &Path,
-    ) -> std::io::Result<()> {
-        if let Err(e) = match game_installation.edition {
-            Edition::Standard => self.launch_game_directly(&self.exe_path()),
-            Edition::Steam | Edition::Remastered => game_installation
-                .launch_game_via_steam(&self.exe_path(), steam_exe, &self.path)
-                .or_else(|_| self.launch_game_directly(&game_installation.get_launcher_path())),
-        } {
+    pub fn launch_game(&self) -> std::io::Result<()> {
+        if let Err(e) = Installation::launch_game_directly(&self.exe_path(), &self.path) {
             error!("Unable to launch game: {}", e);
             Err(e)
         } else {

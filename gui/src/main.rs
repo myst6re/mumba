@@ -95,18 +95,15 @@ fn main() -> Result<(), slint::PlatformError> {
         let ui = ui.as_weak();
         move |old_path| {
             let mut dialog = rfd::FileDialog::new();
-            dialog = dialog.set_title("Select a file");
-            dialog = dialog.add_filter("EXE files", &["exe"]);
+            dialog = dialog.set_title("Select a directory");
             dialog = dialog.set_parent(&ui.unwrap().window().window_handle());
             let old_ppath = Path::new(old_path.as_str());
 
             if old_ppath.exists() {
-                dialog = dialog.set_directory(old_ppath);
-                dialog = dialog
-                    .set_file_name(old_ppath.file_name().unwrap_or_default().to_string_lossy());
+                dialog = dialog.set_directory(old_ppath)
             }
 
-            match dialog.pick_file() {
+            match dialog.pick_folder() {
                 Some(new_path) => new_path.to_string_lossy().to_string().into(),
                 None => old_path,
             }

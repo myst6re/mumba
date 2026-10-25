@@ -7,10 +7,11 @@ use mumba_core::config::{Config, UpdateChannel};
 use mumba_core::game::env::Env;
 use mumba_core::game::ffnx_config;
 use mumba_core::game::ffnx_installation::FfnxInstallation;
-use mumba_core::game::installation;
+use mumba_core::game::installation::{self, Edition};
 use mumba_core::screen::Screen;
-use mumba_core::steam::get_steam_exe;
 use mumba_core::{pe_format, provision, toml};
+use std::fs::File;
+use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::Receiver;
 use thiserror::Error;
@@ -61,10 +62,9 @@ impl WorkerLoop {
         };
 
         info!(
-            "Found Game {:?} {} {:?} at \"{}\"",
+            "Found Game {:?} {} at \"{}\"",
             &installation.edition,
             &installation.language,
-            &installation.version,
             &installation.app_path.to_string_lossy()
         );
 
@@ -86,16 +86,15 @@ impl WorkerLoop {
         let ui_ffnx_config = self
             .ui
             .set_ffnx_config(&mut ffnx_config, &screen_resolutions);
-        let steam_exe = get_steam_exe().unwrap_or_default();
 
         self.ui
             .set_resolutions(&screen_resolutions, ui_ffnx_config.current_resolution);
 
         for received in &self.rx {
             match received {
-                Message::Setup(exe_path, update_chan, language) => {
+                Message::Setup(app_path, update_chan, language) => {
                     update_channel = update_chan.clone();
-                    installation = match self.setup(&exe_path, update_chan, language) {
+                    installation = match self.setup(&app_path, update_chan, language) {
                         Some(inst) => inst,
                         None => continue,
                     };
@@ -142,16 +141,13 @@ impl WorkerLoop {
                             "message-error-cannot-save-ffnx-config",
                         )
                     }
-                    if ffnx_installation
-                        .launch_game(&installation, &steam_exe)
-                        .is_err()
-                    {
+                    if ffnx_installation.launch_game().is_err() {
                         self.ui
                             .set_task_text(TextLevel::Error, "message-error-cannot-launch-game")
                     }
                 }
                 Message::LaunchCW => {
-                    if installation.launch_cw(&steam_exe).is_err() {
+                    if installation.launch_cw().is_err() {
                         self.ui
                             .set_task_text(TextLevel::Error, "message-error-cannot-launch-game")
                     }
@@ -266,24 +262,20 @@ impl WorkerLoop {
         let ret = match mumba_config.installation() {
             Ok(Some(installation)) => {
                 self.ui
-                    .set_game_exe_path(installation.exe_path().to_string_lossy().to_string());
+                    .set_game_app_path(installation.app_path.to_string_lossy().to_string());
                 Some((installation, update_channel))
             }
             Ok(None) | Err(_) => {
                 let installations = installation::Installation::search();
-                for inst in installations {
-                    match inst.edition {
-                        installation::Edition::Standard | installation::Edition::Steam => {
-                            self.ui
-                                .set_game_exe_path(inst.exe_path().to_string_lossy().to_string());
-                        }
-                        installation::Edition::Remastered => {
-                            warn!(
-                                "Ignore remaster at \"{}\", as The Yellow Mumba is not compatible yet",
-                                inst.app_path.to_string_lossy()
-                            )
-                        }
-                    }
+                if !installations.is_empty() {
+                    self.ui.set_game_app_path(
+                        installations
+                            .first()
+                            .unwrap()
+                            .app_path
+                            .to_string_lossy()
+                            .to_string(),
+                    );
                 }
 
                 self.go_to_setup_page()
@@ -335,7 +327,7 @@ impl WorkerLoop {
         installation: &installation::Installation,
         update_channel: UpdateChannel,
     ) -> Result<FfnxInstallation, InstallError> {
-        let ffnx_installation = match FfnxInstallation::from_directory(ffnx_dir, installation) {
+        let ffnx_installation = match FfnxInstallation::from_directory(ffnx_dir, &installation) {
             Some(ffnx_installation) => {
                 info!(
                     "Found FFNx version {} at \"{}\"",
@@ -358,7 +350,7 @@ impl WorkerLoop {
                 );
                 FfnxInstallation::download(url.as_str(), ffnx_dir, &self.env)?;
                 if let Some(ffnx_installation) =
-                    FfnxInstallation::from_directory(ffnx_dir, installation)
+                    FfnxInstallation::from_directory(ffnx_dir, &installation)
                 {
                     ffnx_installation
                 } else {
@@ -380,54 +372,35 @@ impl WorkerLoop {
 
         let exe_path = ffnx_installation.exe_path();
 
-        if matches!(installation.edition, installation::Edition::Steam) {
-            installation.replace_launcher(&self.env)?
+        if matches!(installation.edition, Edition::Steam) {
+            installation.replace_launcher(&self.env)?;
+            provision::copy_file(
+                &installation
+                    .app_path
+                    .join(format!("FF8_{}.exe", installation.language)),
+                &exe_path,
+            )?
         };
 
-        if !exe_path.exists() {
-            provision::copy_file(&installation.exe_path(), &exe_path)?
+        let steam_appid = ffnx_installation.path.join("steam_appid.txt");
+        if !steam_appid.exists() {
+            let mut file = File::create(steam_appid)?;
+            file.write_all(format!("{}", installation.edition.clone() as u32).as_bytes())?;
         }
 
-        let bink_dll_path = ffnx_installation.path.join("binkw32.dll");
-        if !bink_dll_path.exists() {
-            if matches!(installation.edition, installation::Edition::Standard) {
-                let file_name = match &installation.version {
-                    Some((installation::Version::V100, publisher)) => match publisher {
-                        installation::Publisher::EaJp => Some("FF8EasqPatch"),
-                        installation::Publisher::EaUs | installation::Publisher::EidosUk => {
-                            Some("FF8SqeaPatch")
-                        }
-                        installation::Publisher::EidosDe => Some("FF8EidosGerV12"),
-                        installation::Publisher::EidosFr => Some("FF8EidosFre"),
-                        installation::Publisher::EidosIt => Some("ff8ngita"),
-                        installation::Publisher::EidosSp => Some("ff8ngspa"),
-                    },
-                    _ => None,
-                };
-                match file_name {
-                    Some(file_name) => {
-                        let url = format!("https://www.ff8.fr/download/programs/{}.zip", file_name);
-                        match provision::download_zip(
-                            url.as_str(),
-                            "FF8Patch1.02.zip",
-                            &ffnx_installation.path,
-                            &self.env,
-                        ) {
-                            Ok(()) => provision::rename_file(
-                                &ffnx_installation.path.join("FF8.exe"),
-                                &exe_path,
-                            )?,
-                            Err(e) => {
-                                error!("Cannot download 1.02 patch: {}", e)
-                            }
-                        }
-                    }
-                    None => {
-                        error!("Cannot detect the language of your game")
-                    }
+        if !exe_path.exists() {
+            match provision::download_zip(
+                "https://www.ff8.fr/download/programs/FF8SqeaPatch.zip",
+                "FF8Patch1.02.zip",
+                &ffnx_installation.path,
+                &self.env,
+            ) {
+                Ok(()) => {
+                    provision::rename_file(&ffnx_installation.path.join("FF8.exe"), &exe_path)?
                 }
-            } else {
-                provision::copy_file(&installation.app_path.join("binkw32.dll"), &bink_dll_path)?;
+                Err(e) => {
+                    error!("Cannot download 1.02 patch: {}", e)
+                }
             }
         }
         match installation.edition {
@@ -453,7 +426,7 @@ impl WorkerLoop {
                 }
             }
         }
-        if matches!(&installation.edition, installation::Edition::Standard) {
+        if matches!(&installation.edition, Edition::Standard) {
             let ff8_input = ffnx_installation.path.join("override").join("ff8input.cfg");
             if !ff8_input.exists() {
                 std::fs::create_dir_all(ffnx_installation.path.join("override"))?;
@@ -474,19 +447,19 @@ impl WorkerLoop {
 
     fn setup(
         &self,
-        exe_path: &slint::SharedString,
+        app_path: &slint::SharedString,
         update_channel: UpdateChannel,
         language: String,
     ) -> Option<installation::Installation> {
-        info!("Setup with EXE path \"{}\"", exe_path);
-        match installation::Installation::from_exe_path(exe_path.as_str()) {
-            Ok(installation) => {
+        info!("Setup with EXE path \"{}\"", app_path);
+        match installation::Installation::from_directory(app_path.as_str(), None) {
+            Some(installation) => {
                 let mut mumba_config = self.open_mumba_config();
                 mumba_config.set_installation(&installation);
                 mumba_config.set_update_channel(update_channel.clone());
                 mumba_config.set_language(&language);
                 self.ui
-                    .set_game_exe_path(installation.exe_path().to_string_lossy().to_string());
+                    .set_game_app_path(installation.app_path.to_string_lossy().to_string());
                 self.ui.set_update_channel(update_channel);
                 if self.save_mumba_config(&mumba_config) {
                     Some(installation)
@@ -494,14 +467,8 @@ impl WorkerLoop {
                     None
                 }
             }
-            Err(installation::FromExeError::NotFound) => {
-                error!("This file does not exist: \"{}\"", exe_path);
-                self.ui
-                    .set_task_text(TextLevel::Error, "message-error-file-not-found");
-                None
-            }
-            Err(installation::FromExeError::LauncherSelected) => {
-                error!("Select the game exe, not the launcher: \"{}\"", exe_path);
+            None => {
+                error!("This file does not exist: \"{}\"", app_path);
                 self.ui
                     .set_task_text(TextLevel::Error, "message-error-file-not-found");
                 None

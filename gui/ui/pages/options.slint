@@ -1,4 +1,5 @@
 import { HorizontalBox, Button, Palette } from "std-widgets.slint";
+import { OptionsGeneralPage } from "options/general.slint";
 import { OptionsDisplayPage } from "options/display.slint";
 import { OptionsGamepadPage } from "options/gamepad.slint";
 import { SideBar } from "../components/side_bar.slint";
@@ -13,8 +14,9 @@ export component OptionsPage inherits VerticalLayout {
             model: [Fluent.get-message("options-menu-display"), Fluent.get-message("options-menu-gamepad")];
         }
 
-        if(side-bar.current-item == 0) : OptionsDisplayPage {}
-        if(side-bar.current-item == 1) : OptionsGamepadPage {}
+        if(side-bar.current-item == 0) : OptionsGeneralPage {}
+        if(side-bar.current-item == 1) : OptionsDisplayPage {}
+        if(side-bar.current-item == 2) : OptionsGamepadPage {}
     }
 
     Rectangle {

@@ -19,6 +19,7 @@ pub const CFG_WINDOW_SIZE_X_FULLSCREEN: &str = "window_size_x_fullscreen";
 pub const CFG_WINDOW_SIZE_Y_FULLSCREEN: &str = "window_size_y_fullscreen";
 pub const CFG_WINDOW_SIZE_X_WINDOW: &str = "window_size_x_window";
 pub const CFG_WINDOW_SIZE_Y_WINDOW: &str = "window_size_y_window";
+pub const CFG_GAME_LANGUAGE: &str = "game_language";
 
 pub struct FfnxConfig {
     inner: DocumentMut,

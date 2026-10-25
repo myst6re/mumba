@@ -63,12 +63,12 @@ impl UiHelper {
             .unwrap_or_default()
     }
 
-    pub fn set_game_exe_path(&self, text: String) {
+    pub fn set_game_app_path(&self, text: String) {
         self.handle
             .clone()
             .upgrade_in_event_loop(move |h| {
                 h.global::<Installations>()
-                    .set_game_exe_path(slint::SharedString::from(text))
+                    .set_game_app_path(slint::SharedString::from(text))
             })
             .unwrap_or_default()
     }
@@ -205,6 +205,7 @@ impl UiHelper {
                     window_size_y
                 },
             ),
+            game_language: ffnx_config.get_int(ffnx_config::CFG_GAME_LANGUAGE, 0),
         };
         let config2 = config.clone();
         self.handle

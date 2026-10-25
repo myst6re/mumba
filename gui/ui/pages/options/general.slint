@@ -1,0 +1,58 @@
+import { ScrollView, ComboBox, GroupBox, HorizontalBox, VerticalBox } from "std-widgets.slint";
+import { Installations, Fluent } from "../../global.slint";
+
+export component OptionsGeneralPage inherits VerticalLayout {
+    VerticalBox {
+        Text {
+            text: Fluent.get-message("options-page-general-title");
+            font-size: 20px;
+            wrap: word-wrap;
+        }
+    }
+
+    ScrollView {
+        vertical-stretch: 1;
+        horizontal-stretch: 1;
+
+        VerticalBox {
+            max-width: 664px;
+
+            GroupBox {
+                title: Fluent.get-message("config-group-language");
+                vertical-stretch: 0;
+
+                VerticalBox {
+                    HorizontalBox {
+                        alignment: start;
+
+                        Text {
+                            text: Fluent.get-message("config-game-language");
+                            vertical-alignment: TextVerticalAlignment.center;
+                        }
+
+                        ComboBox {
+                            model: [
+                                Fluent.get-message("auto"),
+                                Fluent.get-message("english"),
+                                Fluent.get-message("french"),
+                                Fluent.get-message("german"),
+                                Fluent.get-message("spanish"),
+                                Fluent.get-message("italian"),
+                                Fluent.get-message("japanese")
+                            ];
+                            current-index: Installations.ffnx-config.game_language;
+
+                            selected() => {
+                                Installations.set-ffnx-config-int("game_language", self.current-index)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                vertical-stretch: 1;
+            }
+        }
+    }
+}
