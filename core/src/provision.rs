@@ -112,6 +112,11 @@ pub fn rename_file(source_file: &PathBuf, target_file: &PathBuf) -> Result<(), s
     std::fs::rename(source_file, target_file).and(Ok(()))
 }
 
+pub fn remove_file(target_file: &PathBuf) -> Result<(), std::io::Error> {
+    info!("Remove \"{}\"...", target_file.to_string_lossy());
+    std::fs::remove_file(target_file).and(Ok(()))
+}
+
 #[cfg(all(feature = "network", feature = "zip"))]
 fn from_reader<R: Read + ?Sized>(
     reader: &mut R,

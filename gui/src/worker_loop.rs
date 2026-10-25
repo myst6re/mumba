@@ -93,6 +93,7 @@ impl WorkerLoop {
         for received in &self.rx {
             match received {
                 Message::Setup(app_path, update_chan, language) => {
+                    Self::clean_ffnx_installation(&ffnx_installation).unwrap();
                     update_channel = update_chan.clone();
                     installation = match self.setup(&app_path, update_chan, language) {
                         Some(inst) => inst,
@@ -380,6 +381,8 @@ impl WorkerLoop {
                     .join(format!("FF8_{}.exe", installation.language)),
                 &exe_path,
             )?
+        } else if matches!(installation.edition, Edition::Remastered) {
+            File::create(ffnx_installation.path.join("FFVIII.exe"))?;
         };
 
         let steam_appid = ffnx_installation.path.join("steam_appid.txt");
@@ -443,6 +446,12 @@ impl WorkerLoop {
         }
         pe_format::pe_patch_4bg(&exe_path)?;
         Ok(ffnx_installation)
+    }
+
+    fn clean_ffnx_installation(ffnx_installation: &FfnxInstallation) -> Result<(), std::io::Error> {
+        provision::remove_file(&ffnx_installation.path.join("steam_appid.txt"))?;
+        provision::remove_file(&ffnx_installation.path.join("FFVIII.exe"))?;
+        provision::remove_file(&ffnx_installation.exe_path())
     }
 
     fn setup(
