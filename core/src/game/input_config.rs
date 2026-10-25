@@ -60,7 +60,7 @@ impl InputConfig {
             let mut number_start = -1;
             let mut first_number: u8 = 0;
             let mut second_number: u8 = 0;
-            for (i, c) in line.chars().enumerate() {
+            for (i, c) in line.char_indices() {
                 if c >= '0' && c <= '9' {
                     if number_start < 0 {
                         number_start = i as i32

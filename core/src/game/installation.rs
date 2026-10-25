@@ -63,7 +63,7 @@ impl Installation {
             return None;
         }
         let edition = edition.unwrap_or_else(|| Self::detect_edition(app_path));
-        let language = Self::detect_language(&app_path, edition.clone());
+        let language = Self::detect_language(app_path, edition.clone());
         let config_path = Self::get_config_path(&edition, app_path);
 
         Some(Self {

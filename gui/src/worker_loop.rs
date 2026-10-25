@@ -63,9 +63,9 @@ impl WorkerLoop {
 
         info!(
             "Found Game {:?} {} at \"{}\"",
-            &installation.edition,
-            &installation.language,
-            &installation.app_path.to_string_lossy()
+            installation.edition,
+            installation.language,
+            installation.app_path.to_string_lossy()
         );
 
         let mut ffnx_installation = match self.retrieve_ffnx_installation(
@@ -328,7 +328,7 @@ impl WorkerLoop {
         installation: &installation::Installation,
         update_channel: UpdateChannel,
     ) -> Result<FfnxInstallation, InstallError> {
-        let ffnx_installation = match FfnxInstallation::from_directory(ffnx_dir, &installation) {
+        let ffnx_installation = match FfnxInstallation::from_directory(ffnx_dir, installation) {
             Some(ffnx_installation) => {
                 info!(
                     "Found FFNx version {} at \"{}\"",
@@ -351,7 +351,7 @@ impl WorkerLoop {
                 );
                 FfnxInstallation::download(url.as_str(), ffnx_dir, &self.env)?;
                 if let Some(ffnx_installation) =
-                    FfnxInstallation::from_directory(ffnx_dir, &installation)
+                    FfnxInstallation::from_directory(ffnx_dir, installation)
                 {
                     ffnx_installation
                 } else {
@@ -559,11 +559,8 @@ impl WorkerLoop {
                     self.ui
                         .set_ffnx_path(self.env.ffnx_dir.to_string_lossy().to_string());
 
-                    if let Some(ffnx_path) = self.go_to_select_dir_page() {
-                        ffnx_dir = PathBuf::from(ffnx_path);
-                    } else {
-                        return None; // Exit
-                    }
+                    let ffnx_path = self.go_to_select_dir_page()?;
+                    ffnx_dir = PathBuf::from(ffnx_path);
                 }
                 Err(e) => {
                     error!("Installation error: {}", e);

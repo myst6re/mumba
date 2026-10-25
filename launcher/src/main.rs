@@ -70,8 +70,8 @@ fn run() -> std::io::Result<()> {
     };
     info!(
         "Path=\"{}\" Dir=\"{}\"",
-        &path.to_string_lossy(),
-        &dir.to_string_lossy()
+        path.to_string_lossy(),
+        dir.to_string_lossy()
     );
 
     if is_same_file(&path, current_exe)? {

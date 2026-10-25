@@ -34,12 +34,12 @@ impl I18n {
         if let Some(resource_fallback) = resource_fallback {
             bundle.add_resource_overriding(resource_fallback)
         } else {
-            error!("Cannot load lang: {}", &fallback_lang);
+            error!("Cannot load lang: {}", fallback_lang);
         }
         if let Some(resource) = resource {
             bundle.add_resource_overriding(resource)
         } else {
-            error!("Cannot load lang: {}", &lang);
+            error!("Cannot load lang: {}", lang);
         }
 
         I18n { bundle }
