@@ -232,34 +232,38 @@ impl Installation {
     }
 
     #[cfg(unix)]
-    pub fn get_config_path(edition: &Edition, app_path: &Path) -> PathBuf {
+    pub fn get_config_path(edition: &Edition, app_path: &Path) -> Option<PathBuf> {
         match edition {
-            Edition::Standard => app_path.to_path_buf(),
-            Edition::Steam => app_path
-                .join("..")
-                .join("..")
-                .join("compatdata")
-                .join((Edition::Steam as u64).to_string())
-                .join("pfx")
-                .join("drive_c")
-                .join("users")
-                .join("steamuser")
-                .join("My Documents")
-                .join("Square Enix")
-                .join("FINAL FANTASY VIII Steam"),
-            Edition::Remastered => app_path
-                .join("..")
-                .join("..")
-                .join("compatdata")
-                .join((Edition::Remastered as u64).to_string())
-                .join("pfx")
-                .join("drive_c")
-                .join("users")
-                .join("steamuser")
-                .join("My Documents")
-                .join("My Games")
-                .join("FINAL FANTASY VIII Remastered")
-                .join("game_data"),
+            Edition::Standard => Some(app_path.to_path_buf()),
+            Edition::Steam => Some(
+                app_path
+                    .join("..")
+                    .join("..")
+                    .join("compatdata")
+                    .join((Edition::Steam as u64).to_string())
+                    .join("pfx")
+                    .join("drive_c")
+                    .join("users")
+                    .join("steamuser")
+                    .join("My Documents")
+                    .join("Square Enix")
+                    .join("FINAL FANTASY VIII Steam"),
+            ),
+            Edition::Remastered => Some(
+                app_path
+                    .join("..")
+                    .join("..")
+                    .join("compatdata")
+                    .join((Edition::Remastered as u64).to_string())
+                    .join("pfx")
+                    .join("drive_c")
+                    .join("users")
+                    .join("steamuser")
+                    .join("My Documents")
+                    .join("My Games")
+                    .join("FINAL FANTASY VIII Remastered")
+                    .join("game_data"),
+            ),
         }
     }
 
