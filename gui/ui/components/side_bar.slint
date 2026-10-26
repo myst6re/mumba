@@ -15,15 +15,19 @@ component SideBarItem inherits Rectangle {
     states [
         pressed when touch.pressed : {
             state.opacity: 0.8;
+            highlight.opacity: 0.8;
         }
         hover when touch.has-hover : {
             state.opacity: 0.6;
+            highlight.opacity: 0.6;
         }
         selected when root.selected : {
             state.opacity: 1;
+            highlight.opacity: 1;
         }
         focused when root.has-focus : {
             state.opacity: 0.8;
+            highlight.opacity: 0.8;
         }
     ]
     
@@ -41,6 +45,15 @@ component SideBarItem inherits Rectangle {
         label := Text {
             vertical-alignment: center;
         }
+    }
+
+    highlight := Rectangle {
+        opacity: 0;
+        background: Palette.accent-background;
+        x: parent.width - self.width;
+        width: 3px;
+        
+        animate opacity { duration: 150ms; }
     }
     
     touch := TouchArea {
