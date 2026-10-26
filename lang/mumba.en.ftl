@@ -30,6 +30,7 @@ options-page-general-title = General Options
 options-page-gamepad-title = Gamepad Options
 config-group-inputs = Inputs
 show-ps1-gamepad-icons = Show PS1 gamepad icons
+options-menu-general = General
 options-menu-display = Display
 options-menu-gamepad = Gamepad
 options-page-display-title = Display Options

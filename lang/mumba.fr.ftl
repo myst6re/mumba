@@ -30,6 +30,7 @@ options-page-general-title = Options générales
 options-page-gamepad-title = Options de manette
 config-group-inputs = Entrées
 show-ps1-gamepad-icons = Utiliser les icones des manettes PS1
+options-menu-general = Général
 options-menu-display = Affichage
 options-menu-gamepad = Manette
 options-page-display-title = Options d'affichage
