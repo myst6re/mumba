@@ -1,3 +1,4 @@
+use crate::cdrom::CDRom;
 #[cfg(any(feature = "pe", feature = "zip"))]
 use crate::game::env::Env;
 #[cfg(windows)]
@@ -484,5 +485,108 @@ impl Installation {
         } else {
             Ok(())
         }
+    }
+
+    pub fn install_movies_from_discs(&self) -> std::io::Result<u8> {
+        let mut total_disc_numbers = 0;
+        let disc_drives = CDRom::list();
+        for disc in disc_drives {
+            total_disc_numbers |= self.install_movies_from_discs_in_drive(&disc.path)?;
+
+            if total_disc_numbers == 0xF {
+                break;
+            }
+        }
+
+        Ok(total_disc_numbers)
+    }
+
+    fn install_movies_from_discs_in_drive(&self, drive: &PathBuf) -> std::io::Result<u8> {
+        if !matches!(self.edition, Edition::Standard) {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Unsupported,
+                "Installation from disc is only available for original 2000 version",
+            ));
+        }
+
+        let mut disc_numbers = 0;
+        let data_path = self.app_path.join("Data");
+        let movies_path = data_path.join("disk");
+
+        if !movies_path.exists() {
+            std::fs::create_dir(&movies_path)?
+        }
+
+        info!("Check disc drive {}", drive.to_string_lossy());
+
+        for i in 1..=4 {
+            if drive.join(format!("DISK{}", i)).exists() {
+                disc_numbers |= 1 << (i - 1);
+
+                if i == 4 {
+                    if drive.join("DISC4.PAK").exists() {
+                        provision::copy_file_if_not_exist(
+                            &drive.join("DISC4.PAK"),
+                            &movies_path.join("disc4.pak"),
+                        )?
+                    } else if drive.join("DISC4FRE.PAK").exists() {
+                        provision::copy_file_if_not_exist(
+                            &drive.join("DISC4FRE.PAK"),
+                            &movies_path.join("disc4fre.pak"),
+                        )?
+                    } else if drive.join("DISC4GER.PAK").exists() {
+                        provision::copy_file_if_not_exist(
+                            &drive.join("DISC4GER.PAK"),
+                            &movies_path.join("disc4ger.pak"),
+                        )?
+                    } else if drive.join("DISC4ITA.PAK").exists() {
+                        provision::copy_file_if_not_exist(
+                            &drive.join("DISC4ITA.PAK"),
+                            &movies_path.join("disc4ita.pak"),
+                        )?
+                    } else if drive.join("DISC4JP.PAK").exists() {
+                        provision::copy_file_if_not_exist(
+                            &drive.join("DISC4JP.PAK"),
+                            &movies_path.join("disc4jp.pak"),
+                        )?
+                    } else if drive.join("DISC4SPA.PAK").exists() {
+                        provision::copy_file_if_not_exist(
+                            &drive.join("DISC4SPA.PAK"),
+                            &movies_path.join("disc4spa.pak"),
+                        )?
+                    }
+                    provision::copy_file_if_not_exist(
+                        &drive.join("FIELD2.FS"),
+                        &movies_path.join("field2.fs"),
+                    )?
+                } else {
+                    provision::copy_file_if_not_exist(
+                        &drive.join(format!("DISC{}.PAK", i)),
+                        &movies_path.join(format!("disc{}.pak", i)),
+                    )?
+                }
+
+                provision::copy_file_if_not_exist(
+                    &drive.join("FIELD.FS"),
+                    &data_path.join("field.fs"),
+                )?;
+                provision::copy_file_if_not_exist(
+                    &drive.join("FIELD.FI"),
+                    &data_path.join("field.fi"),
+                )?;
+                provision::copy_file_if_not_exist(
+                    &drive.join("FIELD.FL"),
+                    &data_path.join("field.fl"),
+                )?;
+                provision::copy_file_if_not_exist(
+                    &drive.join(format!("DISK{}", i)),
+                    &movies_path.join(format!("DISK{}", i)),
+                )?
+            } else if movies_path.join(format!("DISK{}", i)).exists() {
+                disc_numbers |= 1 << (i - 1);
+            }
+        }
+
+        Ok(disc_numbers)
     }
 }

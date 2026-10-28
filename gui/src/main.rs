@@ -110,6 +110,11 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
 
+    ui.global::<Installations>().on_install_movies_from_discs({
+        let tx = worker.tx.clone();
+        move || tx.send(worker::Message::InstallMoviesFromDiscs).unwrap()
+    });
+
     ui.global::<Installations>().on_browse_ffnx({
         let ui = ui.as_weak();
         move |old_path| {

@@ -21,6 +21,7 @@ pub enum Message {
     SetFfnxConfigCurrentRefreshRate(i32, i32),
     OpenLogs,
     UpdateGame,
+    InstallMoviesFromDiscs,
     Quit,
 }
 

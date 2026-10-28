@@ -237,6 +237,22 @@ impl WorkerLoop {
                         )
                     }
                 }
+                Message::InstallMoviesFromDiscs => {
+                    match installation.install_movies_from_discs() {
+                        Ok(0) => {
+                            error!("Cannot find game disc");
+                            self.ui
+                                .set_task_text(TextLevel::Error, "message-error-disc-not-found")
+                        }
+                        Ok(disc_numbers) => info!("Disc numbers {}", disc_numbers),
+                        Err(e) => {
+                            error!("Cannot find game disc: {}", e);
+                            self.ui
+                                .set_task_text(TextLevel::Error, "message-error-disc-not-found")
+                        }
+                    }
+                    continue;
+                }
                 Message::OpenLogs => self.open_logs(),
                 Message::CancelConfigureFfnx => ffnx_config.clear(),
                 Message::Quit => return,
@@ -449,9 +465,9 @@ impl WorkerLoop {
     }
 
     fn clean_ffnx_installation(ffnx_installation: &FfnxInstallation) -> Result<(), std::io::Error> {
-        provision::remove_file(&ffnx_installation.path.join("steam_appid.txt"))?;
-        provision::remove_file(&ffnx_installation.path.join("FFVIII.exe"))?;
-        provision::remove_file(&ffnx_installation.exe_path())
+        provision::remove_file_if_exists(&ffnx_installation.path.join("steam_appid.txt"))?;
+        provision::remove_file_if_exists(&ffnx_installation.path.join("FFVIII.exe"))?;
+        provision::remove_file_if_exists(&ffnx_installation.exe_path())
     }
 
     fn setup(

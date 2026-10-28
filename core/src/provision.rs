@@ -103,6 +103,17 @@ pub fn copy_file(source_file: &PathBuf, target_file: &PathBuf) -> Result<(), std
     std::fs::copy(source_file, target_file).and(Ok(()))
 }
 
+pub fn copy_file_if_not_exist(
+    source_file: &PathBuf,
+    target_file: &PathBuf,
+) -> Result<(), std::io::Error> {
+    if target_file.exists() {
+        Ok(())
+    } else {
+        copy_file(source_file, target_file)
+    }
+}
+
 pub fn rename_file(source_file: &PathBuf, target_file: &PathBuf) -> Result<(), std::io::Error> {
     info!(
         "Rename \"{}\" to \"{}\"...",
@@ -115,6 +126,14 @@ pub fn rename_file(source_file: &PathBuf, target_file: &PathBuf) -> Result<(), s
 pub fn remove_file(target_file: &PathBuf) -> Result<(), std::io::Error> {
     info!("Remove \"{}\"...", target_file.to_string_lossy());
     std::fs::remove_file(target_file).and(Ok(()))
+}
+
+pub fn remove_file_if_exists(target_file: &PathBuf) -> Result<(), std::io::Error> {
+    if !target_file.exists() {
+        Ok(())
+    } else {
+        remove_file(target_file)
+    }
 }
 
 #[cfg(all(feature = "network", feature = "zip"))]

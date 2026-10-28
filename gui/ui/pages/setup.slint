@@ -79,6 +79,25 @@ export component SetupPage inherits VerticalLayout {
                     }
                 }
             }
+            GroupBox {
+                title: Fluent.get-message("config-group-install-movies-from-discs");
+                vertical-stretch: 0;
+
+                VerticalLayout {
+                    HorizontalBox {
+                        padding: 0px;
+                        max-width: 664px;
+
+                        Button {
+                            text: Fluent.get-message("button-install-movies-from-discs");
+
+                            clicked => {
+                                Installations.install-movies-from-discs()
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
     Rectangle {

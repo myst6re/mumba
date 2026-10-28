@@ -2,6 +2,7 @@
 extern crate log;
 extern crate simplelog;
 
+pub mod cdrom;
 #[cfg(feature = "config")]
 pub mod config;
 pub mod game;
