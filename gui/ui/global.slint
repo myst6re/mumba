@@ -33,6 +33,7 @@ export global Installations {
     in property <bool> is-initialized : false;
     in property <[string]> resolutions : [Fluent.get-message("auto")];
     in property <[string]> refresh-rates : [Fluent.get-message("auto")];
+    in property <int> ask-for-disc : -1;
 
     pure callback setup(string, int, int);
     pure callback set-ffnx-path(string);

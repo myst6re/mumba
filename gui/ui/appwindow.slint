@@ -2,6 +2,7 @@ import { Button, ComboBox, StyleMetrics, VerticalBox, HorizontalBox } from "std-
 import { SetupPage } from "pages/setup.slint";
 import { OptionsPage } from "pages/options.slint";
 import { SelectDirPage } from "pages/select_dir.slint";
+import { InstallDiscsPage } from "pages/install_discs.slint";
 import { HomePage } from "pages/home.slint";
 import { Installations, Fluent } from "global.slint";
 
@@ -17,4 +18,5 @@ export component AppWindow inherits Window {
     if Installations.current-page == 1 : SetupPage {}
     if Installations.current-page == 2 : OptionsPage {}
     if Installations.current-page == 3 : SelectDirPage {}
+    if Installations.current-page == 4 : InstallDiscsPage {}
 }

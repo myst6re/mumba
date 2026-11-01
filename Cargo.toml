@@ -5,3 +5,10 @@ default-members = ["cli", "core", "gui", "launcher"]
 
 [profile.release]
 strip = true
+
+[profile.dev]
+debug = 1
+incremental = false
+
+[profile.dev.package."*"]
+debug = false

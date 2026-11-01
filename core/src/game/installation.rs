@@ -488,20 +488,6 @@ impl Installation {
     }
 
     pub fn install_movies_from_discs(&self) -> std::io::Result<u8> {
-        let mut total_disc_numbers = 0;
-        let disc_drives = CDRom::list();
-        for disc in disc_drives {
-            total_disc_numbers |= self.install_movies_from_discs_in_drive(&disc.path)?;
-
-            if total_disc_numbers == 0xF {
-                break;
-            }
-        }
-
-        Ok(total_disc_numbers)
-    }
-
-    fn install_movies_from_discs_in_drive(&self, drive: &PathBuf) -> std::io::Result<u8> {
         if !matches!(self.edition, Edition::Standard) {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::Unsupported,
@@ -509,7 +495,6 @@ impl Installation {
             ));
         }
 
-        let mut disc_numbers = 0;
         let data_path = self.app_path.join("Data");
         let movies_path = data_path.join("disk");
 
@@ -517,10 +502,42 @@ impl Installation {
             std::fs::create_dir(&movies_path)?
         }
 
+        let mut total_disc_numbers = 0;
+
+        for i in 1..=4 {
+            if movies_path.join(format!("DISK{}", i)).exists() {
+                total_disc_numbers |= 1 << (i - 1);
+            }
+        }
+
+        if total_disc_numbers == 0b1111 {
+            return Ok(total_disc_numbers);
+        }
+
+        let disc_drives = CDRom::list();
+        for disc in disc_drives {
+            total_disc_numbers |=
+                Self::install_movies_from_discs_in_drive(&disc.path, &data_path, &movies_path)?;
+
+            if total_disc_numbers == 0b1111 {
+                break;
+            }
+        }
+
+        Ok(total_disc_numbers)
+    }
+
+    fn install_movies_from_discs_in_drive(
+        drive: &Path,
+        data_path: &PathBuf,
+        movies_path: &PathBuf,
+    ) -> std::io::Result<u8> {
+        let mut disc_numbers = 0;
+
         info!("Check disc drive {}", drive.to_string_lossy());
 
         for i in 1..=4 {
-            if drive.join(format!("DISK{}", i)).exists() {
+            if (disc_numbers & (1 << (i - 1))) == 0 && drive.join(format!("DISK{}", i)).exists() {
                 disc_numbers |= 1 << (i - 1);
 
                 if i == 4 {
@@ -582,8 +599,6 @@ impl Installation {
                     &drive.join(format!("DISK{}", i)),
                     &movies_path.join(format!("DISK{}", i)),
                 )?
-            } else if movies_path.join(format!("DISK{}", i)).exists() {
-                disc_numbers |= 1 << (i - 1);
             }
         }
 

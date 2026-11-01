@@ -92,6 +92,7 @@ export component SetupPage inherits VerticalLayout {
                             text: Fluent.get-message("button-install-movies-from-discs");
 
                             clicked => {
+                                Installations.current-page = 4;
                                 Installations.install-movies-from-discs()
                             }
                         }

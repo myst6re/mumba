@@ -1,0 +1,43 @@
+
+
+import { GroupBox, Palette, Button, HorizontalBox, LineEdit, VerticalBox } from "std-widgets.slint";
+import { Installations, Fluent } from "../global.slint";
+import { Message } from "../components/message.slint";
+
+export component InstallDiscsPage inherits VerticalLayout {
+    Rectangle {
+        Image {
+            source: @image-url("../../data/cd.svg");
+            max-width: 664px;
+            max-height: 664px;
+        }
+    }
+    Rectangle {
+        vertical-stretch: 1;
+    }
+    Rectangle {
+        background: Palette.background.darker(0.2);
+
+        HorizontalBox {
+            Message {}
+
+            Button {
+                text: Fluent.get-message("button-cancel");
+
+                clicked => {
+                    Installations.current-page = 1;
+                }
+            }
+
+            Button {
+                text: Fluent.get-message("button-continue");
+                primary: true;
+                enabled: Installations.ask-for-disc > 0;
+
+                clicked => {
+                    Installations.install-movies-from-discs()
+                }
+            }
+        }
+    }
+}

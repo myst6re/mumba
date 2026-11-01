@@ -238,13 +238,29 @@ impl WorkerLoop {
                     }
                 }
                 Message::InstallMoviesFromDiscs => {
+                    self.ui.set_ask_for_disc(-1);
+                    self.ui
+                        .set_task_text(TextLevel::Info, "message-install-discs");
                     match installation.install_movies_from_discs() {
-                        Ok(0) => {
-                            error!("Cannot find game disc");
+                        Ok(0b1111) => {
+                            info!("Discs installed");
+                            self.ui.set_current_page(Page::Setup);
                             self.ui
-                                .set_task_text(TextLevel::Error, "message-error-disc-not-found")
+                                .set_task_text(TextLevel::Info, "message-discs-installed");
                         }
-                        Ok(disc_numbers) => info!("Disc numbers {}", disc_numbers),
+                        Ok(disc_numbers) => {
+                            info!("Disc numbers {}", disc_numbers);
+                            for disc in 1..=4 {
+                                if (disc_numbers & (1 << (disc - 1))) == 0 {
+                                    self.ui.set_ask_for_disc(disc);
+                                    self.ui.set_task_text(
+                                        TextLevel::Info,
+                                        format!("message-insert-disc-{}", disc).as_str(),
+                                    );
+                                    break;
+                                }
+                            }
+                        }
                         Err(e) => {
                             error!("Cannot find game disc: {}", e);
                             self.ui
@@ -401,10 +417,12 @@ impl WorkerLoop {
             File::create(ffnx_installation.path.join("FFVIII.exe"))?;
         };
 
-        let steam_appid = ffnx_installation.path.join("steam_appid.txt");
-        if !steam_appid.exists() {
-            let mut file = File::create(steam_appid)?;
-            file.write_all(format!("{}", installation.edition.clone() as u32).as_bytes())?;
+        if installation.edition.clone() as u32 > 0 {
+            let steam_appid = ffnx_installation.path.join("steam_appid.txt");
+            if !steam_appid.exists() {
+                let mut file = File::create(steam_appid)?;
+                file.write_all(format!("{}", installation.edition.clone() as u32).as_bytes())?;
+            }
         }
 
         if !exe_path.exists() {

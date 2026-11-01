@@ -35,7 +35,7 @@ impl UiHelper {
             .unwrap_or_default()
     }
 
-    pub fn set_task_text(&self, text_level: TextLevel, id: &'static str) {
+    pub fn set_task_text(&self, text_level: TextLevel, id: &str) {
         let text = self.i18n.tr(id);
         self.handle
             .clone()
@@ -143,6 +143,15 @@ impl UiHelper {
                 h.global::<Installations>().set_refresh_rates(
                     slint::ModelRc::<slint::SharedString>::from(refresh_rates.as_slice()),
                 );
+            })
+            .unwrap_or_default()
+    }
+
+    pub fn set_ask_for_disc(&self, disc: i32) {
+        self.handle
+            .clone()
+            .upgrade_in_event_loop(move |h| {
+                h.global::<Installations>().set_ask_for_disc(disc);
             })
             .unwrap_or_default()
     }
