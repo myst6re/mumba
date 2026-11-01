@@ -15,6 +15,14 @@ export component HomePage inherits VerticalLayout {
                 }
             }
 
+            Button {
+                text: Fluent.get-message("install-iro");
+                enabled: Installations.is-ready;
+                clicked => {
+                    Installations.browse-iro()
+                }
+            }
+
             Rectangle {
                 vertical-stretch: 1;
             }

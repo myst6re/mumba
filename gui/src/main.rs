@@ -1,11 +1,12 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 slint::include_modules!();
 use log::error;
 use mumba_core::config::{Config, UpdateChannel};
 use mumba_core::game::env::Env;
 use mumba_core::i18n::I18n;
+use rfd::FileDialog;
 
 pub mod lazy_ffnx_config;
 pub mod ui_helper;
@@ -21,12 +22,19 @@ fn pos_to_language(language: i32) -> String {
     }
 }
 
+fn create_file_dialog(ui: &AppWindow, title: impl Into<String>) -> FileDialog {
+    let mut dialog = FileDialog::new();
+    dialog = dialog.set_title(title);
+    dialog.set_parent(&ui.window().window_handle())
+}
+
 fn main() -> Result<(), slint::PlatformError> {
     let env = Env::new("mumba").unwrap();
     mumba_core::mumba_log::init(&env.log_path);
     let config = Config::from_file(&env.config_path).unwrap_or_else(|_| Config::new());
     let language = config.language().ok();
     let i18n = I18n::new(language.clone());
+    let mut iro_dir = PathBuf::new();
 
     let ui = AppWindow::new()?;
 
@@ -94,9 +102,7 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.global::<Installations>().on_browse_game({
         let ui = ui.as_weak();
         move |old_path| {
-            let mut dialog = rfd::FileDialog::new();
-            dialog = dialog.set_title("Select a directory");
-            dialog = dialog.set_parent(&ui.unwrap().window().window_handle());
+            let mut dialog = create_file_dialog(&ui.unwrap(), "Select a directory");
             let old_ppath = Path::new(old_path.as_str());
 
             if old_ppath.exists() {
@@ -118,9 +124,7 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.global::<Installations>().on_browse_ffnx({
         let ui = ui.as_weak();
         move |old_path| {
-            let mut dialog = rfd::FileDialog::new();
-            dialog = dialog.set_title("Select a directory");
-            dialog = dialog.set_parent(&ui.unwrap().window().window_handle());
+            let mut dialog = create_file_dialog(&ui.unwrap(), "Select a directory");
             let old_ppath = Path::new(old_path.as_str());
 
             if old_ppath.exists() {
@@ -149,6 +153,31 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.global::<Installations>().on_upgrade_ffnx({
         let tx = worker.tx.clone();
         move || tx.send(worker::Message::UpdateGame).unwrap()
+    });
+
+    ui.global::<Installations>().on_browse_iro({
+        let tx = worker.tx.clone();
+        let ui = ui.as_weak();
+        move || {
+            let mut dialog = create_file_dialog(&ui.unwrap(), "Select a IRO");
+            dialog = dialog.add_filter("IRO files", &["iroj"]);
+            let old_ppath = &iro_dir;
+
+            if old_ppath.exists() {
+                if let Some(file_name) = old_ppath.file_name() {
+                    dialog = dialog.set_file_name(file_name.to_string_lossy());
+                }
+                dialog = dialog.set_directory(old_ppath);
+            }
+
+            if let Some(new_path) = dialog.pick_file() {
+                tx.send(worker::Message::InstallIro(
+                    new_path.to_string_lossy().to_string().into(),
+                ))
+                .unwrap();
+                iro_dir = new_path
+            }
+        }
     });
 
     ui.global::<Installations>().on_set_ffnx_config_bool({

@@ -529,8 +529,8 @@ impl Installation {
 
     fn install_movies_from_discs_in_drive(
         drive: &Path,
-        data_path: &PathBuf,
-        movies_path: &PathBuf,
+        data_path: &Path,
+        movies_path: &Path,
     ) -> std::io::Result<u8> {
         let mut disc_numbers = 0;
 

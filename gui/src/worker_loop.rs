@@ -8,6 +8,7 @@ use mumba_core::game::env::Env;
 use mumba_core::game::ffnx_config;
 use mumba_core::game::ffnx_installation::FfnxInstallation;
 use mumba_core::game::installation::{self, Edition};
+use mumba_core::iro::archive::{IroArchive, IroError};
 use mumba_core::screen::Screen;
 use mumba_core::{pe_format, provision, toml};
 use std::fs::File;
@@ -237,6 +238,14 @@ impl WorkerLoop {
                         )
                     }
                 }
+                Message::InstallIro(iro_path) => match Self::install_iro(&iro_path) {
+                    Ok(()) => {}
+                    Err(e) => {
+                        error!("Error installing IRO: {}", e);
+                        self.ui
+                            .set_task_text(TextLevel::Error, "message-error-installing-iro")
+                    }
+                },
                 Message::InstallMoviesFromDiscs => {
                     self.ui.set_ask_for_disc(-1);
                     self.ui
@@ -611,5 +620,12 @@ impl WorkerLoop {
                 }
             };
         }
+    }
+
+    fn install_iro(iro_path: &slint::SharedString) -> Result<(), IroError> {
+        let mut archive = IroArchive::from_path(iro_path.as_str())?;
+        let mod_info = archive.unpack_mod_xml()?;
+        info!("Test mod: {:?}", mod_info);
+        Ok(())
     }
 }
