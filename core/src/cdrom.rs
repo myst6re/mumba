@@ -2,7 +2,6 @@
 use std::ffi::OsStr;
 #[cfg(windows)]
 use std::os::windows::ffi::OsStrExt;
-#[cfg(windows)]
 use std::path::PathBuf;
 #[cfg(windows)]
 use windows::core::PCWSTR;
