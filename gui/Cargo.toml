@@ -27,8 +27,10 @@ raw-window-handle = "0.6"
 
 [build-dependencies]
 slint-build = "1.18"
-winresource = "0.1"
 built = { version = "0.8", features = ["git2"] }
+
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1"
 
 [package.metadata.deb]
 assets = [

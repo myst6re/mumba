@@ -622,9 +622,17 @@ impl WorkerLoop {
         }
     }
 
-    fn install_iro(iro_path: &slint::SharedString) -> Result<(), IroError> {
+    fn install_iro(env: &Env, iro_path: &slint::SharedString) -> Result<(), IroError> {
         let mut archive = IroArchive::from_path(iro_path.as_str())?;
-        let mod_info = archive.unpack_mod_xml()?;
+        if let Some(mod_info) = archive.unpack_mod_xml()? {
+            let mod_dir = env.mod_dir.join(mod_info.dir_name());
+
+            if !mod_dir.exists() {
+                std::fs::create_dir_all(mod_dir)?
+            }
+            
+        }
+        
         info!("Test mod: {:?}", mod_info);
         Ok(())
     }

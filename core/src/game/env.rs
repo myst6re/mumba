@@ -8,6 +8,7 @@ pub struct Env {
     pub mumba_dir: PathBuf,
     pub ffnx_dir: PathBuf,
     pub log_path: PathBuf,
+    pub mod_dir: PathBuf,
 }
 
 impl Env {
@@ -28,6 +29,7 @@ impl Env {
                 data_dir: data_fallback,
                 config_path,
                 ffnx_dir: exe_path.join("game"),
+                mod_dir: exe_path.join("mods"),
                 mumba_dir: exe_path,
                 log_path,
             });
@@ -56,14 +58,14 @@ impl Env {
         let config_dir = Self::create_dir(&config_dir)
             .and(Ok(config_dir))
             .or_else(|_| Self::create_dir(&config_fallback).and(Ok(config_fallback)))?;
-        let ffnx_dir = data_dir.join("game");
 
         Ok(Self {
             cache_dir,
+            ffnx_dir: data_dir.join("game"),
+            mod_dir: data_dir.join("mods"),
             data_dir,
             config_path: config_dir.join("mumba.toml"),
             mumba_dir: exe_path,
-            ffnx_dir,
             log_path,
         })
     }

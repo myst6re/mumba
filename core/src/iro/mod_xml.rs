@@ -220,4 +220,22 @@ impl ModInfo {
     pub fn from_reader<R: std::io::BufRead>(reader: R) -> Result<ModInfo, xml::DeError> {
         xml::from_reader(reader)
     }
+
+    pub fn slugify_name(&self) -> String {
+        let mut ret = String::new();
+
+        for c in self.name.chars() {
+            if c.is_ascii_alphanumeric() {
+                ret.push(c.to_ascii_lowercase())
+            } else if ! ret.ends_with('_') {
+                ret.push('_')
+            }
+        }
+
+        ret
+    }
+
+    pub fn dir_name(&self) -> String {
+        format!("{}-{}", self.id, self.slugify_name())
+    }
 }
