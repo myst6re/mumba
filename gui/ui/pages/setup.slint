@@ -1,5 +1,5 @@
 import { GroupBox, Palette, Button, HorizontalBox, LineEdit, VerticalBox, ComboBox } from "std-widgets.slint";
-import { Installations, Fluent } from "../global.slint";
+import { Installations, Fluent, Page } from "../global.slint";
 import { Message } from "../components/message.slint";
 
 export component SetupPage inherits VerticalLayout {
@@ -92,7 +92,7 @@ export component SetupPage inherits VerticalLayout {
                             text: Fluent.get-message("button-install-movies-from-discs");
 
                             clicked => {
-                                Installations.current-page = 4;
+                                Installations.current-page = Page.install-discs;
                                 Installations.install-movies-from-discs()
                             }
                         }
@@ -115,7 +115,7 @@ export component SetupPage inherits VerticalLayout {
                 visible: Installations.is-initialized;
 
                 clicked => {
-                    Installations.current-page = 0;
+                    Installations.current-page = Page.home;
                 }
             }
 
@@ -125,7 +125,7 @@ export component SetupPage inherits VerticalLayout {
 
                 clicked => {
                     Installations.setup(game-app-path.text, update-channel.current-index, language.current-index);
-                    Installations.current-page = 0;
+                    Installations.current-page = Page.home;
                 }
             }
         }

@@ -118,7 +118,7 @@ impl Installation {
     }
 
     fn get_standard_edition_lang(app_path: &Path) -> std::io::Result<String> {
-        let contents = std::fs::read_to_string(app_path.join("Data").join("main.fl"))?;
+        let contents = provision::head_file(&app_path.join("Data").join("main.fl"), 2)?;
         Ok(String::from(
             match contents.match_indices("ff8\\data\\").next() {
                 Some((idx, _matched)) => {

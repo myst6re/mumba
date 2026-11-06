@@ -1,5 +1,6 @@
 use super::{AppWindow, Installations};
 use crate::lazy_ffnx_config::LazyFfnxConfig;
+use crate::Page;
 use crate::TextLevel;
 use mumba_core::config::UpdateChannel;
 use mumba_core::game::ffnx_config;
@@ -10,13 +11,6 @@ use slint::ComponentHandle;
 pub struct UiHelper {
     handle: slint::Weak<AppWindow>,
     i18n: I18n,
-}
-
-pub enum Page {
-    Home,
-    Setup,
-    Options,
-    SelectDir,
 }
 
 impl UiHelper {
@@ -93,12 +87,10 @@ impl UiHelper {
             .unwrap_or_default()
     }
 
-    pub fn set_current_page(&self, page_id: Page) {
+    pub fn set_current_page(&self, page: Page) {
         self.handle
             .clone()
-            .upgrade_in_event_loop(move |h| {
-                h.global::<Installations>().set_current_page(page_id as i32)
-            })
+            .upgrade_in_event_loop(move |h| h.global::<Installations>().set_current_page(page))
             .unwrap_or_default()
     }
 

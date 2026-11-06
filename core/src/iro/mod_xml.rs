@@ -227,7 +227,7 @@ impl ModInfo {
         for c in self.name.chars() {
             if c.is_ascii_alphanumeric() {
                 ret.push(c.to_ascii_lowercase())
-            } else if ! ret.ends_with('_') {
+            } else if !ret.ends_with('_') {
                 ret.push('_')
             }
         }

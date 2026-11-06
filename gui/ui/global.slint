@@ -1,5 +1,6 @@
 import { Palette } from "std-widgets.slint";
 export enum TextLevel { info, warn, error }
+export enum Page { home, setup, options, select-dir, install-discs }
 export struct FfnxConfig {
     renderer_backend: int,
     fullscreen: bool,
@@ -26,7 +27,7 @@ export global Installations {
     in property <string> game-app-path;
     in property <int> update-channel : 0;
     in property <int> language : 0;
-    in-out property <int> current-page : 0;
+    in-out property <Page> current-page : Page.home;
     in property <string> task-text;
     in property <TextLevel> task-text-type : info;
     in property <bool> is-ready : false;

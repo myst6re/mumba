@@ -40,52 +40,52 @@ pub fn update_metadata(
 
     loop {
         match reader.read_event_into(&mut buf) {
-            Ok(Event::Start(e)) if e.name().as_ref() == b"savefile" => {
+            Ok(Event::Start(e)) if e.name().as_ref() == "savefile" => {
                 match e
                     .attributes()
                     .map(|attr| attr.unwrap())
-                    .find(|e| e.key.as_ref() == b"type")
+                    .find(|e| e.key.as_ref() == "type")
                     .map(|e| e.value)
                 {
-                    Some(t) if t.as_ref() == b"ff8" => {
+                    Some(t) if t.as_ref() == "ff8" => {
                         is_ff8_element = true;
                         current_slot = e
                             .attributes()
                             .map(|attr| attr.unwrap())
-                            .find(|e| e.key.as_ref() == b"slot")
-                            .map(|e| String::from_utf8_lossy(&e.value).parse::<u8>().unwrap())
+                            .find(|e| e.key.as_ref() == "slot")
+                            .map(|e| String::from(e.value).parse::<u8>().unwrap())
                             .unwrap_or(0);
                         current_num = e
                             .attributes()
                             .map(|attr| attr.unwrap())
-                            .find(|e| e.key.as_ref() == b"num")
-                            .map(|e| String::from_utf8_lossy(&e.value).parse::<u8>().unwrap())
+                            .find(|e| e.key.as_ref() == "num")
+                            .map(|e| String::from(e.value).parse::<u8>().unwrap())
                             .unwrap_or(0);
                     }
-                    Some(t) if t.as_ref() == b"choco" => is_choco_element = true,
+                    Some(t) if t.as_ref() == "choco" => is_choco_element = true,
                     Some(_) => (),
                     None => (),
                 };
                 assert!(writer.write_event(Event::Start(e.borrow())).is_ok());
             }
-            Ok(Event::End(e)) if e.name().as_ref() == b"savefile" => {
+            Ok(Event::End(e)) if e.name().as_ref() == "savefile" => {
                 is_ff8_element = false;
                 is_choco_element = false;
                 assert!(writer.write_event(Event::End(e.borrow())).is_ok());
             }
-            Ok(Event::Start(e)) if e.name().as_ref() == b"timestamp" => {
+            Ok(Event::Start(e)) if e.name().as_ref() == "timestamp" => {
                 is_timestamp_element = true;
                 assert!(writer.write_event(Event::Start(e.borrow())).is_ok());
             }
-            Ok(Event::End(e)) if e.name().as_ref() == b"timestamp" => {
+            Ok(Event::End(e)) if e.name().as_ref() == "timestamp" => {
                 is_timestamp_element = false;
                 assert!(writer.write_event(Event::End(e.borrow())).is_ok());
             }
-            Ok(Event::Start(e)) if e.name().as_ref() == b"signature" => {
+            Ok(Event::Start(e)) if e.name().as_ref() == "signature" => {
                 is_signature_element = true;
                 assert!(writer.write_event(Event::Start(e.borrow())).is_ok());
             }
-            Ok(Event::End(e)) if e.name().as_ref() == b"signature" => {
+            Ok(Event::End(e)) if e.name().as_ref() == "signature" => {
                 is_signature_element = false;
                 assert!(writer.write_event(Event::End(e.borrow())).is_ok());
             }

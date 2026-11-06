@@ -5,6 +5,7 @@ use log::info;
 use serde::de::DeserializeOwned;
 #[cfg(feature = "network")]
 use std::fs::File;
+use std::io::BufRead;
 #[cfg(feature = "network")]
 use std::io::Read;
 use std::path::PathBuf;
@@ -134,6 +135,21 @@ pub fn remove_file_if_exists(target_file: &PathBuf) -> Result<(), std::io::Error
     } else {
         remove_file(target_file)
     }
+}
+
+pub fn head_file(file: &PathBuf, max_lines: u32) -> Result<String, std::io::Error> {
+    let f = std::fs::File::open(file)?;
+    let reader = std::io::BufReader::new(f);
+    let mut ret = String::new();
+    let mut line_count = 0;
+    for line in reader.lines() {
+        ret.push_str(line.unwrap().as_str());
+        line_count += 1;
+        if line_count >= max_lines {
+            break;
+        }
+    }
+    Ok(ret)
 }
 
 #[cfg(all(feature = "network", feature = "zip"))]

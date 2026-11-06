@@ -17,6 +17,7 @@ windows = { version = "0", features = ["Win32_UI_Shell", "Win32_System_Memory", 
 
 [build-dependencies]
 built = { version = "0.8", features = ["git2"] }
+git2 = { version = "0" }
 
 [target.'cfg(windows)'.build-dependencies]
 winresource = "0.1"

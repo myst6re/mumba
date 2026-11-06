@@ -4,7 +4,7 @@ import { OptionsPage } from "pages/options.slint";
 import { SelectDirPage } from "pages/select_dir.slint";
 import { InstallDiscsPage } from "pages/install_discs.slint";
 import { HomePage } from "pages/home.slint";
-import { Installations, Fluent } from "global.slint";
+import { Installations, Fluent, Page } from "global.slint";
 
 export { Installations, Fluent }
 
@@ -14,9 +14,9 @@ export component AppWindow inherits Window {
     title: Fluent.get-message("window-title");
     icon: @image-url("../data/icon.png");
 
-    if Installations.current-page == 0 : HomePage {}
-    if Installations.current-page == 1 : SetupPage {}
-    if Installations.current-page == 2 : OptionsPage {}
-    if Installations.current-page == 3 : SelectDirPage {}
-    if Installations.current-page == 4 : InstallDiscsPage {}
+    if Installations.current-page == Page.home : HomePage {}
+    if Installations.current-page == Page.setup : SetupPage {}
+    if Installations.current-page == Page.options : OptionsPage {}
+    if Installations.current-page == Page.select-dir : SelectDirPage {}
+    if Installations.current-page == Page.install-discs : InstallDiscsPage {}
 }

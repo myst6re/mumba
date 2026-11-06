@@ -4,7 +4,7 @@ import { OptionsDisplayPage } from "options/display.slint";
 import { OptionsGamepadPage } from "options/gamepad.slint";
 import { SideBar } from "../components/side_bar.slint";
 import { Message } from "../components/message.slint";
-import { Installations, Fluent } from "../global.slint";
+import { Installations, Fluent, Page } from "../global.slint";
 
 export component OptionsPage inherits VerticalLayout {
     HorizontalLayout {
@@ -30,7 +30,7 @@ export component OptionsPage inherits VerticalLayout {
 
                 clicked => {
                     Installations.cancel-configure-ffnx();
-                    Installations.current-page = 0;
+                    Installations.current-page = Page.home;
                 }
             }
             Button {
@@ -39,7 +39,7 @@ export component OptionsPage inherits VerticalLayout {
 
                 clicked => {
                     Installations.configure-ffnx();
-                    Installations.current-page = 0;
+                    Installations.current-page = Page.home;
                 }
             }
         }

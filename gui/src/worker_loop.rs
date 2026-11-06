@@ -1,6 +1,9 @@
 use crate::lazy_ffnx_config::LazyFfnxConfig;
-use crate::ui_helper::{Page, UiHelper};
+use crate::pages::options::PageOptions;
+use crate::pages::setup::PageSetup;
+use crate::ui_helper::UiHelper;
 use crate::worker::Message;
+use crate::Page;
 use crate::TextLevel;
 use log::{error, info, warn};
 use mumba_core::config::{Config, UpdateChannel};
@@ -31,8 +34,8 @@ pub enum InstallError {
 
 pub struct WorkerLoop {
     rx: Receiver<Message>,
-    env: Env,
-    ui: UiHelper,
+    pub env: Env,
+    pub ui: UiHelper,
 }
 
 impl WorkerLoop {
@@ -40,11 +43,11 @@ impl WorkerLoop {
         Self { rx, env, ui }
     }
 
-    fn open_mumba_config(&self) -> Config {
+    pub fn open_mumba_config(&self) -> Config {
         Config::from_file(&self.env.config_path).unwrap_or_else(|_| Config::new())
     }
 
-    fn save_mumba_config(&self, mumba_config: &Config) -> bool {
+    pub fn save_mumba_config(&self, mumba_config: &Config) -> bool {
         match mumba_config.save(&self.env.config_path) {
             Ok(()) => true,
             Err(e) => {
@@ -61,13 +64,6 @@ impl WorkerLoop {
             Some(installation) => installation,
             None => return, // Exit
         };
-
-        info!(
-            "Found Game {:?} {} at \"{}\"",
-            installation.edition,
-            installation.language,
-            installation.app_path.to_string_lossy()
-        );
 
         let mut ffnx_installation = match self.retrieve_ffnx_installation(
             &ffnx_path,
@@ -94,9 +90,9 @@ impl WorkerLoop {
         for received in &self.rx {
             match received {
                 Message::Setup(app_path, update_chan, language) => {
-                    Self::clean_ffnx_installation(&ffnx_installation).unwrap();
+                    PageSetup::clean_ffnx_installation(&ffnx_installation).unwrap();
                     update_channel = update_chan.clone();
-                    installation = match self.setup(&app_path, update_chan, language) {
+                    installation = match PageSetup::setup(self, &app_path, update_chan, language) {
                         Some(inst) => inst,
                         None => continue,
                     };
@@ -155,90 +151,31 @@ impl WorkerLoop {
                     }
                 }
                 Message::SetFfnxConfigBool(key, value) => {
-                    ffnx_config.get().set_bool(key.as_str(), value)
+                    PageOptions::set_ffnx_config_bool(&mut ffnx_config, key, value)
                 }
-                Message::SetFfnxConfigInt(key, value) => {
-                    if key == "current_resolution" {
-                        let resolutions = screen_resolutions.resolutions.get(value as usize);
-                        let (w, h) = match resolutions {
-                            Some(e) => (e.w, e.h),
-                            None => (0, 0),
-                        };
-                        let fullscreen = ffnx_config
-                            .get()
-                            .get_bool(ffnx_config::CFG_FULLSCREEN, true)
-                            .unwrap_or(true);
-                        if fullscreen {
-                            ffnx_config.get().set_int("window_size_x", w);
-                            ffnx_config.get().set_int("window_size_y", h);
-                        } else {
-                            let window_x = ffnx_config
-                                .get()
-                                .get_int("window_size_x_window", 0)
-                                .unwrap_or(0);
-                            let window_y = ffnx_config
-                                .get()
-                                .get_int("window_size_y_window", 0)
-                                .unwrap_or(0);
-                            ffnx_config.get().set_int("window_size_x", window_x);
-                            ffnx_config.get().set_int("window_size_y", window_y);
-                        }
-                        ffnx_config.get().set_int("window_size_x_fullscreen", w);
-                        ffnx_config.get().set_int("window_size_y_fullscreen", h);
-                        self.ui.set_refresh_rates(match resolutions {
-                            Some(e) => e.freqs.clone(),
-                            None => vec![],
-                        })
-                    } else if key == "window_size_x" || key == "window_size_y" {
-                        let fullscreen = ffnx_config
-                            .get()
-                            .get_bool(ffnx_config::CFG_FULLSCREEN, true)
-                            .unwrap_or(true);
-                        if fullscreen {
-                            let fullscreen_value = ffnx_config
-                                .get()
-                                .get_int(format!("{}_fullscreen", key).as_str(), 0)
-                                .unwrap_or(0);
-                            ffnx_config.get().set_int(key.as_str(), fullscreen_value);
-                        } else {
-                            ffnx_config.get().set_int(key.as_str(), value)
-                        }
-                        ffnx_config
-                            .get()
-                            .set_int(format!("{}_window", key).as_str(), value)
-                    } else {
-                        ffnx_config.get().set_int(key.as_str(), value)
-                    }
-                }
+                Message::SetFfnxConfigInt(key, value) => PageOptions::set_ffnx_config_int(
+                    &self,
+                    &screen_resolutions,
+                    &mut ffnx_config,
+                    key,
+                    value,
+                ),
                 Message::SetFfnxConfigString(key, value) => {
-                    ffnx_config.get().set_string(key.as_str(), value)
+                    PageOptions::set_ffnx_config_string(&mut ffnx_config, key, value)
                 }
                 Message::SetFfnxConfigCurrentRefreshRate(
                     current_resolution,
                     current_refresh_rate,
-                ) => {
-                    let freqs = screen_resolutions
-                        .resolutions
-                        .get(current_resolution as usize)
-                        .map(|r| r.freqs.clone())
-                        .unwrap_or_default();
-                    ffnx_config.get().set_int(
-                        "refresh_rate",
-                        *freqs.get(current_refresh_rate as usize).unwrap_or(&0) as i64,
-                    )
-                }
+                ) => PageOptions::set_ffnx_config_current_refresh_rate(
+                    &mut ffnx_config,
+                    &screen_resolutions,
+                    current_resolution,
+                    current_refresh_rate,
+                ),
                 Message::ConfigureFfnx => {
-                    self.ui
-                        .set_ffnx_config(&mut ffnx_config, &screen_resolutions);
-                    if let Err(error) = ffnx_config.save() {
-                        error!("Cannot save FFNx configuration: {}", error);
-                        self.ui.set_task_text(
-                            TextLevel::Error,
-                            "message-error-cannot-save-ffnx-config",
-                        )
-                    }
+                    PageOptions::configure_ffnx(&self, &screen_resolutions, &mut ffnx_config)
                 }
-                Message::InstallIro(iro_path) => match Self::install_iro(&iro_path) {
+                Message::InstallIro(iro_path) => match Self::install_iro(&self.env, &iro_path) {
                     Ok(()) => {}
                     Err(e) => {
                         error!("Error installing IRO: {}", e);
@@ -331,6 +268,12 @@ impl WorkerLoop {
             };
             self.ui
                 .set_ffnx_path(ffnx_path.to_string_lossy().to_string());
+            info!(
+                "Found Game {:?} {} at \"{}\"",
+                installation.edition,
+                installation.language,
+                installation.app_path.to_string_lossy()
+            );
             Some((ffnx_path, installation, update_channel))
         } else {
             None
@@ -491,49 +434,12 @@ impl WorkerLoop {
         Ok(ffnx_installation)
     }
 
-    fn clean_ffnx_installation(ffnx_installation: &FfnxInstallation) -> Result<(), std::io::Error> {
-        provision::remove_file_if_exists(&ffnx_installation.path.join("steam_appid.txt"))?;
-        provision::remove_file_if_exists(&ffnx_installation.path.join("FFVIII.exe"))?;
-        provision::remove_file_if_exists(&ffnx_installation.exe_path())
-    }
-
-    fn setup(
-        &self,
-        app_path: &slint::SharedString,
-        update_channel: UpdateChannel,
-        language: String,
-    ) -> Option<installation::Installation> {
-        info!("Setup with EXE path \"{}\"", app_path);
-        match installation::Installation::from_directory(app_path.as_str(), None) {
-            Some(installation) => {
-                let mut mumba_config = self.open_mumba_config();
-                mumba_config.set_installation(&installation);
-                mumba_config.set_update_channel(update_channel.clone());
-                mumba_config.set_language(&language);
-                self.ui
-                    .set_game_app_path(installation.app_path.to_string_lossy().to_string());
-                self.ui.set_update_channel(update_channel);
-                if self.save_mumba_config(&mumba_config) {
-                    Some(installation)
-                } else {
-                    None
-                }
-            }
-            None => {
-                error!("This file does not exist: \"{}\"", app_path);
-                self.ui
-                    .set_task_text(TextLevel::Error, "message-error-file-not-found");
-                None
-            }
-        }
-    }
-
     fn go_to_setup_page(&self) -> Option<(installation::Installation, UpdateChannel)> {
         loop {
             self.ui.set_current_page(Page::Setup);
             match self.rx.recv() {
                 Ok(Message::Setup(exe_path, update_channel, language)) => {
-                    match self.setup(&exe_path, update_channel.clone(), language) {
+                    match PageSetup::setup(self, &exe_path, update_channel.clone(), language) {
                         Some(installation) => return Some((installation, update_channel)),
                         None => continue,
                     }
@@ -630,10 +536,8 @@ impl WorkerLoop {
             if !mod_dir.exists() {
                 std::fs::create_dir_all(mod_dir)?
             }
-            
-        }
-        
-        info!("Test mod: {:?}", mod_info);
+            info!("Test mod: {:?}", mod_info)
+        };
         Ok(())
     }
 }

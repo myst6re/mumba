@@ -9,6 +9,7 @@ use mumba_core::i18n::I18n;
 use rfd::FileDialog;
 
 pub mod lazy_ffnx_config;
+pub mod pages;
 pub mod ui_helper;
 pub mod worker;
 pub mod worker_loop;
