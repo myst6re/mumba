@@ -1,5 +1,5 @@
 import { Button, ComboBox, Palette, VerticalBox, HorizontalBox } from "std-widgets.slint";
-import { Installations, TextLevel, Fluent, Page } from "../global.slint";
+import { Installations, TextLevel, Fluent } from "../global.slint";
 import { Message } from "../components/message.slint";
 
 export component HomePage inherits VerticalLayout {
@@ -30,14 +30,14 @@ export component HomePage inherits VerticalLayout {
             Button {
                 text: Fluent.get-message("configure-app");
                 clicked => {
-                    Installations.current-page = Page.setup;
+                    Installations.current-page = setup;
                 }
             }
 
             Button {
                 text: Fluent.get-message("configure-game");
                 clicked => {
-                    Installations.current-page = Page.options;
+                    Installations.current-page = options;
                 }
             }
         }

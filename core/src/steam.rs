@@ -1,5 +1,6 @@
 #[cfg(windows)]
 use crate::os::regedit::*;
+use crate::os::run_helper;
 #[cfg(feature = "steam")]
 use keyvalues_parser;
 #[cfg(feature = "steam")]
@@ -9,6 +10,7 @@ use serde::Deserialize;
 #[cfg(feature = "steam")]
 use std::path::Path;
 use std::path::PathBuf;
+use std::process::{Child, Command};
 #[cfg(feature = "steam")]
 use std::{borrow::Cow, collections::HashMap, fs};
 
@@ -28,18 +30,31 @@ struct Library {
 pub struct Steam {
     #[cfg(feature = "steam")]
     library_folders: Option<SteamLibraryFolders>,
-    pub path: PathBuf,
+    path: PathBuf,
+    exe: PathBuf,
 }
 
 impl Steam {
-    pub fn from_config() -> Result<Self, Box<dyn std::error::Error>> {
-        let path = get_steam_path()?;
+    pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
+        let path = Self::get_steam_path()?;
+        let exe = Self::get_steam_exe(&path)?;
 
         Ok(Steam {
             #[cfg(feature = "steam")]
-            library_folders: Self::list_library_folders(&path).ok(),
+            library_folders: None,
             path,
+            exe,
         })
+    }
+
+    pub fn from_config() -> Result<Self, Box<dyn std::error::Error>> {
+        if cfg!(feature = "steam") {
+            let mut steam = Self::new()?;
+            steam.library_folders = Self::list_library_folders(&steam.path).ok();
+            Ok(steam)
+        } else {
+            Self::new()
+        }
     }
 
     #[allow(unused_variables)]
@@ -108,32 +123,52 @@ impl Steam {
 
         Ok(res)
     }
-}
 
-#[cfg(windows)]
-pub fn get_steam_path() -> Result<PathBuf, crate::os::regedit::Error> {
-    let location = RegLocation::Machine;
-    let path = "Software\\Valve\\Steam";
-    let key = "InstallPath";
-    let value = reg_value_str(RegTarget::None, location, path, key)
-        .or_else(|_| reg_value_str(RegTarget::Wow32, location, path, key))
-        .or_else(|_| reg_value_str(RegTarget::Wow64, location, path, key))?;
+    pub fn launch_app(
+        &self,
+        app_id: u64,
+        current_dir: &Path,
+        arg1: &Path,
+    ) -> Result<Child, std::io::Error> {
+        info!(
+            "Launch \"{} -applaunch {} '{}'\" in dir \"{}\"...",
+            &self.exe.to_string_lossy(),
+            app_id,
+            arg1.to_string_lossy(),
+            current_dir.to_string_lossy()
+        );
+        run_helper(&mut Command::new(&self.exe))
+            .args(["-applaunch", app_id.to_string().as_str()])
+            .arg(arg1.as_os_str())
+            .current_dir(current_dir)
+            .spawn()
+    }
 
-    Ok(PathBuf::from(value))
-}
+    #[cfg(windows)]
+    fn get_steam_path() -> Result<PathBuf, crate::os::regedit::Error> {
+        let location = RegLocation::Machine;
+        let path = "Software\\Valve\\Steam";
+        let key = "InstallPath";
+        let value = reg_value_str(RegTarget::None, location, path, key)
+            .or_else(|_| reg_value_str(RegTarget::Wow32, location, path, key))
+            .or_else(|_| reg_value_str(RegTarget::Wow64, location, path, key))?;
 
-#[cfg(unix)]
-pub fn get_steam_path() -> Result<PathBuf, Box<dyn std::error::Error>> {
-    let home = std::env::var("HOME")?;
-    Ok(std::fs::canonicalize(format!("{}/.steam/steam", home))?)
-}
+        Ok(PathBuf::from(value))
+    }
 
-#[cfg(windows)]
-pub fn get_steam_exe() -> Result<PathBuf, crate::os::regedit::Error> {
-    Ok(get_steam_path()?.join("steam.exe"))
-}
+    #[cfg(unix)]
+    fn get_steam_path() -> Result<PathBuf, Box<dyn std::error::Error>> {
+        let home = std::env::var("HOME")?;
+        Ok(std::fs::canonicalize(format!("{}/.steam/steam", home))?)
+    }
 
-#[cfg(unix)]
-pub fn get_steam_exe() -> Result<PathBuf, Box<dyn std::error::Error>> {
-    Ok(PathBuf::from("steam"))
+    #[cfg(windows)]
+    fn get_steam_exe(steam_path: &PathBuf) -> Result<PathBuf, crate::os::regedit::Error> {
+        Ok(steam_path.join("steam.exe"))
+    }
+
+    #[cfg(unix)]
+    fn get_steam_exe(_steam_path: &PathBuf) -> Result<PathBuf, Box<dyn std::error::Error>> {
+        Ok(PathBuf::from("steam"))
+    }
 }

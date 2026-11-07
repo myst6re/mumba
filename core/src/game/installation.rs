@@ -446,7 +446,6 @@ impl Installation {
         run_helper(&mut Command::new(steam_exe))
             .args(["-applaunch", app_id.to_string().as_str()])
             .arg(ff8_path.as_os_str())
-            .arg("--debug")
             .current_dir(current_dir)
             .spawn()
     }

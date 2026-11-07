@@ -1,5 +1,5 @@
 import { GroupBox, Palette, Button, HorizontalBox, LineEdit, VerticalBox } from "std-widgets.slint";
-import { Installations, Fluent, Page } from "../global.slint";
+import { Installations, Fluent } from "../global.slint";
 import { Message } from "../components/message.slint";
 
 export component SelectDirPage inherits VerticalLayout {
@@ -50,7 +50,7 @@ export component SelectDirPage inherits VerticalLayout {
                 visible: Installations.is-initialized;
 
                 clicked => {
-                    Installations.current-page = Page.home;
+                    Installations.current-page = home;
                 }
             }
 
@@ -60,7 +60,7 @@ export component SelectDirPage inherits VerticalLayout {
 
                 clicked => {
                     Installations.set-ffnx-path(ffnx-path.text);
-                    Installations.current-page = Page.home;
+                    Installations.current-page = home;
                 }
             }
         }
