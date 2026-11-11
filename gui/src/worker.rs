@@ -44,7 +44,7 @@ impl Worker {
                         return;
                     }
                 };
-                let i18n = i18n::I18n::new(language);
+                let i18n = i18n::I18n::new(language, &env);
 
                 WorkerLoop::new(rx, env, UiHelper::new(handle_weak, i18n)).run()
             }

@@ -9,6 +9,8 @@ use crate::github::GitHubReleaseAsset;
 use crate::pe_format;
 #[cfg(any(feature = "network", feature = "zip"))]
 use crate::provision;
+use std::fs::File;
+use std::io::{Seek, SeekFrom, Write};
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -132,5 +134,22 @@ impl FfnxInstallation {
         } else {
             Ok(())
         }
+    }
+
+    pub fn fix_game_freeze_at_startup(&self) -> std::io::Result<()> {
+        let path = self.exe_path();
+        let mut f = File::options().read(false).write(true).open(path)?;
+        f.seek(SeekFrom::Start(0x13F1))?;
+        f.write_all(b"\x75")?;
+        f.seek(SeekFrom::Start(0x706E0))?;
+        f.write_all(b"\x85")?;
+        f.seek(SeekFrom::Start(0x791F2C))?;
+        f.write_all(b"_")?;
+        f.seek(SeekFrom::Start(0x791F34))?;
+        f.write_all(b"_")?;
+        f.seek(SeekFrom::Start(0x791F3C))?;
+        f.write_all(b"_")?;
+        f.seek(SeekFrom::Start(0x791F44))?;
+        f.write_all(b"_")
     }
 }

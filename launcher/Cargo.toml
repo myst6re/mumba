@@ -5,6 +5,11 @@ version = "0.1.0"
 edition = "2021"
 authors = ["myst6re <myst6re@gmail.com>"]
 
+[features]
+default = []
+# libgit2-sys is recompiled too much when environment is modified
+git = ["dep:built"]
+
 [dependencies]
 same-file = "1"
 log = "0.4"
@@ -16,7 +21,7 @@ md5 = { version = "0" }
 windows = { version = "0", features = ["Win32_UI_Shell", "Win32_System_Memory", "Win32_Security", "Win32_System_Threading"] }
 
 [build-dependencies]
-built = { version = "0.8", features = ["git2"] }
+built = { version = "0.8", features = ["git2"], optional = true}
 git2 = { version = "0" }
 
 [target.'cfg(windows)'.build-dependencies]

@@ -106,7 +106,7 @@ impl PageOptions {
     ) {
         worker_loop
             .ui
-            .set_ffnx_config(ffnx_config, &screen_resolutions);
+            .set_ffnx_config(ffnx_config, screen_resolutions);
         if let Err(error) = ffnx_config.save() {
             error!("Cannot save FFNx configuration: {}", error);
             worker_loop

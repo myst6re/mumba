@@ -89,6 +89,7 @@
             <Directory Id='$(var.PlatformProgramFilesFolder)' Name='PFiles'>
                 <Directory Id='APPLICATIONFOLDER' Name='mumba'>
                     <Directory Id="LangFolder" Name="lang"/>
+                    <Directory Id="ResourcesFolder" Name="resources"/>
                 </Directory>
             </Directory>
 
@@ -123,19 +124,6 @@
                     Source='$(var.CargoTargetBinDir)\mmb.exe'
                     KeyPath='yes' Checksum='yes'/>
             </Component>
-            <Component Id='LauncherBinary' Guid='*'>
-                <File
-                    Id='exe2'
-                    Name='FF8_Launcher.exe'
-                    Source='$(var.CargoTargetBinDir)\ff8_launcher.exe'
-                    KeyPath='yes' Checksum='yes'/>
-            </Component>
-            <Component Id='EaxDll' Guid='*'>
-                <File
-                    Id='dll1'
-                    Source='$(var.CargoTargetBinDir)\..\..\vendor\creative\eax.dll'
-                    KeyPath='yes' Checksum='yes'/>
-            </Component>
         </DirectoryRef>
 
         <DirectoryRef Id="LangFolder">
@@ -150,6 +138,22 @@
                     Id='langfr'
                     Source='$(var.CargoTargetBinDir)\..\..\lang\mumba.fr.ftl'
                     KeyPath='yes'/>
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="ResourcesFolder">
+            <Component Id='LauncherBinary' Guid='*'>
+                <File
+                    Id='exe2'
+                    Name='FF8_Launcher.exe'
+                    Source='$(var.CargoTargetBinDir)\ff8_launcher.exe'
+                    KeyPath='yes' Checksum='yes'/>
+            </Component>
+            <Component Id='EaxDll' Guid='*'>
+                <File
+                    Id='dll1'
+                    Source='$(var.CargoTargetBinDir)\..\..\vendor\creative\eax.dll'
+                    KeyPath='yes' Checksum='yes'/>
             </Component>
         </DirectoryRef>
 

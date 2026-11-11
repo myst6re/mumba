@@ -34,7 +34,7 @@ fn main() -> Result<(), slint::PlatformError> {
     mumba_core::mumba_log::init(&env.log_path);
     let config = Config::from_file(&env.config_path).unwrap_or_else(|_| Config::new());
     let language = config.language().ok();
-    let i18n = I18n::new(language.clone());
+    let i18n = I18n::new(language.clone(), &env);
     let mut iro_dir = PathBuf::new();
 
     let ui = AppWindow::new()?;

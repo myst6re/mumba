@@ -7,6 +7,11 @@ authors = ["myst6re <myst6re@gmail.com>"]
 license = "GPL-3.0"
 default-run = "mumba"
 
+[features]
+default = []
+# libgit2-sys is recompiled too much when environment is modified
+git = ["dep:built"]
+
 [dependencies]
 log = "0.4"
 mumba_core = { path = "../core", features = ["network", "steam", "zip", "config", "pe", "i18n", "iro"] }
@@ -27,7 +32,7 @@ raw-window-handle = "0.6"
 
 [build-dependencies]
 slint-build = "1.18"
-built = { version = "0.8", features = ["git2"] }
+built = { version = "0.8", features = ["git2"], optional = true }
 
 [target.'cfg(windows)'.build-dependencies]
 winresource = "0.1"
@@ -35,9 +40,10 @@ winresource = "0.1"
 [package.metadata.deb]
 assets = [
     ["target/release/mumba", "usr/bin/", "755"],
-    ["target/release/ff8_launcher.exe", "var/lib/mumba/", "644"],
-    ["../vendor/creative/eax.dll", "var/lib/mumba/", "644"],
-    ["../lang/mumba.en.ftl", "var/lib/mumba/lang/", "644"],
-    ["../lang/mumba.fr.ftl", "var/lib/mumba/lang/", "644"],
+    ["target/release/mmb", "usr/bin/", "755"],
+    ["target/release/ff8_launcher.exe", "usr/share/mumba/resources/", "644"],
+    ["../vendor/creative/eax.dll", "usr/share/mumba/resources/", "644"],
+    ["../lang/mumba.en.ftl", "usr/share/mumba/lang/", "644"],
+    ["../lang/mumba.fr.ftl", "usr/share/mumba/lang/", "644"],
     ["../README.md", "usr/share/doc/mumba/README", "644"],
 ]

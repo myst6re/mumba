@@ -2,11 +2,17 @@ use clap::{arg, Command};
 use mumba_core::game::env::Env;
 use mumba_core::game::installation::{Edition, Installation};
 
+#[cfg(feature = "git")]
 include!(concat!(env!("OUT_DIR"), "/built.rs"));
+
+#[cfg(feature = "git")]
+pub static GIT_VERSION_MMB: Option<&str> = GIT_VERSION;
+#[cfg(not(feature = "git"))]
+pub static GIT_VERSION_MMB: Option<&str> = Some("dev");
 
 fn cli() -> Command {
     Command::new("mmb")
-        .version(GIT_VERSION)
+        .version(GIT_VERSION_MMB)
         .about("Modern and fast FFNx configurator")
         .subcommand_required(true)
         .arg_required_else_help(true)

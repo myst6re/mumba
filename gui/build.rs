@@ -9,5 +9,6 @@ fn main() {
         res.compile().unwrap();
     }
 
-    built::write_built_file().expect("Failed to acquire build-time information");
+    #[cfg(feature = "git")]
+    built::write_built_file().expect("Failed to acquire build-time information")
 }

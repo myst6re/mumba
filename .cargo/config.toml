@@ -1,2 +1,5 @@
 [target.'cfg(all(target_os = "windows", target_env = "msvc"))']
 rustflags = ["-C", "target-feature=+crt-static"]
+
+[registry]
+global-min-publish-age = "7 days"

@@ -3,23 +3,29 @@ use std::path::PathBuf;
 use sys_locale::get_locale;
 use unic_langid::{langid, LanguageIdentifier};
 
+use crate::game::env::Env;
+
 pub struct I18n {
     bundle: FluentBundle<FluentResource>,
 }
 
 impl I18n {
-    pub fn new(lang: Option<String>) -> I18n {
+    pub fn new(lang: Option<String>, env: &Env) -> I18n {
         let lang = lang
             .and_then(|l| LanguageIdentifier::from_bytes(l.as_bytes()).ok())
             .unwrap_or_else(Self::detect_system_lang);
-        let path = Self::find_path(&lang);
+        let path = Self::build_path(&lang, env);
 
-        Self::from_file(&path, lang)
+        Self::from_file(&path, lang, env)
     }
 
-    pub fn from_file<P: AsRef<std::path::Path>>(path: P, lang: LanguageIdentifier) -> I18n {
+    pub fn from_file<P: AsRef<std::path::Path>>(
+        path: P,
+        lang: LanguageIdentifier,
+        env: &Env,
+    ) -> I18n {
         let fallback_lang = langid!("en-US");
-        let fallback = Self::find_path(&fallback_lang);
+        let fallback = Self::build_path(&fallback_lang, env);
 
         info!(
             "Fluent file path: \"{}\" (fallback: \"{}\")",
@@ -72,14 +78,8 @@ impl I18n {
         String::from(self.bundle.format_pattern(pattern, None, &mut errors))
     }
 
-    pub fn find_path(lang: &LanguageIdentifier) -> PathBuf {
-        let file_name = format!("mumba.{}.ftl", lang.language);
-        let path = PathBuf::from("lang").join(&file_name);
-        if path.exists() {
-            path
-        } else {
-            PathBuf::from("/var/lib/mumba/lang").join(file_name)
-        }
+    pub fn build_path(lang: &LanguageIdentifier, env: &Env) -> PathBuf {
+        env.find_lang(lang.language.as_str())
     }
 
     pub fn detect_system_lang() -> LanguageIdentifier {

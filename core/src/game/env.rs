@@ -1,73 +1,168 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
+use directories::ProjectDirs;
+
+/* Windows:
+ *   %binary_dir%\
+ *   ├── mumba.exe
+ *   ├── mmb.exe
+ *   ├── resources\
+ *   │   ├── ff8_launcher.exe
+ *   │   └── eax.dll
+ *   ├── lang\
+ *   │   └── mumba.en.ftl
+ *   └── License.rtf
+ *   C:\Users\Alice\AppData\Roaming\mumba\
+ *   ├── mumba.toml
+ *   ├── game\
+ *   │   └── ffnx + ff8 exe
+ *   ├── mods\
+ *   │   └── ffnx + ff8 exe
+ *   └── mumba.log
+ * Linux:
+ *   /usr/bin/
+ *   ├── mumba
+ *   └── mmb
+ *   /var/lib/mumba/
+ *   ├── resources/
+ *   │   ├── ff8_launcher.exe
+ *   │   └── eax.dll
+ *   └── lang/
+ *       └── mumba.en.ftl
+ *   /home/alice/.config/mumba/
+ *   └── mumba.toml
+ *   /home/alice/.local/share/mumba/
+ *   ├── game\
+ *   │   └── ffnx + ff8 exe
+ *   ├── mods\
+ *   │   └── ffnx + ff8 exe
+ *   └── mumba.log
+ * Portable:
+ *   ├── mumba.exe
+ *   ├── mmb.exe
+ *   ├── resources\
+ *   │   ├── ff8_launcher.exe
+ *   │   └── eax.dll
+ *   ├── lang\
+ *   │   └── mumba.en.ftl
+ *   ├── License.rtf
+ *   ├── mumba.toml
+ *   ├── game\
+ *   │   └── ffnx + ff8 exe
+ *   ├── mods\
+ *   │   └── ffnx + ff8 exe
+ *   └── mumba.log
+ */
+
 pub struct Env {
+    program_name: String,
+    project_dirs: Option<ProjectDirs>,
+    // Where mumba binary is
+    pub binary_dir: PathBuf,
+    // Windows: C:\Users\Alice\AppData\Local\mumba, Linux: /home/alice/.cache/mumba, macOS: /Users/Alice/Library/Caches/mumba
     pub cache_dir: PathBuf,
-    pub data_dir: PathBuf,
+    // Windows: C:\Users\Alice\AppData\Roaming\mumba, Linux: /home/alice/.config/mumba, macOS: /Users/Alice/Library/Application Support/mumba
     pub config_path: PathBuf,
-    pub mumba_dir: PathBuf,
+    // Windows: C:\Users\Alice\AppData\Roaming\mumba\game, Linux: /home/alice/.local/share/mumba/game, macOS: /Users/Alice/Library/Application Support/mumba/game
     pub ffnx_dir: PathBuf,
+    // Windows: C:\Users\Alice\AppData\Roaming\mumba\mods
+    pub mods_dir: PathBuf,
+    // Windows: C:\Users\Alice\AppData\Roaming\mumba\mumba.log
     pub log_path: PathBuf,
-    pub mod_dir: PathBuf,
 }
 
 impl Env {
     pub fn new(program_name: &str) -> Result<Self, std::io::Error> {
-        let mut exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("./mumba"));
+        let mut exe_path = std::env::current_exe()
+            .unwrap_or_else(|_| PathBuf::from(format!("./{}", program_name)));
         exe_path.pop(); // Remove exe filename
+        let local_env = Self {
+            program_name: String::from(program_name),
+            project_dirs: None,
+            binary_dir: exe_path.clone(),
+            cache_dir: exe_path.clone(),
+            config_path: exe_path.clone().join(format!("{}.toml", program_name)),
+            ffnx_dir: exe_path.join("game"),
+            mods_dir: exe_path.join("mods"),
+            log_path: exe_path.join(format!("{}.log", program_name)),
+        };
 
-        let cache_fallback = exe_path.clone();
-        let data_fallback = exe_path.clone();
-        let config_fallback = exe_path.clone();
-
-        let config_path = config_fallback.join("mumba.toml");
-        if config_path.exists() {
-            let log_path = data_fallback.join(format!("{}.log", program_name));
+        if local_env.config_path.exists() {
             // Local installation
-            return Ok(Self {
-                cache_dir: cache_fallback,
-                data_dir: data_fallback,
-                config_path,
-                ffnx_dir: exe_path.join("game"),
-                mod_dir: exe_path.join("mods"),
-                mumba_dir: exe_path,
-                log_path,
-            });
+            return Ok(local_env);
         }
 
-        let base_dirs = directories::BaseDirs::new();
-        let (cache_dir, data_dir, config_dir) = match base_dirs {
+        let project_dirs = directories::ProjectDirs::from("", "", program_name);
+        let (cache_dir, data_dir, config_dir) = match &project_dirs {
             Some(d) => (
-                Self::add_app_dir(d.cache_dir()),
-                Self::add_app_dir(d.data_dir()),
-                Self::add_app_dir(d.config_dir()),
+                d.cache_dir().to_path_buf(),
+                d.data_dir().to_path_buf(),
+                d.config_dir().to_path_buf(),
             ),
-            None => (
-                cache_fallback.clone(),
-                data_fallback.clone(),
-                config_fallback.clone(),
-            ),
+            None => (exe_path.clone(), exe_path.clone(), exe_path.clone()),
         };
         let cache_dir = Self::create_dir(&cache_dir)
             .and(Ok(cache_dir))
-            .or_else(|_| Self::create_dir(&cache_fallback).and(Ok(cache_fallback)))?;
-        let data_dir = Self::create_dir(&data_dir)
-            .and(Ok(data_dir))
-            .or_else(|_| Self::create_dir(&data_fallback).and(Ok(data_fallback)))?;
-        let log_path = data_dir.join(format!("{}.log", program_name));
+            .or_else(|_| Self::create_dir(&local_env.cache_dir).and(Ok(local_env.cache_dir)))?;
+        let data_dir = Self::create_dir(&data_dir).and(Ok(data_dir)).or_else(|_| {
+            Self::create_dir(&local_env.binary_dir).and(Ok(local_env.binary_dir.clone()))
+        })?;
         let config_dir = Self::create_dir(&config_dir)
             .and(Ok(config_dir))
-            .or_else(|_| Self::create_dir(&config_fallback).and(Ok(config_fallback)))?;
+            .or_else(|_| Self::create_dir(&local_env.binary_dir).and(Ok(local_env.binary_dir)))?;
 
         Ok(Self {
+            program_name: local_env.program_name,
+            project_dirs,
             cache_dir,
             ffnx_dir: data_dir.join("game"),
-            mod_dir: data_dir.join("mods"),
-            data_dir,
-            config_path: config_dir.join("mumba.toml"),
-            mumba_dir: exe_path,
-            log_path,
+            mods_dir: data_dir.join("mods"),
+            config_path: config_dir.join(format!("{}.toml", program_name)),
+            binary_dir: exe_path,
+            log_path: data_dir.join(format!("{}.log", program_name)),
         })
+    }
+
+    fn find_data<P: AsRef<Path>>(&self, dirname: &str, name: P) -> PathBuf {
+        let path = PathBuf::from(&dirname).join(&name);
+        if path.exists() {
+            return path;
+        }
+        info!("File not found at {}", path.to_string_lossy());
+        let path = self.binary_dir.join(dirname).join(&name);
+        if path.exists() {
+            return path;
+        }
+        info!("File not found at {}", path.to_string_lossy());
+        if let Some(project_dirs) = &self.project_dirs {
+            let path = project_dirs.data_dir().join(dirname).join(&name);
+            if path.exists() {
+                return path;
+            }
+            info!("File not found at {}", path.to_string_lossy());
+        }
+        #[cfg(unix)]
+        let path = PathBuf::from("/usr/share")
+            .join(&self.program_name)
+            .join(&dirname)
+            .join(&name);
+        #[cfg(unix)]
+        if path.exists() {
+            return path;
+        }
+        #[cfg(unix)]
+        info!("File not found at {}", path.to_string_lossy());
+        PathBuf::new().join(name)
+    }
+
+    pub fn find_resource(&self, name: &str) -> PathBuf {
+        self.find_data("resources", name)
+    }
+
+    pub fn find_lang(&self, lang: &str) -> PathBuf {
+        let name = format!("{}.{}.ftl", self.program_name, lang);
+        self.find_data("lang", name)
     }
 
     fn create_dir<P: AsRef<std::path::Path>>(path: P) -> io::Result<()> {
@@ -75,19 +170,6 @@ impl Env {
             Ok(()) => Ok(()),
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => Ok(()),
             Err(e) => Err(e),
-        }
-    }
-
-    fn add_app_dir(path: &Path) -> PathBuf {
-        path.to_path_buf().join("mumba")
-    }
-
-    pub fn get_resource_launcher_path(&self) -> PathBuf {
-        let resource_launcher_path = self.mumba_dir.join("ff8_launcher.exe");
-        if resource_launcher_path.exists() {
-            resource_launcher_path
-        } else {
-            PathBuf::from("/var/lib/mumba/ff8_launcher.exe")
         }
     }
 }

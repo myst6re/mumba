@@ -54,16 +54,16 @@ jobs:
       run: cargo fmt --check
 
     - name: Build exe
-      run: cargo build --release
+      run: cargo build --release --all-features
 
     - name: Tests
-      run: cargo test --release --tests --workspace
+      run: cargo test --release --all-features --tests --workspace
 
     - name: Build launcher
       if: runner.os == 'Linux'
       run: |
         rustup target add x86_64-pc-windows-gnu
-        cargo build --release --bin ff8_launcher --target x86_64-pc-windows-gnu
+        cargo build --release --all-features --bin ff8_launcher --target x86_64-pc-windows-gnu
         cp target/x86_64-pc-windows-gnu/release/ff8_launcher.exe target/release/ff8_launcher.exe
 
     - name: Install cargo-${{ matrix.installer }}

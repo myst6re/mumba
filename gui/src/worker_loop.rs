@@ -90,7 +90,9 @@ impl WorkerLoop {
         for received in &self.rx {
             match received {
                 Message::Setup(app_path, update_chan, language) => {
-                    PageSetup::clean_ffnx_installation(&ffnx_installation).unwrap();
+                    if installation.app_path != PathBuf::from(&app_path) {
+                        PageSetup::clean_ffnx_installation(&ffnx_installation).unwrap()
+                    }
                     update_channel = update_chan.clone();
                     installation = match PageSetup::setup(self, &app_path, update_chan, language) {
                         Some(inst) => inst,
@@ -154,7 +156,7 @@ impl WorkerLoop {
                     PageOptions::set_ffnx_config_bool(&mut ffnx_config, key, value)
                 }
                 Message::SetFfnxConfigInt(key, value) => PageOptions::set_ffnx_config_int(
-                    &self,
+                    self,
                     &screen_resolutions,
                     &mut ffnx_config,
                     key,
@@ -173,7 +175,7 @@ impl WorkerLoop {
                     current_refresh_rate,
                 ),
                 Message::ConfigureFfnx => {
-                    PageOptions::configure_ffnx(&self, &screen_resolutions, &mut ffnx_config)
+                    PageOptions::configure_ffnx(self, &screen_resolutions, &mut ffnx_config)
                 }
                 Message::InstallIro(iro_path) => match Self::install_iro(&self.env, &iro_path) {
                     Ok(()) => {}
@@ -189,8 +191,9 @@ impl WorkerLoop {
                         .set_task_text(TextLevel::Info, "message-install-discs");
                     match installation.install_movies_from_discs() {
                         Ok(0b1111) => {
+                            ffnx_installation.fix_game_freeze_at_startup();
                             info!("Discs installed");
-                            self.ui.set_current_page(Page::Setup);
+                            self.ui.set_current_page(Page::Options);
                             self.ui
                                 .set_task_text(TextLevel::Info, "message-discs-installed");
                         }
@@ -379,7 +382,7 @@ impl WorkerLoop {
 
         if !exe_path.exists() {
             match provision::download_zip(
-                "https://www.ff8.fr/download/programs/FF8SqeaPatch.zip",
+                "https://www.ff8.fr/download/programs/FF8SqeaNVPatch.zip",
                 "FF8Patch1.02.zip",
                 &ffnx_installation.path,
                 &self.env,
@@ -401,14 +404,14 @@ impl WorkerLoop {
                         .unwrap_or_default()
                         == "FFNx"
                 {
-                    provision::copy_file(&self.env.mumba_dir.join("eax.dll"), &eax_dll_path)?
+                    provision::copy_file(&self.env.find_resource("eax.dll"), &eax_dll_path)?
                 }
             }
             installation::Edition::Standard | installation::Edition::Remastered => {
                 let eax_dll_path = ffnx_installation.path.join("creative_eax.dll");
                 if !eax_dll_path.exists() {
                     if let Err(e) =
-                        provision::copy_file(&self.env.mumba_dir.join("eax.dll"), &eax_dll_path)
+                        provision::copy_file(&self.env.find_resource("eax.dll"), &eax_dll_path)
                     {
                         warn!("Cannot install creative_eax.dll: {}", e);
                     }
@@ -531,10 +534,10 @@ impl WorkerLoop {
     fn install_iro(env: &Env, iro_path: &slint::SharedString) -> Result<(), IroError> {
         let mut archive = IroArchive::from_path(iro_path.as_str())?;
         if let Some(mod_info) = archive.unpack_mod_xml()? {
-            let mod_dir = env.mod_dir.join(mod_info.dir_name());
+            let mods_dir = env.mods_dir.join(mod_info.dir_name());
 
-            if !mod_dir.exists() {
-                std::fs::create_dir_all(mod_dir)?
+            if !mods_dir.exists() {
+                std::fs::create_dir_all(mods_dir)?
             }
             info!("Test mod: {:?}", mod_info)
         };

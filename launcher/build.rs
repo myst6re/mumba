@@ -20,5 +20,6 @@ fn main() {
         res.compile().unwrap();
     };
 
+    #[cfg(feature = "git")]
     built::write_built_file().expect("Failed to acquire build-time information");
 }

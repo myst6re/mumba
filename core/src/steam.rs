@@ -132,7 +132,7 @@ impl Steam {
     ) -> Result<Child, std::io::Error> {
         info!(
             "Launch \"{} -applaunch {} '{}'\" in dir \"{}\"...",
-            &self.exe.to_string_lossy(),
+            self.exe.to_string_lossy(),
             app_id,
             arg1.to_string_lossy(),
             current_dir.to_string_lossy()
@@ -163,7 +163,7 @@ impl Steam {
     }
 
     #[cfg(windows)]
-    fn get_steam_exe(steam_path: &PathBuf) -> Result<PathBuf, crate::os::regedit::Error> {
+    fn get_steam_exe(steam_path: &Path) -> Result<PathBuf, crate::os::regedit::Error> {
         Ok(steam_path.join("steam.exe"))
     }
 

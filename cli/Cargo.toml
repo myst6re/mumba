@@ -4,13 +4,18 @@ version = "0.1.0"
 edition = "2021"
 authors = ["myst6re <myst6re@gmail.com>"]
 
+[features]
+default = []
+# libgit2-sys is recompiled too much when environment is modified
+git = ["dep:built"]
+
 [dependencies]
 mumba_core = { path = "../core", default-features = false, features = ["pe"] }
 log = "0.4"
 clap = "4"
 
 [build-dependencies]
-built = { version = "0.8", features = ["git2"] }
+built = { version = "0.8", features = ["git2"], optional = true }
 
 [target.'cfg(windows)'.build-dependencies]
 winresource = "0.1"

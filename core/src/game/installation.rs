@@ -375,7 +375,7 @@ impl Installation {
                 if cfg!(windows) {
                     #[cfg(windows)]
                     crate::os::windows::run_as(
-                        &String::from(env.mumba_dir.join("mmb.exe").to_str().unwrap()),
+                        &String::from(env.binary_dir.join("mmb.exe").to_str().unwrap()),
                         &format!(
                             "replace_launcher \"{}\"",
                             self.app_path.to_string_lossy().to_string().replace('"', "")
@@ -393,7 +393,7 @@ impl Installation {
     #[cfg(feature = "pe")]
     pub fn replace_launcher_from_app_path(&self, env: &Env) -> std::io::Result<()> {
         let launcher_path = self.get_launcher_path();
-        let resource_launcher_path = env.get_resource_launcher_path();
+        let resource_launcher_path = env.find_resource("ff8_launcher.exe");
         let (launcher_product_name, legal_copyright) =
             match pe_format::pe_version_info(&launcher_path) {
                 Ok(infos) => (
