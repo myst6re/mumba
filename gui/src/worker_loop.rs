@@ -361,7 +361,11 @@ impl WorkerLoop {
         let exe_path = ffnx_installation.exe_path();
 
         if matches!(installation.edition, Edition::Steam) {
-            installation.replace_launcher(&self.env)?;
+            if let Err(err) = installation.replace_launcher(&self.env) {
+                self.ui
+                    .set_task_text(TextLevel::Warn, "message-warn-cannot-replace-launcher");
+                warn!("Cannot replace launcher: {}", err)
+            }
             provision::copy_file(
                 &installation
                     .app_path

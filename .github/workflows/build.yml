@@ -19,6 +19,7 @@ jobs:
         os:
           - ubuntu-latest
           - windows-latest
+          - macos-latest
         include:
           - os: ubuntu-latest
             name: linux64
@@ -28,6 +29,10 @@ jobs:
             name: windows64
             installer: wix
             pattern: target/wix/*.msi
+          - os: macos-latest
+            name: macos-arm64
+            installer: bundle
+            pattern: target/bundle/osx/*.app
 
     steps:
     - uses: actions/checkout@v4
@@ -76,24 +81,28 @@ jobs:
         if [ "$GITHUB_REF_TYPE" != tag ]; then
           version="${version}-continuous.$GITHUB_RUN_NUMBER"
         fi
-        echo "MOOMBA_VERSION=$version" >> $GITHUB_ENV
+        echo "MUMBA_VERSION=$version" >> $GITHUB_ENV
 
     - name: Build installer
       if: runner.os == 'Windows'
       shell: bash
       run: |
-        cargo wix --no-build -p mumba --nocapture -o "target/wix/mumba-${MOOMBA_VERSION}-setup-${{ matrix.name }}-english.msi" -i ${MOOMBA_VERSION} --bin-path '${{ github.workspace }}/wix'
-        cargo wix --no-build -p mumba --nocapture -o "target/wix/mumba-${MOOMBA_VERSION}-setup-${{ matrix.name }}-francais.msi" -i ${MOOMBA_VERSION} --bin-path '${{ github.workspace }}/wix' --culture fr-fr
+        cargo wix --no-build -p mumba --nocapture -o "target/wix/mumba-${MUMBA_VERSION}-setup-${{ matrix.name }}-english.msi" -i ${MUMBA_VERSION} --bin-path '${{ github.workspace }}/wix'
+        cargo wix --no-build -p mumba --nocapture -o "target/wix/mumba-${MUMBA_VERSION}-setup-${{ matrix.name }}-francais.msi" -i ${MUMBA_VERSION} --bin-path '${{ github.workspace }}/wix' --culture fr-fr
 
     - name: Build installer
       if: runner.os == 'Linux'
-      run: cargo deb --no-build -p mumba -o "target/debian/mumba-${MOOMBA_VERSION}-${{ matrix.name }}.deb"
+      run: cargo deb --no-build -p mumba -o "target/debian/mumba-${MUMBA_VERSION}-${{ matrix.name }}.deb"
+
+    - name: Build installer
+      if: runner.os == 'macOS'
+      run: cargo bundle -p mumba -f osx --binary-path target/release/mumba
 
     - name: Create zip
       if: runner.os == 'Windows'
       shell: bash
       run: |
-        dir='${{ github.workspace }}'"/mumba-${MOOMBA_VERSION}-${{ matrix.name }}"
+        dir='${{ github.workspace }}'"/mumba-${MUMBA_VERSION}-${{ matrix.name }}"
         mkdir -p "$dir"
         cp target/release/mumba "$dir"
         cp target/release/ff8_launcher.exe "$dir/FF8_Launcher.exe"
@@ -101,7 +110,7 @@ jobs:
         cp -r lang "$dir"
         cp gui/wix/License.rtf "$dir"
         cp vendor/creative/eax.dll "$dir"
-        7z a '${{ github.workspace }}'"/mumba-${MOOMBA_VERSION}-${{ matrix.name }}.zip" "$dir"
+        7z a '${{ github.workspace }}'"/mumba-${MUMBA_VERSION}-${{ matrix.name }}.zip" "$dir"
 
     - name: Upload installer
       uses: actions/upload-artifact@v4

@@ -142,6 +142,16 @@ impl Env {
             }
             info!("File not found at {}", path.to_string_lossy());
         }
+        #[cfg(target_os = "macos")]
+        let path = self
+            .binary_dir
+            .join("../Resources") // Search in bundle
+            .join(&dirname)
+            .join(&name);
+        #[cfg(target_os = "macos")]
+        if path.exists() {
+            return path;
+        }
         #[cfg(unix)]
         let path = PathBuf::from("/usr/share")
             .join(&self.program_name)
