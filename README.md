@@ -28,7 +28,7 @@ On Linux we need to cross-compile `ff8_launcher` for Windows target
 sudo apt-get install mingw-w64
 rustup target add x86_64-pc-windows-gnu
 cargo build --release --bin ff8_launcher --target x86_64-pc-windows-gnu
-cp target/x86_64-pc-windows-gnu/release/ff8_launcher.exe target/release/
+cp target/x86_64-pc-windows-gnu/release/ff8_launcher.exe resources/
 ```
 
 ## Create installer

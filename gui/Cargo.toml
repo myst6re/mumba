@@ -41,7 +41,7 @@ winresource = "0.1"
 assets = [
     ["target/release/mumba", "usr/bin/", "755"],
     ["target/release/mmb", "usr/bin/", "755"],
-    ["target/release/ff8_launcher.exe", "usr/share/mumba/resources/", "644"],
+    ["../resources/ff8_launcher.exe", "usr/share/mumba/resources/", "644"],
     ["../resources/eax.dll", "usr/share/mumba/resources/", "644"],
     ["../lang/mumba.en.ftl", "usr/share/mumba/lang/", "644"],
     ["../lang/mumba.fr.ftl", "usr/share/mumba/lang/", "644"],
@@ -52,4 +52,8 @@ assets = [
 name = "Mumba"
 identifier = "com.myst6re.mumba"
 icon = ["gui/data/mumba.icns"]
-resources = ["resources/eax.dll", "lang/*.ftl"]
+resources = [
+    "resources/ff8_launcher.exe",
+    "resources/eax.dll",
+    "lang/*.ftl",
+]

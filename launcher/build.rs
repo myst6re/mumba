@@ -1,3 +1,4 @@
+#[cfg(target_os = "windows")]
 fn get_repo_tag() -> String {
     let repo = git2::Repository::discover(
         std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR"),

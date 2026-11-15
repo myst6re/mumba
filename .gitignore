@@ -11,3 +11,5 @@ target/
 
 # Application logs
 *.log
+
+resources/ff8_launcher.exe
