@@ -109,7 +109,7 @@ jobs:
         cp target/release/mmb "$dir"
         cp -r lang "$dir"
         cp gui/wix/License.rtf "$dir"
-        cp vendor/creative/eax.dll "$dir"
+        cp resources/eax.dll "$dir"
         7z a '${{ github.workspace }}'"/mumba-${MUMBA_VERSION}-${{ matrix.name }}.zip" "$dir"
 
     - name: Upload installer

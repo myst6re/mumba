@@ -152,7 +152,7 @@
             <Component Id='EaxDll' Guid='*'>
                 <File
                     Id='dll1'
-                    Source='$(var.CargoTargetBinDir)\..\..\vendor\creative\eax.dll'
+                    Source='$(var.CargoTargetBinDir)\..\..\resources\eax.dll'
                     KeyPath='yes' Checksum='yes'/>
             </Component>
         </DirectoryRef>
