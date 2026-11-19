@@ -51,7 +51,7 @@ jobs:
         sudo apt-get install -y -qqq -m mingw-w64 liblzma-dev dpkg-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libfontconfig-dev libssl-dev clang libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev libasound2-dev pkg-config qtbase5-dev libqt5svg5-dev || true
 
     - name: Install macos dependencies
-      if: runner.os = 'macOS'
+      if: runner.os == 'macOS'
       run: brew install mingw-w64
 
     - run: rustup toolchain install stable --profile minimal
