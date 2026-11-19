@@ -33,7 +33,7 @@ jobs:
           - os: macos-latest
             name: macos-arm64
             installer: bundle
-            pattern: target/release/bundle/osx/*.app
+            pattern: target/release/bundle/osx/*.dmg
 
     steps:
     - uses: actions/checkout@v4
