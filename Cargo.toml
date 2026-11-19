@@ -4,11 +4,8 @@ resolver = "2"
 default-members = ["cli", "core", "gui", "launcher"]
 
 [profile.release]
+debug = 0
 strip = true
 
 [profile.dev]
-debug = 1
-incremental = false
-
-[profile.dev.package."*"]
-debug = false
+debug = 0
