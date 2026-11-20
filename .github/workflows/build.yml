@@ -103,6 +103,7 @@ jobs:
       if: runner.os == 'macOS'
       run: |
         cargo bundle --release -p mumba -f dmg --binary-path target/release/mumba
+        mkdir "${{ github.workspace }}/target/bundle"
         mv "${{ github.workspace }}/target/release/bundle/dmg/*.dmg" "${{ github.workspace }}/target/bundle/mumba-${MUMBA_VERSION}-${{ matrix.name }}.dmg"
 
     - name: Create zip
