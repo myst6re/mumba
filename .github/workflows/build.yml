@@ -33,7 +33,7 @@ jobs:
           - os: macos-latest
             name: macos-arm64
             installer: bundle
-            pattern: target/release/bundle/dmg/*.dmg
+            pattern: target/bundle/*.dmg
 
     steps:
     - uses: actions/checkout@v4
@@ -101,7 +101,9 @@ jobs:
 
     - name: Build installer
       if: runner.os == 'macOS'
-      run: cargo bundle --release -p mumba -f dmg --binary-path target/release/mumba
+      run: |
+        cargo bundle --release -p mumba -f dmg --binary-path target/release/mumba
+        mv "${{ github.workspace }}/target/release/bundle/dmg/*.dmg" "${{ github.workspace }}/target/bundle/mumba-${MUMBA_VERSION}-${{ matrix.name }}.dmg"
 
     - name: Create zip
       if: runner.os == 'Windows'
